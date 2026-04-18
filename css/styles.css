@@ -521,66 +521,8 @@ button { font: inherit; border: 0; background: none; color: inherit; cursor: poi
 @keyframes scrollLine { to { transform: translateY(60px); } }
 @media (max-width: 900px) { .hero__scroll { display: none; } }
 
-/* ========== FLOATING SOCIAL ========== */
-.social-float {
-  position: fixed;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 90;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.social-float__btn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border-radius: 999px;
-  background: rgba(20,20,20,.85);
-  border: 1px solid var(--line);
-  color: var(--fg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  overflow: hidden;
-  transition: width .35s var(--ease), background .3s, border-color .3s, color .3s;
-  white-space: nowrap;
-}
-.social-float__btn svg {
-  flex-shrink: 0;
-  width: 44px;
-  padding: 12px;
-}
-.social-float__btn span {
-  font-size: .78rem;
-  font-weight: 600;
-  letter-spacing: .5px;
-  padding-right: 16px;
-  opacity: 0;
-  transition: opacity .2s;
-}
-.social-float__btn:hover {
-  width: 150px;
-  background: var(--flame);
-  border-color: var(--flame);
-  color: #fff;
-}
-.social-float__btn:hover span { opacity: 1; transition-delay: .1s; }
-
-@media (max-width: 900px) {
-  .social-float {
-    right: auto; left: 50%;
-    top: auto; bottom: 16px;
-    transform: translateX(-50%);
-    flex-direction: row;
-  }
-  .social-float__btn:hover { width: 44px; background: rgba(20,20,20,.95); border-color: var(--flame); color: var(--flame); }
-  .social-float__btn:hover span { opacity: 0; }
-}
+/* Failsafe: hide any residual floating social widget */
+.social-float, [class*="social-float"] { display: none !important; }
 
 /* ========== MARQUEE ========== */
 .marquee {
@@ -2069,9 +2011,3 @@ button { font: inherit; border: 0; background: none; color: inherit; cursor: poi
   .hero__logo { max-width: 200px; }
 }
 
-/* Hide social-float on very tight screens to avoid overlap */
-@media (max-width: 380px) {
-  .social-float { bottom: 10px; gap: 6px; }
-  .social-float__btn { width: 38px; height: 38px; }
-  .social-float__btn svg { width: 38px; padding: 10px; }
-}
