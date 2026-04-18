@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="description" content="CED-GYM - Fábrica de Monstruos. Entrenamiento funcional, pesas, powerlifting, workout, nutrición y rehabilitación en Chihuahua." />
+  <title>CED-GYM · Fábrica de Monstruos</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:wght@300;400;500;700;900&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="loader__logo">
+      <svg viewBox="0 0 100 100" class="loader__ring">
+        <circle cx="50" cy="50" r="45" />
+      </svg>
+      <span class="loader__text">CED·GYM</span>
+    </div>
+  </div>
+
+  <!-- Noise grain overlay -->
+  <div class="grain"></div>
+
+  <!-- NAV -->
+  <header class="nav" id="nav">
+    <a href="#hero" class="nav__brand" data-cursor="hover">
+      <img src="assets/logos.png" alt="CED-GYM" class="nav__logo" onerror="this.style.display='none'" />
+      <span class="nav__brand-text">CED<span class="accent">·</span>GYM</span>
+    </a>
+    <nav class="nav__links">
+      <a href="#services" data-cursor="hover">Servicios</a>
+      <a href="#football" data-cursor="hover">Deportivo</a>
+      <a href="#kids" data-cursor="hover">Kids</a>
+      <a href="#schedule" data-cursor="hover">Horario</a>
+      <a href="#contact" data-cursor="hover">Contacto</a>
+    </nav>
+    <a href="https://web.bewe.co/ced-gym" target="_blank" rel="noopener" class="btn btn--primary nav__cta" data-cursor="hover">
+      <span>Reservar</span>
+      <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <button class="nav__burger" id="burger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+
+  <!-- MOBILE MENU -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#services">Servicios</a>
+    <a href="#football">Deportivo</a>
+    <a href="#kids">Kids</a>
+    <a href="#schedule">Horario</a>
+    <a href="#contact">Contacto</a>
+    <a href="https://web.bewe.co/ced-gym" target="_blank" rel="noopener" class="btn btn--primary">Reservar ahora</a>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero__bg">
+      <div class="hero__gradient"></div>
+      <div class="hero__sparks" id="sparks"></div>
+    </div>
+
+    <div class="hero__inner">
+      <div class="hero__content">
+        <h1 class="hero__title">
+          <span class="line"><span data-split>FÁBRICA <em class="hero__de">de</em></span></span>
+          <span class="line"><span class="flame" data-split>MONSTRUOS</span></span>
+        </h1>
+
+        <p class="hero__sub reveal" data-reveal>
+          Centro de entrenamiento deportivo. Aquí se viene a <strong>construir un monstruo</strong>, no a pasar el rato.
+        </p>
+
+        <div class="hero__cta reveal" data-reveal>
+          <a href="https://web.bewe.co/ced-gym" target="_blank" rel="noopener" class="btn btn--primary" data-cursor="hover">
+            Reservar
+            <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </a>
+          <a href="#services" class="btn btn--ghost" data-cursor="hover">
+            Servicios
+          </a>
+        </div>
+
+      </div>
+
+      <div class="hero__logo">
+        <div class="hero__logo-glow"></div>
+        <img src="assets/logos.png" alt="CED-GYM Logo" class="hero__logo-img" onerror="this.parentElement.classList.add('hero__logo--fallback')" />
+        <div class="hero__logo-fallback">
+          <svg viewBox="0 0 200 200" width="100%" height="100%">
+            <circle cx="100" cy="100" r="90" fill="none" stroke="url(#grad)" stroke-width="4"/>
+            <circle cx="100" cy="100" r="75" fill="none" stroke="#b0b0b0" stroke-width="2" stroke-dasharray="4 4"/>
+            <text x="100" y="108" text-anchor="middle" fill="#fff" font-family="Anton" font-size="28" letter-spacing="2">CED·GYM</text>
+            <defs>
+              <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ff3d00"/>
+                <stop offset="100%" stop-color="#ffb300"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- FLOATING SOCIAL BUTTONS -->
+  <aside class="social-float" aria-label="Redes sociales">
+    <a href="https://instagram.com/ced.gym.chih" target="_blank" rel="noopener" class="social-float__btn" aria-label="Instagram" data-cursor="hover">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="5"/>
+        <circle cx="12" cy="12" r="4"/>
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor"/>
+      </svg>
+      <span>Instagram</span>
+    </a>
+    <a href="https://maps.app.goo.gl/hjCPfR18PnDXEFqr7" target="_blank" rel="noopener" class="social-float__btn" aria-label="Google Maps" data-cursor="hover">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s-8-7.5-8-13a8 8 0 0116 0c0 5.5-8 13-8 13z"/>
+        <circle cx="12" cy="9" r="3"/>
+      </svg>
+      <span>Maps</span>
+    </a>
+    <a href="https://wa.me/526141970660" target="_blank" rel="noopener" class="social-float__btn" aria-label="WhatsApp" data-cursor="hover">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+      </svg>
+      <span>WhatsApp</span>
+    </a>
+  </aside>
+
+  <!-- MARQUEE -->
+  <section class="marquee" aria-hidden="true">
+    <div class="marquee__track">
+      <span>UNLEASH THE BEAST</span><span class="marquee__dot">•</span>
+      <span>FÁBRICA DE MONSTRUOS</span><span class="marquee__dot">•</span>
+      <span>NO EXCUSES</span><span class="marquee__dot">•</span>
+      <span>POWERLIFTING</span><span class="marquee__dot">•</span>
+      <span>FUNCIONAL</span><span class="marquee__dot">•</span>
+      <span>HYROX</span><span class="marquee__dot">•</span>
+      <span>UNLEASH THE BEAST</span><span class="marquee__dot">•</span>
+      <span>FÁBRICA DE MONSTRUOS</span><span class="marquee__dot">•</span>
+      <span>NO EXCUSES</span><span class="marquee__dot">•</span>
+      <span>POWERLIFTING</span><span class="marquee__dot">•</span>
+      <span>FUNCIONAL</span><span class="marquee__dot">•</span>
+      <span>HYROX</span><span class="marquee__dot">•</span>
+    </div>
+  </section>
+
+  <!-- INTRO -->
+  <section class="intro">
+    <div class="container">
+      <div class="intro__grid">
+        <div class="intro__label reveal" data-reveal>
+          <span class="label-txt">Quiénes somos</span>
+        </div>
+        <div class="intro__body">
+          <h2 class="h2 reveal" data-reveal>
+            No vendemos memberships.<br />
+            Construimos <span class="outline">atletas</span>.
+          </h2>
+          <p class="intro__text reveal" data-reveal>
+            CED-GYM es un centro de entrenamiento deportivo en Chihuahua. Somos coaches
+            certificados, programas reales, y una comunidad que entrena en serio.
+            Desde deportistas amateurs hasta preparación física de élite para jugadores
+            de fútbol americano, powerlifting y HYROX.
+          </p>
+          <div class="intro__pills reveal" data-reveal>
+            <span class="pill">Coaches certificados</span>
+            <span class="pill">Planes personalizados</span>
+            <span class="pill">Open 6 días</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="services" id="services">
+    <div class="container">
+      <header class="section-head">
+        <h2 class="h2 reveal" data-reveal>Disciplinas que <span class="flame">destruyen</span> límites</h2>
+      </header>
+
+      <div class="services__grid">
+        <article class="service reveal" data-reveal data-tilt>
+          <span class="service__num">01</span>
+          <div class="service__icon">
+            <svg viewBox="0 0 64 64" width="48" height="48"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M8 32h8m32 0h8M20 22v20M44 22v20M28 16v32M36 16v32"/></svg>
+          </div>
+          <h3>Entrenamiento Funcional</h3>
+          <p>Movimiento, fuerza, explosividad. Prepara tu cuerpo para lo que sea.</p>
+          <span class="service__arrow">→</span>
+        </article>
+
+        <article class="service reveal" data-reveal data-tilt>
+          <span class="service__num">02</span>
+          <div class="service__icon">
+            <svg viewBox="0 0 64 64" width="48" height="48"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M4 32h8m40 0h8M12 20h6v24h-6zm34 0h6v24h-6zM18 32h28"/></svg>
+          </div>
+          <h3>Pesas</h3>
+          <p>Hipertrofia, tonificación y ganancia de masa muscular con técnica pro.</p>
+          <span class="service__arrow">→</span>
+        </article>
+
+        <article class="service reveal service--hot" data-reveal data-tilt>
+          <span class="service__tag">Especialidad</span>
+          <span class="service__num">03</span>
+          <div class="service__icon">
+            <svg viewBox="0 0 64 64" width="48" height="48"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M16 44l8-8M40 28l8-8M24 36l-8-8m16 16l8 8m-24-8l12-12 12 12M22 22l20 20"/></svg>
+          </div>
+          <h3>Powerlifting</h3>
+          <p>Sentadilla, press banca, peso muerto. Programación basada en ciencia.</p>
+          <span class="service__arrow">→</span>
+        </article>
+
+        <article class="service reveal" data-reveal data-tilt>
+          <span class="service__num">04</span>
+          <div class="service__icon">
+            <svg viewBox="0 0 64 64" width="48" height="48"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M32 4l8 14h14l-11 10 4 14-15-8-15 8 4-14L10 18h14z"/></svg>
+          </div>
+          <h3>Workout / HYROX</h3>
+          <p>Circuitos de alta intensidad. Resistencia, fuerza, velocidad.</p>
+          <span class="service__arrow">→</span>
+        </article>
+
+        <article class="service reveal" data-reveal data-tilt>
+          <span class="service__num">05</span>
+          <div class="service__icon">
+            <svg viewBox="0 0 64 64" width="48" height="48"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 20c0-6 6-10 12-10s8 4 8 8c0 8-10 10-10 18m10 14v.01M22 36c0 12 10 20 22 20"/></svg>
+          </div>
+          <h3>Nutrición</h3>
+          <p>Planes alimenticios alineados a tu objetivo y tu entrenamiento.</p>
+          <span class="service__arrow">→</span>
+        </article>
+
+        <article class="service reveal" data-reveal data-tilt>
+          <span class="service__num">06</span>
+          <div class="service__icon">
+            <svg viewBox="0 0 64 64" width="48" height="48"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M32 56C16 44 6 32 6 22a12 12 0 0126-8 12 12 0 0126 8c0 10-10 22-26 34z"/></svg>
+          </div>
+          <h3>Rehabilitación</h3>
+          <p>Recuperación de lesiones y movilidad supervisada por profesionales.</p>
+          <span class="service__arrow">→</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ELITE BANNER / FOOTBALL -->
+  <section class="elite" id="football">
+    <div class="elite__bg">
+      <div class="elite__grid-pattern"></div>
+      <div class="elite__glow elite__glow--1"></div>
+      <div class="elite__glow elite__glow--2"></div>
+      <div class="elite__field-lines" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="elite__tag reveal" data-reveal>
+        <span class="elite__tag-dot"></span>
+        PROGRAMA ÉLITE
+      </div>
+
+      <header class="elite__head">
+        <h2 class="elite__title">
+          <span class="line"><span data-split>PREPARACIÓN</span></span>
+          <span class="line"><span data-split>FÍSICA</span> <span class="flame" data-split>ÉLITE</span></span>
+        </h2>
+        <p class="elite__kicker reveal" data-reveal>
+          Para jugadores de <strong>fútbol americano</strong>. Entrena como atleta completo:
+          fuerza, potencia, velocidad, resistencia y agilidad en un solo programa.
+        </p>
+
+        <div class="elite__chips reveal" data-reveal>
+          <span class="chip chip--flame">Football Americano</span>
+          <span class="chip">HYROX</span>
+          <span class="chip">Powerlifting</span>
+          <span class="chip">Functional Training</span>
+        </div>
+      </header>
+
+      <div class="elite__grid">
+        <!-- BLOCK: Qué trabajamos -->
+        <article class="elite__block reveal" data-reveal>
+          <header class="elite__block-head">
+            <span class="elite__block-icon">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+              </svg>
+            </span>
+            <h3>Qué trabajamos</h3>
+          </header>
+          <ul class="elite__list">
+            <li><strong>Fuerza máxima</strong> — Powerlifting para ganar potencia real en el campo.</li>
+            <li><strong>Resistencia HYROX</strong> — Capacidad anaeróbica y resistencia funcional.</li>
+            <li><strong>Velocidad &amp; Explosividad</strong> — Cambios de dirección y reacción.</li>
+            <li><strong>Prevención de lesiones</strong> — Movilidad específica por posición.</li>
+            <li><strong>Acondicionamiento total</strong> — Pretemporada y temporada.</li>
+          </ul>
+        </article>
+
+        <!-- BLOCK: Resultados -->
+        <article class="elite__block elite__block--accent reveal" data-reveal>
+          <header class="elite__block-head">
+            <span class="elite__block-icon elite__block-icon--flame">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4-6.5 4 2-7L2 9h7z"/>
+              </svg>
+            </span>
+            <h3>Resultados reales</h3>
+          </header>
+          <ul class="elite__checks">
+            <li><span>✓</span> Más fuerza en los choques</li>
+            <li><span>✓</span> Mayor velocidad en rutas y salidas</li>
+            <li><span>✓</span> Potencia en piernas y tren superior</li>
+            <li><span>✓</span> Aguantar 4 cuartos sin bajar intensidad</li>
+            <li><span>✓</span> Mejor recuperación entre jugadas</li>
+          </ul>
+        </article>
+
+        <!-- BLOCK: Coach -->
+        <article class="elite__block elite__block--coach reveal" data-reveal>
+          <div class="elite__coach-badge">COACH</div>
+          <div class="elite__coach-name">
+            <span class="elite__coach-first">NAYO</span>
+            <span class="elite__coach-last flame">REVILLA</span>
+          </div>
+          <p class="elite__coach-role">Titular · Preparación deportiva</p>
+          <div class="elite__stats">
+            <div>
+              <span class="elite__stat-num" data-count="10">0</span><span class="elite__stat-plus">+</span>
+              <span class="elite__stat-label">Años exp.</span>
+            </div>
+            <div>
+              <span class="elite__stat-num" data-count="100">0</span><span class="elite__stat-plus">+</span>
+              <span class="elite__stat-label">Atletas</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- BLOCK: CTA -->
+        <article class="elite__cta reveal" data-reveal>
+          <div class="elite__cta-body">
+            <span class="elite__cta-mini">PROGRAMA 2026</span>
+            <h3 class="elite__cta-title">
+              <span>LLEVA TU JUEGO</span>
+              <span class="flame">AL SIGUIENTE NIVEL</span>
+            </h3>
+            <div class="elite__schedule">
+              <div><span>LUN — VIE</span><strong>7:00 AM — 1:00 PM</strong></div>
+              <div><span>TARDES</span><strong>4:00 PM — 9:00 PM</strong></div>
+            </div>
+            <div class="elite__actions">
+              <a href="https://web.bewe.co/ced-gym" target="_blank" rel="noopener" class="btn btn--primary">
+                Reservar sesión
+                <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </a>
+              <a href="https://wa.me/526141970660?text=Hola!%20Quiero%20info%20del%20programa%20élite%20para%20football" target="_blank" rel="noopener" class="btn btn--ghost">
+                Preguntar por WhatsApp
+              </a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- KIDS -->
+  <section class="kids" id="kids">
+    <div class="container">
+      <div class="kids__grid">
+        <div class="kids__text">
+          <h2 class="h2 reveal" data-reveal>Los buenos hábitos empiezan <span class="outline">chiquitos</span></h2>
+          <p class="reveal" data-reveal>
+            Maestros certificados para niños. Motívalos a moverse, a jugar y a hacer
+            ejercicio en un ambiente seguro y profesional.
+          </p>
+          <div class="kids__features reveal" data-reveal>
+            <div><span>✓</span> Maestros certificados</div>
+            <div><span>✓</span> Grupos por edad</div>
+            <div><span>✓</span> Lun a Vie PM / 7PM</div>
+          </div>
+          <a href="https://wa.me/526141970660" target="_blank" rel="noopener" class="btn btn--ghost" data-cursor="hover">Pregunta por el programa</a>
+        </div>
+        <div class="kids__visual reveal" data-reveal>
+          <div class="kids__bg"></div>
+
+          <!-- Poster card: class schedule -->
+          <div class="kids__card kids__card--board">
+            <div class="kids__card-head">
+              <span class="kids__card-tag">CLASES · 2026</span>
+              <span class="kids__card-dot"></span>
+            </div>
+            <div class="kids__board">
+              <div class="kids__row">
+                <div class="kids__row-left">
+                  <span class="kids__row-age">6–9</span>
+                  <span class="kids__row-lbl">Mini Ceds</span>
+                </div>
+                <div class="kids__row-right">
+                  <span>Lun · Mié · Vie</span>
+                  <strong>18:00 — 19:00</strong>
+                </div>
+              </div>
+              <div class="kids__row">
+                <div class="kids__row-left">
+                  <span class="kids__row-age">10–13</span>
+                  <span class="kids__row-lbl">Junior</span>
+                </div>
+                <div class="kids__row-right">
+                  <span>Mar · Jue</span>
+                  <strong>19:00 — 20:00</strong>
+                </div>
+              </div>
+              <div class="kids__row">
+                <div class="kids__row-left">
+                  <span class="kids__row-age">14–17</span>
+                  <span class="kids__row-lbl">Teens</span>
+                </div>
+                <div class="kids__row-right">
+                  <span>Lun — Vie</span>
+                  <strong>20:00 — 21:00</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating activity chips -->
+          <div class="kids__chip kids__chip--1">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 9l6-1z"/></svg>
+            <span>Juego &amp; coordinación</span>
+          </div>
+          <div class="kids__chip kids__chip--2">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20l4-9 3 5 5-9"/><path d="M3 20h18"/></svg>
+            <span>Técnica deportiva</span>
+          </div>
+
+          <!-- Certified badge -->
+          <div class="kids__badge">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2l3 7 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/>
+            </svg>
+            <div>
+              <strong>Maestros</strong>
+              <span>Certificados</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCHEDULE / BIG QUOTE -->
+  <section class="schedule" id="schedule">
+    <div class="container">
+      <div class="schedule__big">
+        <div class="schedule__row reveal" data-reveal>
+          <span class="schedule__day">LUN</span>
+          <span class="schedule__time">07:00 — 12:00 · 16:00 — 21:00</span>
+        </div>
+        <div class="schedule__row reveal" data-reveal>
+          <span class="schedule__day">MAR</span>
+          <span class="schedule__time">07:00 — 12:00 · 16:00 — 21:00</span>
+        </div>
+        <div class="schedule__row reveal" data-reveal>
+          <span class="schedule__day">MIÉ</span>
+          <span class="schedule__time">07:00 — 12:00 · 16:00 — 21:00</span>
+        </div>
+        <div class="schedule__row reveal" data-reveal>
+          <span class="schedule__day">JUE</span>
+          <span class="schedule__time">07:00 — 12:00 · 16:00 — 21:00</span>
+        </div>
+        <div class="schedule__row reveal" data-reveal>
+          <span class="schedule__day">VIE</span>
+          <span class="schedule__time">07:00 — 12:00 · 16:00 — 21:00</span>
+        </div>
+        <div class="schedule__row schedule__row--closed reveal" data-reveal>
+          <span class="schedule__day">SÁB</span>
+          <span class="schedule__time">Consultar</span>
+        </div>
+        <div class="schedule__row schedule__row--closed reveal" data-reveal>
+          <span class="schedule__day">DOM</span>
+          <span class="schedule__time">Cerrado</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOCATION / MAPS -->
+  <section class="location" id="location">
+    <div class="container">
+      <div class="location__wrap">
+        <div class="location__info">
+          <span class="location__tag reveal" data-reveal>
+            <span class="location__tag-dot"></span>
+            Ubicación
+          </span>
+          <h2 class="h2 reveal" data-reveal>
+            Te esperamos en <span class="flame">Chihuahua</span>
+          </h2>
+          <p class="location__desc reveal" data-reveal>
+            Encuéntranos en la Deportiva, Av. Tecnológico, Santo Niño. Estacionamiento amplio y acceso directo.
+          </p>
+
+          <div class="location__details reveal" data-reveal>
+            <div class="location__detail">
+              <div class="location__detail-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div>
+                <span>Dirección</span>
+                <strong>Av. Tecnológico, Santo Niño<br/>Deportiva, Chihuahua</strong>
+              </div>
+            </div>
+            <div class="location__detail">
+              <div class="location__detail-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div>
+                <span>Horario</span>
+                <strong>Lun — Vie<br/>7:00 — 13:00 · 16:00 — 21:00</strong>
+              </div>
+            </div>
+            <div class="location__detail">
+              <div class="location__detail-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+              </div>
+              <div>
+                <span>Contacto</span>
+                <strong>614 197 0660</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="location__actions reveal" data-reveal>
+            <a href="https://maps.app.goo.gl/hjCPfR18PnDXEFqr7" target="_blank" rel="noopener" class="btn btn--primary">
+              Cómo llegar
+              <svg viewBox="0 0 24 24" width="16" height="16"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+            <a href="tel:+526141970660" class="btn btn--ghost">Llamar ahora</a>
+          </div>
+        </div>
+
+        <div class="location__map reveal" data-reveal>
+          <div class="location__map-frame">
+            <iframe
+              src="https://www.google.com/maps?q=CED+Gym+Av.+Tecnologico+Santo+Nino+Chihuahua&output=embed&z=16"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              allowfullscreen=""
+              title="Ubicación CED-GYM en Google Maps"></iframe>
+            <div class="location__map-overlay"></div>
+            <div class="location__pin">
+              <div class="location__pin-ring"></div>
+              <div class="location__pin-dot">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 0C7 0 3 4 3 9c0 7 9 15 9 15s9-8 9-15c0-5-4-9-9-9zm0 12a3 3 0 110-6 3 3 0 010 6z"/></svg>
+              </div>
+            </div>
+            <a href="https://maps.app.goo.gl/hjCPfR18PnDXEFqr7" target="_blank" rel="noopener" class="location__map-cta">
+              <span>Abrir en Google Maps</span>
+              <svg viewBox="0 0 24 24" width="14" height="14"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M7 7h10v10"/></svg>
+            </a>
+          </div>
+          <div class="location__map-label">
+            <strong>CED-GYM</strong>
+            <span>Fábrica de Monstruos · Chihuahua</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS / SOCIAL PROOF -->
+  <section class="social">
+    <div class="container">
+      <header class="section-head section-head--center">
+        <h2 class="h2 reveal" data-reveal>Lo que dice la <span class="flame">manada</span></h2>
+      </header>
+
+      <div class="social__grid">
+        <blockquote class="social__card reveal" data-reveal>
+          <div class="social__stars">★★★★★</div>
+          <p>"Los coaches son de los mejores en Chihuahua. Llevo 8 meses y no me he vuelto a lesionar."</p>
+          <footer>— Miguel A.</footer>
+        </blockquote>
+        <blockquote class="social__card reveal" data-reveal>
+          <div class="social__stars">★★★★★</div>
+          <p>"Llevo a mi hijo a las clases de niños y le encanta. Los maestros saben lo que hacen."</p>
+          <footer>— Ana P.</footer>
+        </blockquote>
+        <blockquote class="social__card reveal" data-reveal>
+          <div class="social__stars">★★★★★</div>
+          <p>"Powerlifting con Nayo. PRs cada mes, programación real. Otro nivel."</p>
+          <footer>— Jorge R.</footer>
+        </blockquote>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA / CONTACT -->
+  <section class="cta" id="contact">
+    <div class="cta__bg"></div>
+    <div class="container">
+      <div class="cta__wrap">
+        <h2 class="cta__title">
+          <span data-split>ES</span>
+          <span data-split>HORA</span>
+          <span data-split class="flame">DE</span>
+          <span data-split class="flame">ENTRENAR</span>
+        </h2>
+        <p class="cta__sub reveal" data-reveal>Reserva tu primera sesión. Conoce las instalaciones. Rompe tu primer PR.</p>
+        <a href="https://web.bewe.co/ced-gym" target="_blank" rel="noopener" class="btn btn--primary btn--xl reveal" data-cursor="hover" data-reveal>
+          Reservar ahora
+          <svg viewBox="0 0 24 24" width="20" height="20"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+
+      <div class="contact-grid">
+        <a href="tel:+526141970660" class="contact-card reveal" data-reveal data-cursor="hover">
+          <span class="contact-card__label">Teléfono</span>
+          <strong>614 197 0660</strong>
+        </a>
+        <a href="https://instagram.com/ced.gym.chih" target="_blank" rel="noopener" class="contact-card reveal" data-reveal data-cursor="hover">
+          <span class="contact-card__label">Instagram</span>
+          <strong>@ced.gym.chih</strong>
+        </a>
+        <a href="https://wa.me/526141970660" target="_blank" rel="noopener" class="contact-card reveal" data-reveal data-cursor="hover">
+          <span class="contact-card__label">WhatsApp</span>
+          <strong>Escríbenos</strong>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <div class="footer__brand">
+          <img src="assets/logos.png" alt="CED-GYM" class="footer__logo" onerror="this.style.display='none'" />
+          <div>
+            <strong>CED·GYM</strong>
+            <span>Fábrica de Monstruos · Chihuahua</span>
+          </div>
+        </div>
+        <div class="footer__nav">
+          <a href="#services">Servicios</a>
+          <a href="#football">Deportivo</a>
+          <a href="#kids">Kids</a>
+          <a href="#schedule">Horario</a>
+          <a href="#contact">Contacto</a>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span>© <span id="year"></span> CED-GYM · Todos los derechos reservados</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

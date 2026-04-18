@@ -1,0 +1,16 @@
+GUARDA TU LOGO AQUI
+===================
+
+1. Guarda la imagen del logo del gorila (preferentemente sin fondo / PNG transparente)
+   con este nombre exacto:
+
+       logo.png
+
+2. Colocalo en esta misma carpeta:  assets/logo.png
+
+3. Si tienes una version sin fondo (solo el gorila con el circulo negro),
+   quedara mucho mejor porque el fondo de la web es negro.
+
+4. Tamano recomendado: minimo 600x600 px, cuadrado.
+
+Si no pones nada, la web mostrara un logo de respaldo circular con el texto CED-GYM.
