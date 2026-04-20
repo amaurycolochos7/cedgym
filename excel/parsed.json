@@ -1,0 +1,517 @@
+{
+  "workouts": {
+    "hombre_2025": {
+      "Pecho Y Triceps": [
+        {
+          "name": "Bicicleta",
+          "sets_reps": "20 min",
+          "notes": ""
+        },
+        {
+          "name": "PRES DE BANCO",
+          "sets_reps": "15,12,10,8",
+          "notes": ""
+        },
+        {
+          "name": "PRES DE BANCO INCLINADO",
+          "sets_reps": "15,12,10,8",
+          "notes": ""
+        },
+        {
+          "name": "PRES DE BANCO DECLINADO CON MANCUERNAS",
+          "sets_reps": "4X15",
+          "notes": ""
+        },
+        {
+          "name": "FLYS",
+          "sets_reps": "4X25",
+          "notes": ""
+        },
+        {
+          "name": "FONDOS DE EN BANCO",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "PUSH 3 POSICIONES",
+          "sets_reps": "4X10",
+          "notes": ""
+        },
+        {
+          "name": "PATADA DE MULA",
+          "sets_reps": "4X15",
+          "notes": ""
+        },
+        {
+          "name": "PRES FRANCES",
+          "sets_reps": "15,12,10, 8 aumentando de peso",
+          "notes": ""
+        },
+        {
+          "name": "PULL DOWN",
+          "sets_reps": "15,12,10,8",
+          "notes": ""
+        },
+        {
+          "name": "PATADA DE MULA CON TRX",
+          "sets_reps": "4X15 AUMENTANDO EL PESO",
+          "notes": ""
+        },
+        {
+          "name": "Abdominales",
+          "sets_reps": "100",
+          "notes": ""
+        }
+      ],
+      "Pierna": [
+        {
+          "name": "Steps con mancuera",
+          "sets_reps": "3-1min",
+          "notes": ""
+        },
+        {
+          "name": "SENTADILLA",
+          "sets_reps": "15,12,10,8",
+          "notes": ""
+        },
+        {
+          "name": "DESPLANTES",
+          "sets_reps": "4X20",
+          "notes": ""
+        },
+        {
+          "name": "PRENSA PIERNAS JUNTAS",
+          "sets_reps": "4X15",
+          "notes": ""
+        },
+        {
+          "name": "Sentadilla Isometrica",
+          "sets_reps": "3x1min",
+          "notes": ""
+        },
+        {
+          "name": "Peso Muerto Sumo",
+          "sets_reps": "3x15",
+          "notes": ""
+        },
+        {
+          "name": "SENTADILLA HACK",
+          "sets_reps": "3x25",
+          "notes": ""
+        },
+        {
+          "name": "PANTORIILLA 3 POSICIONES",
+          "sets_reps": "4X25",
+          "notes": ""
+        },
+        {
+          "name": "ABS",
+          "sets_reps": "100",
+          "notes": ""
+        },
+        {
+          "name": "Hiperextensiones",
+          "sets_reps": "4-25",
+          "notes": ""
+        },
+        {
+          "name": "Remo en maquina",
+          "sets_reps": "6Pesadas-12Livianas 4 series",
+          "notes": ""
+        },
+        {
+          "name": "Jalon al frente",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "jalon invertido",
+          "sets_reps": "4-15",
+          "notes": ""
+        }
+      ],
+      "Espalda Y Hombro": [
+        {
+          "name": "Press militar en aparato",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "Laterales",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "Frontal C/Disco",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "Circulos C/Mancuerna adelante y atrás",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "Abdominales",
+          "sets_reps": "100",
+          "notes": ""
+        }
+      ],
+      "Brazo, Antebrazo Y Trapecio": [
+        {
+          "name": "Bicicleta",
+          "sets_reps": "10 min",
+          "notes": ""
+        },
+        {
+          "name": "CURL BICEPS",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "CURL MARTILLO",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "PREDICADOR",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "CURL CONCENTRADO",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "SUPINACION",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "PRONACION",
+          "sets_reps": "4-20",
+          "notes": ""
+        },
+        {
+          "name": "ISOMETRICO SOSTENIENDO MANCUERNAS",
+          "sets_reps": "4X1.30MIN.",
+          "notes": ""
+        },
+        {
+          "name": "ABDOMINALES",
+          "sets_reps": "100",
+          "notes": ""
+        }
+      ],
+      "Entrenamiento Funcional": [
+        {
+          "name": "VOLTEAR LA LLANTA",
+          "sets_reps": "3X15",
+          "notes": ""
+        },
+        {
+          "name": "GOLPEO CON MARRO",
+          "sets_reps": "3X20",
+          "notes": ""
+        },
+        {
+          "name": "COORDINACION CON ESCALERA",
+          "sets_reps": "10 EJERCICIOS DIFERENTES",
+          "notes": ""
+        },
+        {
+          "name": "YOGUIS CON VAYAS",
+          "sets_reps": "DE FRENTE DE LADO Y EN DEZLIS",
+          "notes": ""
+        },
+        {
+          "name": "MONTAIN CLIMBERS",
+          "sets_reps": "4X1MIN.",
+          "notes": ""
+        },
+        {
+          "name": "PLANK",
+          "sets_reps": "4X1MIN.",
+          "notes": ""
+        },
+        {
+          "name": "ABS",
+          "sets_reps": "100",
+          "notes": ""
+        }
+      ]
+    },
+    "mujer_catia_francia": {
+      "Francia Pavon": [
+        {
+          "name": "OBJETIVO RENDIMIENTO AUMENTAR DE MUSCULO",
+          "sets_reps": "COACH M.A. SAMUEL JEFFERY",
+          "notes": ""
+        }
+      ],
+      "Cuadriceps": [
+        {
+          "name": "Bicicleta",
+          "sets_reps": "20 min",
+          "notes": ""
+        },
+        {
+          "name": "Desplante bulgaro",
+          "sets_reps": "4X 12",
+          "notes": ""
+        },
+        {
+          "name": "Extenciones",
+          "sets_reps": "10 PESADAS 1O LIVIANAS  SUBE CONTROLADO Y APRIETA ARRIBA 1 SEGUNDO",
+          "notes": ""
+        },
+        {
+          "name": "saltos desplantes",
+          "sets_reps": "4x 20",
+          "notes": ""
+        },
+        {
+          "name": "sentadilla frontal",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "DESPLANTE ISOMETRICO",
+          "sets_reps": "4-1min CON CADA PIERNA",
+          "notes": ""
+        },
+        {
+          "name": "Prensa piernas cerradas",
+          "sets_reps": "15,12,10,8 aumentando de peso en cada serie",
+          "notes": ""
+        },
+        {
+          "name": "Sentadilla Isometrica",
+          "sets_reps": "4-1min TALONES ARRIBA",
+          "notes": ""
+        },
+        {
+          "name": "Abdominales",
+          "sets_reps": "100",
+          "notes": ""
+        }
+      ],
+      "Brazo": [
+        {
+          "name": "Bicicleta",
+          "sets_reps": "10 min",
+          "notes": ""
+        },
+        {
+          "name": "CURL 21",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "CURL MARTILLO EN 21",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "PREDICADOR 3 POSICIONES",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "CURL CONCENTRADO",
+          "sets_reps": "4-15 SUBE LENTO Y APRIETA ARRIBA",
+          "notes": ""
+        },
+        {
+          "name": "PRES FRANCES",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "FONDOS  EN BANCO PARALELOS",
+          "sets_reps": "4-20",
+          "notes": ""
+        },
+        {
+          "name": "Abdominales",
+          "sets_reps": "100",
+          "notes": ""
+        }
+      ],
+      "Femoral Y Pompi": [
+        {
+          "name": "SENTADILLAS PROFUNDA PROPIO PESO",
+          "sets_reps": "100",
+          "notes": ""
+        },
+        {
+          "name": "CURL DE PIERNA ACOSTADO",
+          "sets_reps": "10 PESADAS 1O LIVIANAS",
+          "notes": ""
+        },
+        {
+          "name": "PESO MUERTO SUMO",
+          "sets_reps": "4-20",
+          "notes": ""
+        },
+        {
+          "name": "REVERENCIAS",
+          "sets_reps": "4-12",
+          "notes": ""
+        },
+        {
+          "name": "CURL FEMORAL SENTADO",
+          "sets_reps": "10 PESADAS 1O LIVIANAS",
+          "notes": ""
+        },
+        {
+          "name": "SALTOS HACIENDO SENTADILLA",
+          "sets_reps": "4-10",
+          "notes": ""
+        },
+        {
+          "name": "PATADA ATRÁS Y  LATERAL CON POLOEA",
+          "sets_reps": "4-12",
+          "notes": ""
+        },
+        {
+          "name": "PATADA DE MULA PARA GLUTEO",
+          "sets_reps": "10 PESADAS 1O LIVIANAS",
+          "notes": ""
+        },
+        {
+          "name": "PANTORRILLA",
+          "sets_reps": "4-25",
+          "notes": ""
+        },
+        {
+          "name": "PUENTES (pompi)",
+          "sets_reps": "15-12-10-8  AUMENTANDO DE PESO",
+          "notes": ""
+        },
+        {
+          "name": "Hiperextensiones",
+          "sets_reps": "4-25",
+          "notes": ""
+        },
+        {
+          "name": "Remo en maquina con barra \"T\"",
+          "sets_reps": "10Pesadas-10 Livianas 4 series",
+          "notes": ""
+        },
+        {
+          "name": "JALON CON ANGULO",
+          "sets_reps": "4-15",
+          "notes": ""
+        }
+      ],
+      "Espalda Y Hombro": [
+        {
+          "name": "PRESMILITAR CON MANCUERNAS",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "FRONTAL CON DISCO",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "LATERALES POLIQUIN",
+          "sets_reps": "4-15",
+          "notes": ""
+        },
+        {
+          "name": "Abdominales",
+          "sets_reps": "100",
+          "notes": ""
+        }
+      ],
+      "Pierna": [
+        {
+          "name": "SETADILLA",
+          "sets_reps": "10,8,6,3,2,1 HACER UNA FALLA AL FINAL CON PESO LIGERO",
+          "notes": ""
+        },
+        {
+          "name": "PRENSA",
+          "sets_reps": "ABIERTA Y CERRADA 4-10",
+          "notes": ""
+        },
+        {
+          "name": "ABDUCTORES",
+          "sets_reps": "3X8",
+          "notes": ""
+        },
+        {
+          "name": "ADUCTORES",
+          "sets_reps": "3X 8",
+          "notes": ""
+        },
+        {
+          "name": "Desplates laterales",
+          "sets_reps": "3X8",
+          "notes": ""
+        }
+      ],
+      "Pecho": [
+        {
+          "name": "Pres de banco",
+          "sets_reps": "4x15",
+          "notes": ""
+        },
+        {
+          "name": "Pres de banco inclinado",
+          "sets_reps": "4x15",
+          "notes": ""
+        },
+        {
+          "name": "Pres de banco declinado",
+          "sets_reps": "4x15",
+          "notes": ""
+        },
+        {
+          "name": "Preck deck",
+          "sets_reps": "4x15",
+          "notes": ""
+        }
+      ]
+    }
+  },
+  "meal_plan_paty": {
+    "AL DESPERTAR": [
+      "2 VASOS DE AGUA 400 GRAMOS, VITAMINA C, 300 ml de te de manzanilla con canela, con stevia y una pizca de bicarbonato\n1 grs vit c",
+      "1/2 SERVICIO DE PROTEINA, 1TAZA DE FRESAS CONGELADAS, 1 PLATANO 1 CUCHARADAS DE AVENA"
+    ],
+    "DEZAYUNO": [
+      "5 CLARAS HUEVOS",
+      "1/2 LATA DE ATUN",
+      "2 TORTILLAS DE MAIZ",
+      "1 OMEGA 1/2 TORONJA",
+      "1 PAPA AL VAPOR 1 NARANJA , AGUA O JUGO DE FRUTAS"
+    ],
+    "MEDIA MAÑANA": [
+      "1 LATAS DE ATUN EN AGUA, MEDIO AGUACATE, 2 TOSTADAS, 2 HOJAS DE ESPINACAS",
+      "1/2  TAZA DE ARROZ CON LECHE",
+      "MEDIA TORONJA",
+      "2 VASOS DE AGUA DE FRUTA NATURAL"
+    ],
+    "COMIDA": [
+      "200 GR. DE CARNE, POLLO, PESCADO, CEBOLLA, CHILE MORRON, MEDIO AGUACATE, 8 ALMENDRAS",
+      "2 TAZAS DE VERDURA, 3 TORTILLAS DE MAIZ",
+      "1 PERA"
+    ],
+    "TARDE  ANTES DE ENTRENAR": [
+      "1 TAZA DE YOGURT GRIEGO DE FRUTA , 1 REBANADA DE PAI DE MANZANA, 1 SERVICIO DE CREATIA",
+      "1/2  PLATANO"
+    ],
+    "CENA": [
+      "100 GRAMOS DE SALMON",
+      "1 PLATO DE CEREAL ALL BRAN",
+      "1 PORCION DE PROTEINA PREAPARADA CON AGUA NATURAL",
+      "1 CAPSULA DE VITAMINA \"E\""
+    ],
+    "TOMAR 3 LITROS DE AGUA DIARIOS": []
+  }
+}

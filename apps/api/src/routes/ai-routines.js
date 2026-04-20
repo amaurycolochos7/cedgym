@@ -20,9 +20,32 @@ const FITNESS_GOALS = ['WEIGHT_LOSS', 'MUSCLE_GAIN', 'MAINTENANCE', 'STRENGTH', 
 const LEVELS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
 const LOCATIONS = ['GYM', 'HOME', 'BOTH'];
 
+// Tipo de usuario según la filosofía del Coach Samuel:
+//   ADULT    — adulto general (18-55)
+//   SENIOR   — adulto mayor (55+) — baja carga, alto control
+//   KID      — niño/juvenil (6-17) — funcional + peso corporal
+//   ATHLETE  — deportista de disciplina específica (fútbol, americano, etc.)
+const USER_TYPES = ['ADULT', 'SENIOR', 'KID', 'ATHLETE'];
+
+// Disciplinas del gym (si user_type=ATHLETE o quiere enfoque específico).
+const DISCIPLINES = [
+    'STRENGTH',      // Fuerza / hipertrofia
+    'HYROX',         // HYROX
+    'POWERLIFTING',  // Powerlifting (SBD)
+    'FUNCTIONAL',    // Entrenamiento funcional
+    'FOOTBALL_US',   // Fútbol americano
+    'FOOTBALL_SOCCER',
+    'BASKETBALL',
+    'TENNIS',
+    'BOXING',
+    'CROSSFIT',
+];
+
 const generateBody = z.object({
     objective: z.enum(FITNESS_GOALS).optional(),
     level: z.enum(LEVELS).optional(),
+    user_type: z.enum(USER_TYPES).optional(),
+    discipline: z.enum(DISCIPLINES).optional(),
     location: z.enum(LOCATIONS),
     days_per_week: z.number().int().min(2).max(6),
     available_equipment: z.array(z.string().trim().min(1).max(64)).max(30).optional(),
@@ -61,16 +84,41 @@ const aiResponseSchema = z.object({
 });
 
 // ── Prompt builders ───────────────────────────────────────────────
-const SYSTEM_PROMPT =
-    'Eres un entrenador personal certificado que genera rutinas de entrenamiento personalizadas. ' +
-    'Respondes SOLO con JSON válido siguiendo el esquema exacto proporcionado. ' +
-    'Tu tono es profesional pero cercano, como un coach mexicano experimentado. ' +
-    'Siempre respetas las lesiones del usuario y eliges ejercicios apropiados al nivel.';
+//
+// El system prompt clona la voz y método del Coach M.A. Samuel Oswaldo
+// Rodríguez Jeffery (CED·GYM, Chihuahua). Tricampeón mundial de
+// powerlifting, campeón nacional ONEFA, entrenador con +20 años en
+// alto rendimiento. Las frases-firma vienen de sus Excels de rutinas.
+const SYSTEM_PROMPT = `Eres el Coach M.A. Samuel Oswaldo Rodríguez Jeffery de CED·GYM en Chihuahua, México. Tricampeón mundial de powerlifting y campeón nacional de football americano con las Águilas UACH. Tienes más de 20 años formando atletas de alto rendimiento.
+
+Generas rutinas personalizadas para los socios del gym. Respondes SOLO con JSON válido siguiendo el esquema exacto proporcionado.
+
+TU MÉTODO (respeta siempre):
+- "No te preocupes por cargar mucho, preocúpate por hacerlo bien." — la técnica viene primero, el peso después.
+- Sube controlado y aprieta 1 segundo en la contracción.
+- Movimiento controlado sin impulso — nada de aventar pesos.
+- Progresión: aumentar peso cada serie (formato "15,12,10,8" con peso subiendo) o "10 pesadas / 10 livianas" para técnica.
+- Compuestos primero (sentadilla, peso muerto, press banco, remo), aislamiento después.
+- Piernas: siempre incluir trabajo isométrico y pliométrico (sentadilla isométrica, saltos desplantes).
+- Core al final del día (100 reps de abdominales como estándar).
+- Calentamiento con bicicleta o cardio ligero 10-20 min antes de trabajar peso.
+
+ADAPTACIÓN POR TIPO DE USUARIO:
+- ADULT (18-55): rutinas clásicas de hipertrofia/fuerza con compound lifts.
+- SENIOR (55+): máquinas > peso libre, baja carga, alta técnica, mayor descanso, énfasis en movilidad y core.
+- KID (6-17): entrenamiento funcional y peso corporal principalmente. Nada de cargas pesadas. Coordinación, agilidad y diversión.
+- ATHLETE: rutina específica para su deporte — football americano (fuerza + pliometría + HYROX), soccer (explosividad + cambios de dirección), básquet (salto vertical + core), tenis (rotación + hombro), etc.
+
+TONO: mexicano norteño, directo, de coach que lleva al atleta de la mano. Nada de inglés innecesario. Cuando pongas notas en los ejercicios, usa frases cortas tipo "sube lento y aprieta arriba", "espalda recta", "codos pegados al cuerpo".
+
+SEGURIDAD: si hay lesiones declaradas, NUNCA asignes ejercicios que las empeoren. Sustituye con alternativas seguras.`;
 
 function buildUserPrompt({
     days_per_week,
     objective,
     level,
+    user_type,
+    discipline,
     location,
     session_duration_min,
     available_equipment,
@@ -94,30 +142,45 @@ function buildUserPrompt({
         ? injuries.join(', ')
         : '(ninguna)';
     const notesStr = notes && notes.trim() ? notes.trim() : '(sin notas)';
+    const disciplineStr = discipline ? discipline : '(no aplica)';
 
-    return `Genera una rutina semanal de ${days_per_week} días para este atleta.
+    return `Genera una rutina semanal de ${days_per_week} días para este socio.
 
 PERFIL:
+- Tipo de usuario: ${user_type} (ADULT=adulto 18-55, SENIOR=55+, KID=6-17, ATHLETE=deportista)
+- Disciplina/Deporte: ${disciplineStr}
 - Objetivo: ${objective}
 - Nivel: ${level}
-- Ubicación: ${location} (GYM = acceso completo a máquinas y pesos, HOME = solo lo que tenga en casa, BOTH = alterna)
+- Ubicación: ${location} (GYM = acceso completo a máquinas + pesos + cardio; HOME = solo lo que tenga en casa; BOTH = alterna)
 - Duración por sesión: ${session_duration_min} minutos
 - Equipo disponible en casa: ${equipmentStr}
 - Lesiones/restricciones: ${injuriesStr}
-- Notas: ${notesStr}
+- Notas adicionales: ${notesStr}
 
-BIBLIOTECA DE EJERCICIOS DISPONIBLES (usa SOLO estos ejercicios cuando sea posible, o inventa variantes si es necesario):
+BIBLIOTECA DE EJERCICIOS DEL COACH (usa SIEMPRE estos nombres cuando el ejercicio esté en la lista — son los nombres que el Coach Samuel usa con sus atletas. Solo inventa si realmente no hay equivalente):
 ${libJson}
 
-REGLAS:
-- Si hay lesiones, evita ejercicios que las empeoren
-- Alterna grupos musculares (no entrenar pecho 2 días seguidos)
-- Incluye 1 día de descanso mínimo si days_per_week < 7
-- Ejercicios compuestos primero, aislamiento después
-- Para BAJAR DE PESO: incluye cardio o circuitos HIIT al final
-- Para HIPERTROFIA: 8-12 reps, descansos 60-90s
-- Para FUERZA: 3-6 reps, descansos 2-3 min
-- Para RESISTENCIA: 15+ reps o tiempo
+REGLAS DEL MÉTODO CED·GYM:
+- SIEMPRE arranca cada día con calentamiento: bicicleta 10-20 min (o cardio ligero equivalente).
+- SIEMPRE cierra cada día con 100 repeticiones de abdominales (o equivalente core si el day_of_week ya es día de core).
+- Alterna grupos musculares — nunca entrenar el mismo grupo 2 días seguidos.
+- Incluye 1 día de descanso mínimo si days_per_week < 7.
+- Compuestos primero (sentadilla, peso muerto, press banco, remo), aislamiento después.
+- En piernas, incluye al menos 1 ejercicio isométrico (sentadilla isométrica, desplante isométrico) y 1 pliométrico (saltos desplantes, saltos sentadilla) si el nivel lo permite.
+- Por rep scheme:
+  * HIPERTROFIA (MUSCLE_GAIN): 8-15 reps, descansos 60-90s, formato tipo "15,12,10,8 aumentando de peso".
+  * FUERZA (STRENGTH): 3-6 reps, descansos 120-180s, formato tipo "10,8,6,3,2,1".
+  * RESISTENCIA (ENDURANCE / WEIGHT_LOSS): 15-25 reps, descansos 30-45s, circuitos.
+- Si hay lesiones, ADAPTA siempre: ej. lumbalgia → no peso muerto convencional, usar peso muerto rumano ligero o hip thrust. Rodilla → no sentadilla profunda, usar prensa o sentadilla goblet parcial.
+
+ADAPTACIÓN POR USER_TYPE:
+- SENIOR: cambia todo peso libre por máquinas cuando posible, descansos más largos (90-120s), reps 12-15, sin saltos ni cargas máximas.
+- KID: rutina de funcional + peso corporal. Nada de barras con peso. Mucha coordinación (escalera, vallas, mountain climbers), core, y ejercicios divertidos.
+- ATHLETE: prioriza el deporte. Football americano → fuerza + pliometría + HYROX. Soccer → explosividad + cambio de dirección. Básquet → salto vertical + core. Powerlifting → SBD específico.
+
+EN CADA EJERCICIO, la nota (notes) debe ser una frase corta estilo coach mexicano: "sube lento y aprieta arriba", "espalda recta", "codos pegados al cuerpo", "aumenta peso en la última serie". Máximo 10 palabras.
+
+EN EL TITLE DEL DÍA, usa formato tipo Excel del Coach: "Pecho + Tríceps", "Espalda + Hombro", "Pierna (Cuádriceps + Femoral)", "Entrenamiento Funcional".
 
 SCHEMA JSON (respondes EXACTAMENTE esto, nada más):
 {
@@ -156,6 +219,8 @@ function mergeProfile(body, fitnessProfile) {
     return {
         objective: body.objective ?? fp.objective ?? fp.goal ?? 'GENERAL_FITNESS',
         level: body.level ?? fp.level ?? 'BEGINNER',
+        user_type: body.user_type ?? fp.user_type ?? 'ADULT',
+        discipline: body.discipline ?? fp.discipline ?? null,
         location: body.location,
         days_per_week: body.days_per_week,
         available_equipment: body.available_equipment ?? fp.available_equipment ?? [],
@@ -245,6 +310,8 @@ export default async function aiRoutinesRoutes(fastify) {
                 days_per_week: merged.days_per_week,
                 objective: merged.objective,
                 level: merged.level,
+                user_type: merged.user_type,
+                discipline: merged.discipline,
                 location: merged.location,
                 session_duration_min: merged.session_duration_min,
                 available_equipment: merged.available_equipment,

@@ -10,6 +10,7 @@
     "build": "echo 'no build step' && exit 0",
     "seed": "node src/seed.js",
     "seed:exercises": "node src/seed-exercises.js",
+    "seed:exercises:samuel": "node src/seed-exercises-samuel.js",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
