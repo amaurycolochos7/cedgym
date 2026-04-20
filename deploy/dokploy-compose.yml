@@ -44,7 +44,7 @@ services:
 
   api:
     build:
-      context: .
+      context: ..
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     environment:
@@ -88,7 +88,7 @@ services:
 
   whatsapp-bot:
     build:
-      context: .
+      context: ..
       dockerfile: apps/whatsapp-bot/Dockerfile
     restart: unless-stopped
     environment:
@@ -113,7 +113,7 @@ services:
 
   worker:
     build:
-      context: .
+      context: ..
       dockerfile: apps/worker/Dockerfile
     restart: unless-stopped
     environment:
