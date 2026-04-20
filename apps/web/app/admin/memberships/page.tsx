@@ -247,16 +247,13 @@ function DeleteMembershipDialog({
     if (member) setReason('');
   }, [member]);
 
-  const valid = reason.trim().length >= 10 && reason.trim().length <= 500;
-
   return (
     <Dialog open={!!member} onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Eliminar membresía</DialogTitle>
           <DialogDescription>
-            Esta acción es permanente y se registra en auditoría. El motivo
-            quedará visible para administradores.
+            Se borrará de la base de datos permanentemente.
           </DialogDescription>
         </DialogHeader>
 
@@ -270,18 +267,15 @@ function DeleteMembershipDialog({
         )}
 
         <label className="block text-xs uppercase tracking-wider text-white/50">
-          Motivo de eliminación
+          Motivo (opcional)
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            rows={4}
-            placeholder="Ej. Socio pidió baja definitiva por mudanza; se confirmó por WhatsApp."
+            rows={2}
+            placeholder="Ej. Socio pidió baja"
             className="mt-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-brand-orange/60 focus:outline-none"
             maxLength={500}
           />
-          <span className="mt-1 block text-[11px] text-white/40">
-            {reason.trim().length}/500 · mínimo 10 caracteres
-          </span>
         </label>
 
         <DialogFooter>
@@ -290,9 +284,9 @@ function DeleteMembershipDialog({
           </Button>
           <Button
             variant="destructive"
-            onClick={() => valid && onConfirm(reason.trim())}
+            onClick={() => onConfirm(reason.trim())}
             loading={loading}
-            disabled={!valid || loading}
+            disabled={loading}
           >
             Eliminar membresía
           </Button>

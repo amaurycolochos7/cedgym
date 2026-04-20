@@ -7,8 +7,10 @@
 //   PATCH  /admin/miembros/:id             — edit (name, status, notes)
 //   POST   /admin/miembros/:id/suspend
 //   POST   /admin/miembros/:id/reactivate
+//   DELETE /admin/miembros/:id             — hard delete user + cascade data
 // ─────────────────────────────────────────────────────────────────
 import bcrypt from 'bcryptjs';
+import { audit, auditCtx } from '../lib/audit.js';
 
 export default async function adminMembersRoutes(fastify) {
   const guard = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN', 'RECEPTIONIST', 'TRAINER')] };
@@ -154,5 +156,88 @@ export default async function adminMembersRoutes(fastify) {
       data: { status: 'ACTIVE' },
     });
     return { success: true };
+  });
+
+  // ─── DELETE /admin/miembros/:id ────────────────────────────────
+  // Hard delete: cascade through all related rows in a single
+  // transaction, then drop the user. Writes a best-effort audit entry.
+  // Guards: tenant scope (workspace_id must match the caller) + role.
+  fastify.delete('/admin/miembros/:id', adminOnly, async (req, reply) => {
+    const workspaceId = req.user.workspace_id;
+    const user = await fastify.prisma.user.findFirst({
+      where: { id: req.params.id, workspace_id: workspaceId },
+      select: {
+        id: true,
+        name: true,
+        full_name: true,
+        email: true,
+        phone: true,
+        role: true,
+      },
+    });
+    if (!user) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' },
+      });
+    }
+    // Prevent admins from deleting themselves or a higher-tier user.
+    if (user.id === (req.user?.sub || req.user?.id)) {
+      return reply.status(400).send({
+        error: { code: 'CANNOT_DELETE_SELF', message: 'No puedes eliminar tu propia cuenta' },
+      });
+    }
+    if (user.role === 'SUPERADMIN' && req.user.role !== 'SUPERADMIN') {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'Solo SUPERADMIN puede eliminar a otro SUPERADMIN' },
+      });
+    }
+
+    const uid = user.id;
+
+    // Cascade delete. Order matters: children first, then parent. Each
+    // deleteMany is safe — if a relation is already cascaded by the
+    // schema, the rows will be gone before we try.
+    await fastify.prisma.$transaction(async (tx) => {
+      await tx.checkIn.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.emergencyContact.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.refreshToken.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.otpCode.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.payment.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.productPurchase.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.productReview.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.classBooking.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.referral.deleteMany({
+        where: { OR: [{ referrer_id: uid }, { referred_id: uid }] },
+      }).catch(() => {});
+      await tx.userBadge.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.userProgress.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.bodyMeasurement.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.message.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.conversation.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.membershipFreeze.deleteMany({
+        where: { membership: { user_id: uid } },
+      }).catch(() => {});
+      await tx.membership.deleteMany({ where: { user_id: uid } }).catch(() => {});
+      await tx.automationJob.deleteMany({ where: { context: { path: ['user_id'], equals: uid } } }).catch(() => {});
+      await tx.user.delete({ where: { id: uid } });
+    });
+
+    // Best-effort audit (never blocks).
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'member.deleted',
+      target_type: 'user',
+      target_id: uid,
+      metadata: {
+        name: user.full_name || user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+      ...auditCtx(req),
+    });
+
+    return { success: true, id: uid };
   });
 }

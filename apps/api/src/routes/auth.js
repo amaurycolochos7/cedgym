@@ -192,15 +192,17 @@ export default async function authRoutes(fastify) {
                 select: { id: true, email: true, phone: true, status: true },
             });
             if (existing) {
-                // Conflict — but if the existing row is UNVERIFIED and the
-                // phone matches, we treat this like "resend" rather than a
-                // hard conflict. This lets users who abandoned the flow
-                // complete it without asking for a different phone.
-                if (existing.status === 'UNVERIFIED' && existing.phone === phone && existing.email === email) {
-                    // Fall through: we'll re-create a fresh OTP for this user.
-                } else {
-                    return reply.status(409).send(errPayload('USER_EXISTS', 'Ya existe un usuario con ese correo o teléfono', 409));
-                }
+                // Política: si el teléfono o email ya existe, NUNCA mandamos
+                // OTP ni creamos usuario nuevo. El frontend abre un modal
+                // ofreciendo recuperar contraseña (usa /auth/password/forgot
+                // para enviar el OTP al dueño real del número).
+                return reply.status(409).send(
+                    errPayload(
+                        'USER_EXISTS',
+                        'Ese teléfono o correo ya tiene una cuenta. Recupera tu contraseña.',
+                        409,
+                    ),
+                );
             }
 
             const workspace_id = fastify.defaultWorkspaceId;

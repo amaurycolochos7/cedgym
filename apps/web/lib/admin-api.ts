@@ -523,6 +523,8 @@ export const adminApi = {
     api.post(`/admin/miembros/${id}/reactivate`).then((r) => r.data),
   resetMemberPassword: (id: string) =>
     api.post(`/admin/miembros/${id}/reset-password`).then((r) => r.data),
+  deleteMember: (id: string) =>
+    api.delete(`/admin/miembros/${id}`).then((r) => r.data),
   memberQrPng: (id: string) =>
     api
       .get<{ url: string }>(`/admin/members/${id}/qr`)
@@ -548,23 +550,59 @@ export const adminApi = {
     }),
   updateMembershipPlan: (id: string, patch: Partial<AdminMembershipPlan>) =>
     api.patch(`/admin/memberships/plans/${id}`, patch).then((r) => r.data),
-  listActiveMemberships: (params: { q?: string; plan?: string; page?: number }) =>
-    api.get<any>('/admin/memberships', { params }).then((r) => {
-      const d: any = r.data;
-      return {
-        items: (Array.isArray(d) ? d : d?.memberships ?? d?.items ?? []) as AdminMember[],
-        total: d?.total ?? 0,
-        page: d?.page ?? params.page ?? 1,
-        page_size: d?.limit ?? 20,
-      };
-    }),
+  // Memberships admin list reuses /admin/miembros (backend source of truth
+  // for member+membership joined rows). Backend returns `items` with
+  // `membership.plan/status/expires_at` nested — we flatten to the
+  // AdminMember shape the table expects.
+  listActiveMemberships: (params: { q?: string; plan?: string; page?: number }) => {
+    const limit = 30;
+    const page = params.page ?? 1;
+    const offset = Math.max(0, (page - 1) * limit);
+    const apiParams: Record<string, any> = {
+      limit,
+      offset,
+      ...(params.q && { search: params.q }),
+      ...(params.plan && { plan: params.plan }),
+    };
+    return api
+      .get<{ items: any[]; total: number; limit: number; offset: number }>(
+        '/admin/miembros',
+        { params: apiParams },
+      )
+      .then((r) => ({
+        items: (r.data?.items ?? []).map(
+          (u: any): AdminMember => ({
+            id: u.id,
+            name: u.full_name || u.name || '—',
+            phone: u.phone ?? '',
+            email: u.email ?? undefined,
+            status: (u.membership?.status ?? 'expired').toLowerCase() as
+              | 'active'
+              | 'frozen'
+              | 'expired'
+              | 'cancelled',
+            plan_code: u.membership?.plan,
+            plan_name: u.membership?.plan,
+            expires_at: u.membership?.expires_at,
+            last_checkin_at: u.last_checkin_at,
+            xp: u.xp,
+            created_at: u.created_at,
+          }),
+        ),
+        total: r.data?.total ?? 0,
+        page,
+        page_size: limit,
+      }));
+  },
   broadcastMembershipReminder: (memberIds: string[]) =>
     api
       .post('/admin/memberships/broadcast', { member_ids: memberIds })
       .then((r) => r.data),
-  deleteMembership: (id: string, reason: string) =>
+  deleteMembership: (id: string, reason?: string) =>
     api
-      .delete(`/admin/memberships/${id}`, { data: { reason } })
+      .delete(`/admin/memberships/${id}`, {
+        data: reason ? { reason } : {},
+      })
       .then((r) => r.data),
   listExpiredMemberships: () =>
     api

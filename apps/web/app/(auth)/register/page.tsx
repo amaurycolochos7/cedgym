@@ -46,6 +46,10 @@ export default function RegisterPage() {
   const productLabel = useMemo(() => labelForSlug(product), [product]);
   const [showPw, setShowPw] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [existsModal, setExistsModal] = useState<{
+    phone: string;
+    email: string;
+  } | null>(null);
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -79,8 +83,15 @@ export default function RegisterPage() {
       toast.success('Cuenta creada. Te enviamos un código por WhatsApp.');
       router.push(`/verify?phone=${encodeURIComponent(vars.phone)}`);
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, vars) => {
       const norm = normalizeError(err) as ApiError;
+      // Si el backend detectó teléfono/email duplicado → abrir modal con
+      // la opción de recuperar contraseña en lugar de mostrar un error feo.
+      if (norm.code === 'USER_EXISTS' || norm.status === 409) {
+        setExistsModal({ phone: vars.phone, email: vars.email });
+        setApiError(null);
+        return;
+      }
       setApiError(norm.message);
     },
   });
@@ -93,6 +104,21 @@ export default function RegisterPage() {
       phone: `+52${values.phone}`,
       password: values.password,
     });
+  };
+
+  // Dispara OTP de reset y redirige a /reset-password con el teléfono.
+  const handleRecover = async () => {
+    if (!existsModal) return;
+    try {
+      await authApi.forgotPassword({ phone: existsModal.phone });
+      toast.success('Código enviado por WhatsApp');
+      router.push(
+        `/reset-password?phone=${encodeURIComponent(existsModal.phone)}`,
+      );
+    } catch (e) {
+      const norm = normalizeError(e) as ApiError;
+      toast.error(norm.message || 'No se pudo enviar el código');
+    }
   };
 
   return (
@@ -216,6 +242,50 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+
+      {/* Modal: teléfono/email ya tienen cuenta → ofrecer recuperación */}
+      {existsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => setExistsModal(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-white">Ya tienes cuenta</h3>
+            <p className="mt-2 text-sm text-white/70">
+              Ese teléfono o correo ya está registrado en CED·GYM.
+              ¿Quieres recuperar tu contraseña? Te enviaremos un código por
+              WhatsApp.
+            </p>
+            <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-white/80">
+              {existsModal.phone}
+            </div>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row-reverse">
+              <Button onClick={handleRecover} className="sm:flex-1">
+                Recuperar contraseña
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setExistsModal(null)}
+                className="sm:flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
+            <p className="mt-4 text-center text-xs text-white/50">
+              ¿No eres tú?{' '}
+              <Link
+                href="/login"
+                className="font-semibold text-brand-orange hover:underline"
+              >
+                Inicia sesión
+              </Link>
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

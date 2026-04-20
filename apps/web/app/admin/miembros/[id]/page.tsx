@@ -13,6 +13,7 @@ import {
   Play,
   QrCode,
   Send,
+  Trash2,
 } from 'lucide-react';
 import {
   Tabs,
@@ -47,6 +48,7 @@ export default function AdminMemberDetailPage() {
   const [suspend, setSuspend] = React.useState(false);
   const [reactivate, setReactivate] = React.useState(false);
   const [resetPw, setResetPw] = React.useState(false);
+  const [del, setDel] = React.useState(false);
   const [waOpen, setWaOpen] = React.useState(false);
   const [waBody, setWaBody] = React.useState('');
 
@@ -127,6 +129,14 @@ export default function AdminMemberDetailPage() {
           <Button variant="ghost" onClick={openCarnet}>
             <FileText className="h-3 w-3" />
             Carnet PDF
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setDel(true)}
+            className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          >
+            <Trash2 className="h-3 w-3" />
+            Eliminar
           </Button>
         </div>
       </div>
@@ -227,6 +237,23 @@ export default function AdminMemberDetailPage() {
         onConfirm={async () => {
           await adminApi.resetMemberPassword(id);
           toast.success('Código enviado');
+        }}
+      />
+      <ConfirmDialog
+        open={del}
+        onOpenChange={setDel}
+        title={`Eliminar a ${m?.name ?? 'este miembro'}`}
+        description="Se borran todos sus datos de la base (membresía, check-ins, pagos, etc). Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        destructive
+        onConfirm={async () => {
+          try {
+            await adminApi.deleteMember(id);
+            toast.success('Miembro eliminado');
+            router.replace('/admin/miembros');
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error?.message || 'No se pudo eliminar');
+          }
         }}
       />
 

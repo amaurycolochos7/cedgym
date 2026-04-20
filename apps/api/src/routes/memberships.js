@@ -75,8 +75,10 @@ const adminPatchBody = z.object({
     sport: z.string().optional(),
 });
 
+// Motivo opcional: si el dueño quiere dejar constancia puede, pero
+// el flujo debe ser 2 clics por defecto.
 const adminDeleteBody = z.object({
-    reason: z.string().trim().min(10).max(500),
+    reason: z.string().trim().max(500).optional(),
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -579,7 +581,7 @@ export default async function membershipsRoutes(fastify) {
             if (!parsed.success) {
                 throw err(
                     'BAD_BODY',
-                    'El motivo de eliminación debe tener entre 10 y 500 caracteres',
+                    'Motivo inválido (opcional, máx 500 caracteres)',
                     400
                 );
             }

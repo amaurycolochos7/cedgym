@@ -22,7 +22,6 @@ const TITLES: Record<string, string> = {
   '/admin/payments': 'Pagos',
   '/admin/products': 'Marketplace',
   '/admin/inventory': 'Inventario',
-  '/admin/automations': 'Automaciones',
   '/admin/whatsapp': 'WhatsApp',
   '/admin/promocodes': 'Promocodes',
   '/admin/referrals': 'Referidos',
