@@ -10,7 +10,17 @@
 //   DELETE /admin/miembros/:id             — hard delete user + cascade data
 // ─────────────────────────────────────────────────────────────────
 import bcrypt from 'bcryptjs';
+import QRCode from 'qrcode';
 import { audit, auditCtx } from '../lib/audit.js';
+import { rotateTokenForUser } from '../lib/qr.js';
+import { generateMembershipCard } from '../lib/pdf.js';
+import { sendWhatsAppMessage } from '../lib/whatsapp.js';
+import {
+  generateOtpCode,
+  hashOtpCode,
+  otpExpiresAt,
+  sendOtpViaWhatsApp,
+} from '../lib/otp.js';
 
 export default async function adminMembersRoutes(fastify) {
   const guard = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN', 'RECEPTIONIST', 'TRAINER')] };
@@ -155,6 +165,129 @@ export default async function adminMembersRoutes(fastify) {
       where: { id: req.params.id },
       data: { status: 'ACTIVE' },
     });
+    return { success: true };
+  });
+
+  // ─── POST /admin/miembros/:id/reset-password ──────────────────
+  // Admin dispara un OTP al WhatsApp del socio para que arme
+  // contraseña nueva. Idéntico a /auth/password/forgot pero iniciado
+  // desde el panel sin que el socio tenga que pedirlo.
+  fastify.post('/admin/miembros/:id/reset-password', adminOnly, async (req, reply) => {
+    const user = await fastify.prisma.user.findFirst({
+      where: { id: req.params.id, workspace_id: req.user.workspace_id },
+      select: { id: true, phone: true },
+    });
+    if (!user) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' } });
+    }
+    if (!user.phone) {
+      return reply.status(400).send({ error: { code: 'NO_PHONE', message: 'El miembro no tiene teléfono registrado' } });
+    }
+    const code = generateOtpCode();
+    const code_hash = await hashOtpCode(code);
+    await fastify.prisma.otpCode.create({
+      data: {
+        phone: user.phone,
+        code_hash,
+        purpose: 'PASSWORD_RESET',
+        expires_at: otpExpiresAt(),
+      },
+    });
+    const send = await sendOtpViaWhatsApp({
+      workspaceId: user.workspace_id || req.user.workspace_id,
+      phone: user.phone,
+      code,
+      purpose: 'PASSWORD_RESET',
+      logger: req.log,
+    });
+    return { success: true, ok: send.ok };
+  });
+
+  // ─── GET /admin/miembros/:id/qr ───────────────────────────────
+  // Devuelve URL data:image/png;base64 con el QR rotativo actual.
+  // El admin puede imprimirlo, pero dura ~90 s — el socio real
+  // siempre debe usar su propio /portal/qr.
+  fastify.get('/admin/miembros/:id/qr', adminOnly, async (req, reply) => {
+    const user = await fastify.prisma.user.findFirst({
+      where: { id: req.params.id, workspace_id: req.user.workspace_id },
+      select: { id: true, workspace_id: true, name: true, full_name: true },
+    });
+    if (!user) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' } });
+    }
+    const { token, expires_in } = await rotateTokenForUser(
+      fastify.redis,
+      user.workspace_id,
+      user.id,
+    );
+    const dataUrl = await QRCode.toDataURL(token, { width: 512, margin: 2 });
+    return { url: dataUrl, token, expires_in, name: user.full_name || user.name };
+  });
+
+  // ─── GET /admin/miembros/:id/carnet.pdf ───────────────────────
+  // PDF carnet con nombre, plan, vencimiento, QR — listo para imprimir.
+  fastify.get('/admin/miembros/:id/carnet.pdf', adminOnly, async (req, reply) => {
+    const user = await fastify.prisma.user.findFirst({
+      where: { id: req.params.id, workspace_id: req.user.workspace_id },
+      include: { membership: true, workspace: true },
+    });
+    if (!user) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' } });
+    }
+    const { token } = await rotateTokenForUser(
+      fastify.redis,
+      user.workspace_id,
+      user.id,
+    );
+    const buffer = await generateMembershipCard(user, user.membership, user.workspace, token);
+    reply
+      .header('Content-Type', 'application/pdf')
+      .header(
+        'Content-Disposition',
+        `attachment; filename="carnet-${(user.full_name || user.name || 'socio').replace(/\s+/g, '_')}.pdf"`,
+      );
+    return reply.send(buffer);
+  });
+
+  // ─── POST /admin/miembros/:id/whatsapp ────────────────────────
+  // Envío manual (texto libre). Se registra en audit log.
+  fastify.post('/admin/miembros/:id/whatsapp', adminOnly, async (req, reply) => {
+    const body = (req.body || {}).message;
+    if (typeof body !== 'string' || body.trim().length < 3 || body.length > 2000) {
+      return reply.status(400).send({
+        error: { code: 'BAD_BODY', message: 'Mensaje requerido (3-2000 caracteres)' },
+      });
+    }
+    const user = await fastify.prisma.user.findFirst({
+      where: { id: req.params.id, workspace_id: req.user.workspace_id },
+      select: { id: true, workspace_id: true, phone: true, name: true, full_name: true },
+    });
+    if (!user) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' } });
+    }
+    if (!user.phone) {
+      return reply.status(400).send({ error: { code: 'NO_PHONE', message: 'El miembro no tiene teléfono registrado' } });
+    }
+    const send = await sendWhatsAppMessage({
+      workspaceId: user.workspace_id,
+      phone: user.phone,
+      message: body.trim(),
+      logger: req.log,
+    });
+    audit(fastify, {
+      workspace_id: user.workspace_id,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'whatsapp.sent_manual',
+      target_type: 'user',
+      target_id: user.id,
+      metadata: { preview: body.slice(0, 200), ok: send.ok },
+      ...auditCtx(req),
+    });
+    if (!send.ok) {
+      return reply.status(502).send({
+        error: { code: 'WA_SEND_FAILED', message: 'No se pudo enviar por WhatsApp', details: send.error },
+      });
+    }
     return { success: true };
   });
 

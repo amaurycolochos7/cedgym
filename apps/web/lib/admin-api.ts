@@ -529,15 +529,21 @@ export const adminApi = {
     api.delete(`/admin/miembros/${id}`, { data: {} }).then((r) => r.data),
   memberQrPng: (id: string) =>
     api
-      .get<{ url: string }>(`/admin/members/${id}/qr`)
+      .get<{ url: string; token: string; expires_in: number; name?: string }>(
+        `/admin/miembros/${id}/qr`,
+      )
       .then((r) => r.data),
-  memberCarnetPdf: (id: string) =>
-    api
-      .get<{ url: string }>(`/admin/members/${id}/carnet.pdf`)
-      .then((r) => r.data),
+  // Carnet PDF: abrimos vía navegador con blob para poder previsualizar.
+  memberCarnetPdf: async (id: string) => {
+    const r = await api.get(`/admin/miembros/${id}/carnet.pdf`, {
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(r.data as Blob);
+    return { url };
+  },
   sendManualWhatsapp: (id: string, body: string) =>
     api
-      .post(`/admin/members/${id}/whatsapp`, { body })
+      .post(`/admin/miembros/${id}/whatsapp`, { message: body })
       .then((r) => r.data),
   exportMembersCsv: () =>
     api
