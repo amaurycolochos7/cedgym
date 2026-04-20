@@ -318,6 +318,71 @@ export interface StaffUser {
   enabled: boolean;
 }
 
+// ─── Exercises ───────────────────────────────────────────────────
+// String-literal unions (not Prisma enum types) so the frontend does
+// not have to pull a runtime dependency on @prisma/client.
+export type ExerciseMuscleGroup =
+  | 'CHEST'
+  | 'BACK'
+  | 'LEGS'
+  | 'SHOULDERS'
+  | 'ARMS'
+  | 'CORE'
+  | 'FULL_BODY'
+  | 'CARDIO';
+
+export type ExerciseLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+
+export interface AdminExercise {
+  id: string;
+  workspace_id: string;
+  name: string;
+  slug: string;
+  muscle_group: ExerciseMuscleGroup;
+  equipment: string[];
+  level: ExerciseLevel;
+  video_url: string | null;
+  thumbnail_url: string | null;
+  description: string | null;
+  default_sets: number;
+  default_reps: string;
+  default_rest_sec: number;
+  variant_easier_id: string | null;
+  variant_harder_id: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminExerciseInput {
+  name: string;
+  slug?: string;
+  muscle_group: ExerciseMuscleGroup;
+  equipment: string[];
+  level: ExerciseLevel;
+  video_url?: string | null;
+  thumbnail_url?: string | null;
+  description?: string | null;
+  default_sets?: number;
+  default_reps?: string;
+  default_rest_sec?: number;
+  variant_easier_id?: string | null;
+  variant_harder_id?: string | null;
+  is_active?: boolean;
+}
+
+export interface ExerciseStats {
+  by_muscle: Record<ExerciseMuscleGroup, number>;
+  by_level: Record<ExerciseLevel, number>;
+  total: number;
+}
+
+export interface ExerciseBulkImportResult {
+  created: number;
+  updated: number;
+  errors: { index: number; error: string }[];
+}
+
 export interface ExpiredMember {
   user_id: string;
   name: string;
@@ -983,6 +1048,50 @@ export const adminApi = {
     api.post<StaffUser>('/admin/staff', input).then((r) => r.data),
   updateStaff: (id: string, patch: Partial<StaffUser>) =>
     api.patch(`/admin/staff/${id}`, patch).then((r) => r.data),
+
+  // Exercises — admin CRUD over the shared Exercise library that powers
+  // the AI routine builder. Backend returns the Prisma row shape
+  // directly; no unwrapping needed except where noted.
+  listExercises: (params?: {
+    muscle_group?: ExerciseMuscleGroup;
+    level?: ExerciseLevel;
+    equipment?: string; // CSV
+    q?: string;
+    is_active?: boolean;
+    page?: number;
+    limit?: number;
+  }) => {
+    const apiParams: Record<string, unknown> = {};
+    if (params?.muscle_group) apiParams.muscle_group = params.muscle_group;
+    if (params?.level) apiParams.level = params.level;
+    if (params?.equipment) apiParams.equipment = params.equipment;
+    if (params?.q) apiParams.q = params.q;
+    if (params?.is_active !== undefined) apiParams.is_active = String(params.is_active);
+    if (params?.page) apiParams.page = params.page;
+    if (params?.limit) apiParams.limit = params.limit;
+    return api
+      .get<{ items: AdminExercise[]; total: number; page: number; limit: number }>(
+        '/admin/exercises',
+        { params: apiParams },
+      )
+      .then((r) => r.data);
+  },
+  createExercise: (input: AdminExerciseInput) =>
+    api.post<AdminExercise>('/admin/exercises', input).then((r) => r.data),
+  updateExercise: (id: string, patch: Partial<AdminExerciseInput>) =>
+    api.patch<AdminExercise>(`/admin/exercises/${id}`, patch).then((r) => r.data),
+  deleteExercise: (id: string) =>
+    // Match deleteMember's explicit empty body (Fastify rejects DELETE
+    // with Content-Type: application/json and no body).
+    api
+      .delete<{ success: boolean }>(`/admin/exercises/${id}`, { data: {} })
+      .then((r) => r.data),
+  bulkImportExercises: (exercises: AdminExerciseInput[]) =>
+    api
+      .post<ExerciseBulkImportResult>('/admin/exercises/bulk-import', { exercises })
+      .then((r) => r.data),
+  getExerciseStats: () =>
+    api.get<ExerciseStats>('/admin/exercises/stats').then((r) => r.data),
 };
 
 /* =========================================================================

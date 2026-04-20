@@ -9,6 +9,7 @@
     "start": "node src/index.js",
     "build": "echo 'no build step' && exit 0",
     "seed": "node src/seed.js",
+    "seed:exercises": "node src/seed-exercises.js",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "fastify": "^5.3.2",
     "ioredis": "^5.4.1",
     "mercadopago": "^2.0.15",
+    "openai": "^4.76.0",
     "pdfkit": "^0.15.0",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
