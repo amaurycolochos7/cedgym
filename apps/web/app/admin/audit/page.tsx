@@ -117,7 +117,8 @@ export default function AuditPage() {
         </label>
       </section>
 
-      <section className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
+      {/* Desktop table */}
+      <section className="hidden overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02] md:block">
         <table className="w-full min-w-[860px] text-sm">
           <thead className="text-left text-[11px] uppercase tracking-wider text-white/40">
             <tr>
@@ -196,6 +197,73 @@ export default function AuditPage() {
             })}
           </tbody>
         </table>
+      </section>
+
+      {/* Mobile card list */}
+      <section className="space-y-2 md:hidden">
+        {query.isLoading && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center text-sm text-white/40">
+            Cargando…
+          </div>
+        )}
+        {!query.isLoading && items.length === 0 && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center text-sm text-white/40">
+            Sin eventos.
+          </div>
+        )}
+        {items.map((e) => {
+          const meta = e.metadata as Record<string, any> | null;
+          const reason = meta?.reason as string | undefined;
+          const userName = meta?.user_name as string | undefined;
+          const plan = meta?.plan as string | undefined;
+          return (
+            <div
+              key={e.id}
+              className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <ActionBadge action={e.action} />
+                <span className="text-[11px] text-white/50">
+                  {fmtDate(e.created_at)}
+                </span>
+              </div>
+              <div className="mb-2 text-xs">
+                <span className="text-white/40">Actor: </span>
+                <span className="text-white">{e.actor_name}</span>
+                <span className="ml-1 text-white/40">
+                  ({e.actor_role ?? '—'})
+                </span>
+              </div>
+              {(e.target_type || e.target_id) && (
+                <div className="mb-2 text-xs text-white/70">
+                  <span className="text-white/40">Target: </span>
+                  {e.target_type ?? '—'}
+                  <span className="ml-1 block truncate font-mono text-[11px] text-white/40">
+                    {e.target_id ?? '—'}
+                  </span>
+                </div>
+              )}
+              {reason && (
+                <div className="mb-1 text-xs">
+                  <span className="text-white/40">Motivo: </span>
+                  <span className="text-white/90">{reason}</span>
+                </div>
+              )}
+              {(userName || plan) && (
+                <div className="text-xs text-white/60">
+                  {userName && <span>{userName}</span>}
+                  {userName && plan && ' · '}
+                  {plan && <span>{plan}</span>}
+                </div>
+              )}
+              {!reason && !userName && !plan && meta && (
+                <code className="block truncate text-[11px] text-white/50">
+                  {JSON.stringify(meta)}
+                </code>
+              )}
+            </div>
+          );
+        })}
       </section>
     </div>
   );

@@ -76,7 +76,7 @@ export default function PortalDashboardPage() {
       </Link>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
           icon={<Flame className="w-5 h-5 text-orange-400" />}
           label="Racha"
@@ -104,7 +104,7 @@ export default function PortalDashboardPage() {
       </div>
 
       {/* Level progress */}
-      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6">
+      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
         <div className="flex items-center justify-between mb-3">
           <div>
             <div className="text-xs uppercase tracking-wide text-zinc-500">Nivel {level}</div>
@@ -123,8 +123,8 @@ export default function PortalDashboardPage() {
       </div>
 
       {/* Two-column: membership + quick actions */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
           <h3 className="text-lg font-semibold mb-4">Tu membresía</h3>
           {membership?.plan ? (
             <div className="space-y-3">
@@ -152,7 +152,7 @@ export default function PortalDashboardPage() {
           )}
         </div>
 
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6">
+        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
           <h3 className="text-lg font-semibold mb-4">Accesos rápidos</h3>
           <div className="grid grid-cols-2 gap-3">
             <QuickTile href="/portal/qr" icon={<QrCode className="w-5 h-5" />} label="Mi QR" />
@@ -165,7 +165,7 @@ export default function PortalDashboardPage() {
 
       {/* Recent badges */}
       {progress?.recent_badges?.length > 0 && (
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6">
+        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
           <h3 className="text-lg font-semibold mb-4">Logros recientes</h3>
           <div className="flex flex-wrap gap-3">
             {progress.recent_badges.map((b: any) => (
@@ -187,13 +187,13 @@ export default function PortalDashboardPage() {
 
 function KpiCard({ icon, label, value, hint }: any) {
   return (
-    <div className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase tracking-wide text-zinc-500">{label}</span>
-        {icon}
+    <div className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-3 sm:p-4 min-w-0">
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <span className="text-[10px] sm:text-xs uppercase tracking-wide text-zinc-500 truncate">{label}</span>
+        <span className="shrink-0">{icon}</span>
       </div>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-zinc-500 mt-1">{hint}</div>
+      <div className="text-lg sm:text-2xl font-bold truncate">{value}</div>
+      <div className="text-[11px] sm:text-xs text-zinc-500 mt-1 truncate">{hint}</div>
     </div>
   );
 }

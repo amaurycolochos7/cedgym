@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
 
       {/* Revenue + retention */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 xl:col-span-2">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5 xl:col-span-2">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -142,7 +142,7 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
           <div className="mb-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">
               Retención
@@ -161,7 +161,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Heatmap */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
         <div className="mb-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-white">
             Check-ins por día y hora
@@ -185,7 +185,7 @@ export default function AdminDashboardPage() {
           subtitle="Clases impartidas"
           items={topCoaches.data ?? []}
         />
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
           <div className="mb-3 flex items-start justify-between">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -242,7 +242,7 @@ function TopList({
 }) {
   const max = items.reduce((m, i) => Math.max(m, i.value), 1);
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
       <div className="mb-3">
         <h3 className="text-sm font-bold uppercase tracking-wider text-white">
           {title}

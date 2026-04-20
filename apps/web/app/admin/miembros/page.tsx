@@ -109,60 +109,63 @@ export default function AdminMiembrosPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2">
         <Input
           placeholder="Buscar por nombre, teléfono o email"
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-          className="h-9 max-w-xs"
+          className="h-9 w-full sm:max-w-xs"
         />
-        <Select
-          value={filters.status}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="h-9 max-w-[160px]"
-        >
-          <option value="">Estado</option>
-          <option value="active">Activo</option>
-          <option value="frozen">Congelado</option>
-          <option value="expired">Vencido</option>
-          <option value="cancelled">Cancelado</option>
-        </Select>
-        <Select
-          value={filters.plan}
-          onChange={(e) => setFilters({ ...filters, plan: e.target.value })}
-          className="h-9 max-w-[160px]"
-        >
-          <option value="">Plan</option>
-          <option value="starter">Starter</option>
-          <option value="pro">Pro</option>
-          <option value="elite">Elite</option>
-        </Select>
-        <Select
-          value={filters.sport}
-          onChange={(e) => setFilters({ ...filters, sport: e.target.value })}
-          className="h-9 max-w-[160px]"
-        >
-          <option value="">Deporte</option>
-          <option value="boxeo">Boxeo</option>
-          <option value="muaythai">Muay Thai</option>
-          <option value="mma">MMA</option>
-          <option value="crossfit">CrossFit</option>
-          <option value="funcional">Funcional</option>
-        </Select>
-
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            variant="ghost"
-            onClick={() => exportMut.mutate()}
-            loading={exportMut.isPending}
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <Select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="h-9 w-full sm:max-w-[160px]"
           >
-            <Download className="h-3 w-3" />
-            Exportar CSV
-          </Button>
-          <Button onClick={() => setModal(true)}>
-            <Plus className="h-4 w-4" />
-            Nuevo miembro
-          </Button>
+            <option value="">Estado</option>
+            <option value="active">Activo</option>
+            <option value="frozen">Congelado</option>
+            <option value="expired">Vencido</option>
+            <option value="cancelled">Cancelado</option>
+          </Select>
+          <Select
+            value={filters.plan}
+            onChange={(e) => setFilters({ ...filters, plan: e.target.value })}
+            className="h-9 w-full sm:max-w-[160px]"
+          >
+            <option value="">Plan</option>
+            <option value="starter">Starter</option>
+            <option value="pro">Pro</option>
+            <option value="elite">Elite</option>
+          </Select>
+          <Select
+            value={filters.sport}
+            onChange={(e) => setFilters({ ...filters, sport: e.target.value })}
+            className="h-9 w-full sm:max-w-[160px]"
+          >
+            <option value="">Deporte</option>
+            <option value="boxeo">Boxeo</option>
+            <option value="muaythai">Muay Thai</option>
+            <option value="mma">MMA</option>
+            <option value="crossfit">CrossFit</option>
+            <option value="funcional">Funcional</option>
+          </Select>
+
+          <div className="col-span-3 mt-1 flex items-center gap-2 sm:col-span-1 sm:ml-auto sm:mt-0">
+            <Button
+              variant="ghost"
+              onClick={() => exportMut.mutate()}
+              loading={exportMut.isPending}
+              className="flex-1 sm:flex-initial"
+            >
+              <Download className="h-3 w-3" />
+              Exportar CSV
+            </Button>
+            <Button onClick={() => setModal(true)} className="flex-1 sm:flex-initial">
+              <Plus className="h-4 w-4" />
+              Nuevo miembro
+            </Button>
+          </div>
         </div>
       </div>
 

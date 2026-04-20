@@ -120,7 +120,7 @@ export default function ExpiredMembershipsPage() {
       </section>
 
       <section className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <h2 className="text-sm font-bold uppercase tracking-wider text-white">
             Socios vencidos{' '}
             <span className="text-white/40">({items.length})</span>
@@ -129,13 +129,14 @@ export default function ExpiredMembershipsPage() {
             placeholder="Buscar por nombre, teléfono o email"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="ml-4 h-9 max-w-xs"
+            className="h-9 w-full sm:ml-4 sm:max-w-xs"
           />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:ml-auto">
             <Button
               disabled={selected.size === 0 || campaign.isPending}
               loading={campaign.isPending}
               onClick={() => campaign.mutate()}
+              className="w-full sm:w-auto"
             >
               <Send className="h-3 w-3" />
               Enviar a {selected.size} seleccionado{selected.size === 1 ? '' : 's'}
@@ -157,7 +158,7 @@ export default function ExpiredMembershipsPage() {
         )}
 
         {!isLoading && items.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02]">
+          <div className="hidden overflow-x-auto rounded-xl border border-white/10 bg-white/[0.02] md:block">
             <table className="w-full min-w-[640px] text-sm">
               <thead className="text-left text-[11px] uppercase tracking-wider text-white/40">
                 <tr>
@@ -251,6 +252,83 @@ export default function ExpiredMembershipsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!isLoading && items.length > 0 && (
+          <div className="space-y-2 md:hidden">
+            {filtered.length === 0 && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-6 text-center text-sm text-white/40">
+                Sin resultados para «{q}».
+              </div>
+            )}
+            {filtered.map((m) => {
+              const checked = selected.has(m.user_id);
+              return (
+                <div
+                  key={m.user_id}
+                  className="rounded-xl border border-white/10 bg-white/[0.02] p-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleOne(m.user_id)}
+                      className="mt-1 accent-brand-orange"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold text-white">
+                        {m.name}
+                      </div>
+                      <div className="truncate text-xs text-white/60">
+                        {m.phone}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="rounded bg-white/5 px-2 py-0.5 text-white/70">
+                          {m.plan}
+                        </span>
+                        <span
+                          className={
+                            m.days_since_expiry > 30
+                              ? 'text-red-400'
+                              : m.days_since_expiry > 7
+                              ? 'text-amber-400'
+                              : 'text-white/70'
+                          }
+                        >
+                          Vencido hace {m.days_since_expiry} d
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="mt-3 w-full"
+                    disabled={campaign.isPending}
+                    onClick={() => {
+                      adminApi
+                        .whatsappBulkCampaign({
+                          user_ids: [m.user_id],
+                          message_template: template,
+                        })
+                        .then(() =>
+                          toast.success(`Campaña enviada a ${m.name}`),
+                        )
+                        .catch((e: any) =>
+                          toast.error(
+                            e?.response?.data?.error?.message ||
+                              'No se pudo enviar',
+                          ),
+                        );
+                    }}
+                  >
+                    <Send className="h-3 w-3" />
+                    Enviar campaña
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>

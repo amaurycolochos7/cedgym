@@ -1,6 +1,7 @@
 'use client';
 
-import { Award, Dumbbell, Medal, Shield, Star, Trophy } from 'lucide-react';
+import * as React from 'react';
+import { Award, ChevronDown, Dumbbell, Medal, Shield, Star, Trophy } from 'lucide-react';
 
 type Category = 'football' | 'power' | 'rec';
 
@@ -100,44 +101,50 @@ const STATS = [
   { value: '1°', label: 'TD inaugural Estadio UACH', Icon: Award },
 ];
 
+const HIGHLIGHT_COUNT = 4;
+
 export function FounderSection() {
+  const [expanded, setExpanded] = React.useState(false);
+  const visible = expanded ? ACHIEVEMENTS : ACHIEVEMENTS.slice(0, HIGHLIGHT_COUNT);
+  const remaining = ACHIEVEMENTS.length - HIGHLIGHT_COUNT;
+
   return (
     <section
       id="fundador"
-      className="relative overflow-hidden bg-gradient-to-b from-brand-dark via-black to-brand-dark px-4 py-16 sm:py-24"
+      className="relative overflow-hidden bg-gradient-to-b from-brand-dark via-black to-brand-dark px-4 py-10 sm:py-16"
     >
       <div className="pointer-events-none absolute -right-40 top-20 h-96 w-96 rounded-full bg-brand-orange/10 blur-[120px]" />
       <div className="pointer-events-none absolute -left-40 bottom-20 h-96 w-96 rounded-full bg-red-500/5 blur-[120px]" />
 
       <div className="relative z-10 mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-12 text-center sm:mb-16">
-          <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
+        <div className="mb-8 text-center sm:mb-12">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
             Detrás del método
           </span>
-          <h2 className="mb-4 px-2 text-3xl font-black uppercase leading-tight sm:text-4xl md:text-5xl">
+          <h2 className="mb-2 px-2 text-2xl font-black uppercase leading-tight sm:text-4xl md:text-5xl">
             Conoce al{' '}
             <span className="bg-gradient-to-r from-brand-orange-2 to-brand-orange bg-clip-text text-transparent">
               fundador
             </span>
           </h2>
           <p className="mx-auto max-w-2xl text-sm text-gray-400 sm:text-base">
-            No vendemos teoría. Vendemos el mismo método que nos llevó a ganar a nivel mundial.
+            No vendemos teoría. El mismo método que nos llevó a ganar a nivel mundial.
           </p>
         </div>
 
         {/* Photo + bio */}
-        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-10">
           {/* Photo column */}
           <div className="relative flex flex-col items-center text-center lg:items-start lg:text-left">
-            <div className="relative mb-6">
+            <div className="relative mb-5">
               <div className="absolute inset-0 animate-pulse rounded-3xl bg-brand-orange/30 blur-[60px]" />
-              <div className="relative overflow-hidden rounded-3xl border-4 border-brand-dark shadow-[0_0_40px_rgba(255,107,26,0.25)] sm:border-[6px]">
+              <div className="relative overflow-hidden rounded-2xl border-4 border-brand-dark shadow-[0_0_40px_rgba(255,107,26,0.25)] sm:rounded-3xl sm:border-[6px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/founder.jpg"
                   alt="M.A. Samuel Oswaldo Rodríguez Jeffery"
-                  className="h-[360px] w-[320px] object-cover sm:h-[460px] sm:w-[400px]"
+                  className="h-[280px] w-full max-w-[320px] object-cover sm:h-[460px] sm:w-[400px]"
                   onError={(e) => {
                     const img = e.currentTarget;
                     img.style.background = 'linear-gradient(135deg,#1a1a1a,#2a2a2a)';
@@ -145,24 +152,22 @@ export function FounderSection() {
                   }}
                 />
               </div>
-              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-brand-orange/40 bg-black/90 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-orange backdrop-blur-sm sm:text-xs">
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-brand-orange/40 bg-black/90 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand-orange backdrop-blur-sm sm:-bottom-4 sm:px-4 sm:py-1.5 sm:text-xs">
                 Fundador · Coach
               </div>
             </div>
 
-            <div className="mt-4">
-              <h3 className="text-2xl font-black uppercase leading-tight text-white sm:text-3xl">
+            <div className="mt-3">
+              <h3 className="text-xl font-black uppercase leading-tight text-white sm:text-3xl">
                 M.A. Samuel Oswaldo
                 <br />
                 Rodríguez Jeffery
               </h3>
-              <p className="mt-2 text-sm text-gray-400 sm:text-base">
-                Football Americano · Powerlifting · Preparación Física
+              <p className="mt-1 text-xs text-gray-400 sm:mt-2 sm:text-base">
+                Football Americano · Powerlifting · Prep Física
               </p>
-              <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-gray-300 sm:text-base lg:mx-0">
-                Atleta multidisciplina con más de dos décadas en alto rendimiento: campeón nacional con
-                las Águilas UACH, tricampeón mundial de Powerlifting y referente de la preparación física
-                en Chihuahua.
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-gray-300 sm:text-base lg:mx-0">
+                Atleta multidisciplina con más de dos décadas en alto rendimiento: campeón nacional con las Águilas UACH, tricampeón mundial de Powerlifting y referente de la preparación física en Chihuahua.
               </p>
             </div>
           </div>
@@ -170,17 +175,17 @@ export function FounderSection() {
           {/* Stats + timeline column */}
           <div>
             {/* Stats grid */}
-            <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-4">
               {STATS.map(({ value, label, Icon }) => (
                 <div
                   key={label}
-                  className="glass rounded-2xl border border-white/5 p-4 sm:p-5"
+                  className="glass rounded-xl border border-white/5 p-3 sm:rounded-2xl sm:p-5"
                 >
-                  <Icon className="mb-2 h-5 w-5 text-brand-orange sm:h-6 sm:w-6" />
-                  <div className="text-2xl font-black leading-none text-white sm:text-3xl">
+                  <Icon className="mb-1 h-4 w-4 text-brand-orange sm:mb-2 sm:h-6 sm:w-6" />
+                  <div className="text-xl font-black leading-none text-white sm:text-3xl">
                     {value}
                   </div>
-                  <div className="mt-1 text-[11px] uppercase tracking-wide text-gray-400 sm:text-xs">
+                  <div className="mt-1 text-[10px] uppercase tracking-wide text-gray-400 sm:text-xs">
                     {label}
                   </div>
                 </div>
@@ -188,9 +193,9 @@ export function FounderSection() {
             </div>
 
             {/* Timeline */}
-            <div className="glass rounded-2xl border border-white/5 p-4 sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-white sm:text-base">
+            <div className="glass rounded-xl border border-white/5 p-3 sm:rounded-2xl sm:p-6">
+              <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-white sm:text-base">
                   Logros deportivos
                 </h4>
                 <div className="hidden gap-2 sm:flex">
@@ -209,31 +214,42 @@ export function FounderSection() {
                 </div>
               </div>
 
-              <ol className="relative ml-1 space-y-4 border-l border-white/10 pl-5 sm:space-y-5">
-                {ACHIEVEMENTS.map((a, idx) => {
+              <ol className="relative ml-1 space-y-3 border-l border-white/10 pl-4 sm:space-y-5 sm:pl-5">
+                {visible.map((a, idx) => {
                   const meta = CATEGORY_META[a.cat];
                   return (
                     <li key={idx} className="relative">
                       <span
-                        className={`absolute -left-[1.52rem] top-1 flex h-5 w-5 items-center justify-center rounded-full border ${meta.color}`}
+                        className={`absolute -left-[1.35rem] top-0.5 flex h-4 w-4 items-center justify-center rounded-full border sm:-left-[1.52rem] sm:top-1 sm:h-5 sm:w-5 ${meta.color}`}
                       >
-                        <meta.Icon className="h-2.5 w-2.5" />
+                        <meta.Icon className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                       </span>
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <span className="text-xs font-black uppercase tracking-widest text-brand-orange sm:text-sm">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-brand-orange sm:text-sm">
                           {a.year}
                         </span>
-                        <h5 className="text-sm font-bold text-white sm:text-base">
+                        <h5 className="text-xs font-bold text-white sm:text-base">
                           {a.title}
                         </h5>
                       </div>
-                      <p className="mt-0.5 text-xs leading-relaxed text-gray-400 sm:text-sm">
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-gray-400 sm:text-sm">
                         {a.desc}
                       </p>
                     </li>
                   );
                 })}
               </ol>
+
+              {remaining > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-brand-orange/30 bg-brand-orange/10 py-2.5 text-[11px] font-black uppercase tracking-widest text-brand-orange transition hover:bg-brand-orange/20 sm:text-xs"
+                >
+                  {expanded ? 'Mostrar menos' : `Ver ${remaining} logros más`}
+                  <ChevronDown className={`h-3 w-3 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
             </div>
           </div>
         </div>

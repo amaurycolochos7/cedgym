@@ -51,15 +51,15 @@ export function Topbar({ onMenu, title }: TopbarProps) {
         {title}
       </div>
 
-      <div className="ml-auto flex items-center gap-2 md:ml-6 md:w-96">
+      <div className="flex min-w-0 flex-1 items-center gap-2 md:ml-6 md:max-w-sm">
         <MemberSearch
-          className="flex-1"
+          className="flex-1 min-w-0"
           placeholder="Buscar socio…"
           onSelect={(m) => router.push(`/admin/miembros/${m.id}`)}
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <Link
           href="/admin/automations"
           className="relative rounded-md p-2 text-white/70 hover:bg-white/5 hover:text-white"

@@ -47,7 +47,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${outfit.variable} dark`}>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <body className="min-h-screen overflow-x-hidden bg-background text-foreground antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

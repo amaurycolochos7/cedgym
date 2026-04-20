@@ -7,7 +7,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <PortalSidebar />
       <main className="flex-1 min-w-0">
         <ProfileCompletionBanner />
-        <div className="p-6 md:p-8 max-w-7xl mx-auto">
+        <div className="px-4 pb-8 pt-16 sm:p-6 md:p-8 max-w-7xl mx-auto">
           {children}
         </div>
       </main>

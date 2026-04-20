@@ -73,9 +73,9 @@ export default function HomePage() {
               <img
                 src="/logo.png"
                 alt="CED·GYM"
-                className="h-10 w-10 rounded-full ring-1 ring-white/10"
+                className="h-9 w-9 rounded-full ring-1 ring-white/10 sm:h-10 sm:w-10"
               />
-              <span className="logo-font hidden text-xl font-black leading-none tracking-tight sm:inline-block md:text-2xl">
+              <span className="logo-font text-lg font-black leading-none tracking-tight sm:text-xl md:text-2xl">
                 <span className="text-brand-orange">CED</span>
                 <span className="text-white">·GYM</span>
               </span>
@@ -88,9 +88,6 @@ export default function HomePage() {
               </a>
               <a href="#disciplinas" className="transition-colors hover:text-brand-orange">
                 Deportes
-              </a>
-              <a href="#insignia" className="transition-colors hover:text-brand-orange">
-                Football
               </a>
               <a href="#fundador" className="transition-colors hover:text-brand-orange">
                 Fundador
@@ -156,12 +153,6 @@ export default function HomePage() {
               Deportes
             </a>
             <a
-              href="#insignia"
-              className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
-            >
-              Football Élite
-            </a>
-            <a
               href="#fundador"
               className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
             >
@@ -212,33 +203,14 @@ export default function HomePage() {
       {/* Hero */}
       <section
         id="inicio"
-        className="hero-bg relative flex min-h-[100svh] items-center justify-center pb-16 pt-20"
+        className="hero-bg relative flex min-h-[100svh] items-center justify-center py-24 lg:py-28"
       >
         <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30" />
-        <div className="relative z-10 mx-auto mt-8 w-full max-w-7xl px-4 text-center sm:px-6 md:mt-0 md:text-left lg:pl-8">
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 text-center sm:px-6 md:text-left lg:pl-8">
           <div className="mx-auto max-w-3xl md:mx-0">
-            <div className="glass mb-6 inline-flex w-auto items-center justify-center gap-2 rounded-full border-brand-orange/30 px-4 py-2 md:justify-start">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-brand-orange" />
-              <span className="text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
-                Chihuahua · Desde 2016
-              </span>
-            </div>
-
-            <h1 className="mb-4 text-5xl font-black uppercase leading-[1.05] tracking-tight sm:mb-6 sm:text-6xl md:text-7xl lg:text-8xl">
-              Preparación
-              <br className="hidden sm:block" />
-              física para <br className="hidden sm:block" />
-              <span className="rotator text-gradient leading-tight">
-                <em className="is-active">todos los deportes.</em>
-                <em>fútbol americano.</em>
-                <em>fútbol soccer.</em>
-                <em>básquetbol.</em>
-                <em>tenis.</em>
-                <em>beisbol.</em>
-                <em>MMA.</em>
-                <em>powerlifting.</em>
-                <em>HYROX.</em>
-              </span>
+            <h1 className="mb-4 break-words text-3xl font-black uppercase leading-[1.05] tracking-tight sm:mb-6 sm:text-5xl md:text-6xl lg:text-7xl">
+              Preparación física <br className="hidden sm:block" /> para{' '}
+              <span className="text-gradient">atletas reales</span>
             </h1>
 
             <p className="mx-auto mb-8 max-w-2xl px-4 text-base font-light leading-relaxed text-gray-300 sm:mb-10 sm:text-lg md:mx-0 md:px-0 md:text-xl">
@@ -287,39 +259,15 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="absolute bottom-8 left-1/2 hidden -translate-x-1/2 transform animate-bounce flex-col items-center md:flex">
-          <span className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-400">
-            Explorar
-          </span>
-          <ChevronDown className="text-brand-orange" />
-        </div>
-      </section>
-
-      {/* Marquee */}
-      <section className="relative z-20 overflow-hidden bg-brand-orange py-6 sm:py-8">
-        <div className="group flex items-center overflow-hidden whitespace-nowrap">
-          <div className="marquee-track flex items-center text-lg font-black uppercase tracking-widest text-black sm:text-xl md:text-2xl">
-            {Array.from({ length: 2 }).map((_, r) => (
-              <span key={r} className="flex items-center">
-                <span className="mx-4 sm:mx-8">•</span> FÁBRICA DE MONSTRUOS
-                <span className="mx-4 sm:mx-8">•</span> PREP FÍSICA DE ÉLITE
-                <span className="mx-4 sm:mx-8">•</span> COACHES CERTIFICADOS
-                <span className="mx-4 sm:mx-8">•</span> ACADEMIA ONLINE
-                <span className="mx-4 sm:mx-8">•</span> COMUNIDAD REAL
-                <span className="mx-4 sm:mx-8">•</span> PAGO CON MERCADO PAGO
-              </span>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* Deportes */}
       <section
         id="disciplinas"
-        className="relative overflow-hidden px-4 py-16 sm:py-24"
+        className="relative overflow-hidden px-4 py-10 sm:py-16"
       >
         <div className="mx-auto max-w-7xl">
-          <div className="mb-12 text-center sm:mb-20">
+          <div className="mb-8 text-center sm:mb-12">
             <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
               La plataforma
             </span>
@@ -495,103 +443,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Football Élite */}
-      <section
-        id="insignia"
-        className="insignia-bg relative overflow-hidden py-16 sm:py-24"
-      >
-        <div className="absolute inset-0 bg-black/70 md:bg-black/60" />
-        <div className="relative z-10 mx-auto max-w-7xl px-4">
-          <div className="flex flex-col items-center gap-10 overflow-hidden rounded-3xl border border-white/10 bg-brand-dark/90 p-6 shadow-2xl backdrop-blur-xl sm:p-8 md:gap-12 md:rounded-[2.5rem] md:bg-brand-dark/80 md:p-16 lg:flex-row">
-            <div className="order-2 w-full text-center lg:order-1 lg:w-3/5 lg:text-left">
-              <div className="mb-4 flex items-center justify-center space-x-3 sm:mb-6 lg:justify-start">
-                <div className="inline-block rounded-sm border-l-4 border-brand-orange bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-black sm:text-xs">
-                  PROGRAMA INSIGNIA
-                </div>
-              </div>
-              <h2 className="mb-4 text-3xl font-black uppercase leading-[1.05] text-white sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
-                Prep Física para <br />
-                <span className="bg-gradient-to-r from-brand-orange-2 to-brand-orange bg-clip-text text-transparent">
-                  Football
-                </span>
-              </h2>
-              <p className="mx-auto mb-8 max-w-xl text-sm leading-relaxed text-gray-300 sm:text-base md:text-lg lg:mx-0">
-                Programa insignia de la casa. Fuerza, potencia, velocidad, resistencia
-                y agilidad en un solo sistema diseñado para jugadores de{' '}
-                <strong className="text-white">fútbol americano</strong>.
-              </p>
-
-              <div className="mb-8 grid grid-cols-1 gap-4 text-left sm:mb-10 sm:grid-cols-2 sm:gap-6">
-                {[
-                  {
-                    icon: Zap,
-                    title: 'Fuerza + Velocidad',
-                    body: 'Potencia real para el contacto y el sprint.',
-                  },
-                  {
-                    icon: Medal,
-                    title: 'Coach Nayo',
-                    body: '+10 años preparando atletas de football.',
-                  },
-                  {
-                    icon: Timer,
-                    title: 'HYROX',
-                    body: 'Para aguantar 4 cuartos al mismo nivel.',
-                  },
-                  {
-                    icon: Users,
-                    title: 'Por posición',
-                    body: 'QB, RB, WR, OL, DL — prep específica.',
-                  },
-                ].map(({ icon: Icon, title, body }) => (
-                  <div
-                    key={title}
-                    className="glass flex items-center gap-4 rounded-xl p-4 sm:block sm:gap-0 sm:p-5"
-                  >
-                    <Icon className="h-8 w-8 shrink-0 text-brand-orange sm:mb-2" />
-                    <div>
-                      <h4 className="text-xs font-bold uppercase text-white sm:text-sm">
-                        {title}
-                      </h4>
-                      <p className="mt-1 text-[11px] text-gray-400 sm:text-xs">
-                        {body}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Link
-                href="/register"
-                className="inline-flex w-full items-center justify-center rounded-xl bg-brand-orange px-6 py-4 text-xs font-black uppercase tracking-widest text-black transition hover:scale-105 sm:w-auto sm:rounded-full sm:px-10 sm:py-5 sm:text-sm"
-              >
-                Inscribirme al programa{' '}
-                <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-              </Link>
-            </div>
-
-            <div className="relative order-1 mb-6 flex w-full justify-center lg:order-2 lg:mb-0 lg:w-2/5">
-              <div className="absolute inset-0 animate-pulse rounded-full bg-brand-orange/20 blur-[40px] md:blur-[60px]" />
-              <div className="relative h-48 w-48 overflow-hidden rounded-full border-[6px] border-brand-dark shadow-[0_0_30px_rgba(255,107,26,0.3)] sm:h-64 sm:w-64 md:h-80 md:w-80 md:border-[10px] lg:h-96 lg:w-96">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://images.unsplash.com/photo-1566577739112-5180d4bf9390?q=80&w=2071&auto=format&fit=crop"
-                  alt="Football training"
-                  className="h-full w-full object-cover grayscale transition duration-700 hover:grayscale-0"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Fundador */}
       <FounderSection />
 
       {/* Cursos / Academia */}
-      <section id="cursos" className="relative overflow-hidden px-4 py-16 sm:py-24">
+      <section id="cursos" className="relative overflow-hidden px-4 py-10 sm:py-16">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-12 text-center sm:mb-20">
+          <div className="mb-8 text-center sm:mb-12">
             <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
               Academia
             </span>
@@ -704,71 +562,70 @@ export default function HomePage() {
       {/* Membresías */}
       <section
         id="planes"
-        className="overflow-hidden border-y border-white/5 bg-brand-gray py-16 sm:py-24"
+        className="overflow-hidden border-y border-white/5 bg-brand-gray py-10 sm:py-16"
       >
         <div className="mx-auto max-w-7xl px-4">
-          <div className="mb-12 text-center">
-            <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
+          <div className="mb-6 text-center sm:mb-8">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
               Membresías
             </span>
-            <h2 className="mb-4 px-2 text-3xl font-black uppercase sm:text-4xl md:text-5xl">
+            <h2 className="mb-3 px-2 text-2xl font-black uppercase sm:text-4xl md:text-5xl">
               Elige tu <span className="text-gradient">nivel</span>
             </h2>
-            <p className="mx-auto mt-6 max-w-2xl text-base font-light text-gray-400 sm:text-lg">
-              Mensual, trimestral o anual. Cancela cuando quieras. Cobros seguros con
-              Mercado Pago.
+            <p className="mx-auto max-w-xl text-sm text-gray-400 sm:text-base">
+              Todos los planes incluyen <strong className="text-white">acceso al gym con QR</strong>.
+              Cancela cuando quieras.
             </p>
-            <div className="mx-auto mt-8 h-1.5 w-20 rounded-full bg-brand-orange sm:w-24" />
           </div>
 
-          <div className="mb-12 flex justify-center">
-            <div className="glass inline-flex gap-1 rounded-full p-1.5">
+          <div className="mb-6 flex justify-center sm:mb-8">
+            <div className="glass inline-flex gap-1 rounded-full p-1">
               <button
-                className="cycle-btn is-active rounded-full px-5 py-2 text-xs font-black uppercase tracking-widest transition"
+                className="cycle-btn is-active rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition sm:px-5 sm:py-2 sm:text-xs"
                 data-cycle="month"
               >
                 Mensual
               </button>
               <button
-                className="cycle-btn flex items-center gap-2 rounded-full px-5 py-2 text-xs font-black uppercase tracking-widest transition"
+                className="cycle-btn flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition sm:gap-2 sm:px-5 sm:py-2 sm:text-xs"
                 data-cycle="q"
               >
-                Trimestral{' '}
-                <span className="rounded bg-brand-orange/20 px-2 py-0.5 text-[10px] text-brand-orange">
+                Trim.{' '}
+                <span className="rounded bg-brand-orange/20 px-1 text-[9px] text-brand-orange sm:px-2 sm:py-0.5 sm:text-[10px]">
                   −10%
                 </span>
               </button>
               <button
-                className="cycle-btn flex items-center gap-2 rounded-full px-5 py-2 text-xs font-black uppercase tracking-widest transition"
+                className="cycle-btn flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition sm:gap-2 sm:px-5 sm:py-2 sm:text-xs"
                 data-cycle="y"
               >
                 Anual{' '}
-                <span className="rounded bg-brand-orange/20 px-2 py-0.5 text-[10px] text-brand-orange">
+                <span className="rounded bg-brand-orange/20 px-1 text-[9px] text-brand-orange sm:px-2 sm:py-0.5 sm:text-[10px]">
                   −20%
                 </span>
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3 md:gap-6">
             {/* Starter */}
-            <div className="glass-card rounded-3xl p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-orange/10">
-                  <Zap className="h-5 w-5 text-brand-orange" />
+            <div className="glass-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 sm:h-12 sm:w-12">
+                  <Zap className="h-4 w-4 text-brand-orange sm:h-5 sm:w-5" />
                 </div>
-                <div>
-                  <h3 className="text-2xl font-black uppercase tracking-wide">
+                <div className="min-w-0">
+                  <h3 className="truncate text-xl font-black uppercase tracking-wide sm:text-2xl">
                     Starter
                   </h3>
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                  <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:text-xs">
                     Para empezar
                   </p>
                 </div>
               </div>
-              <div className="mb-6 border-b border-white/5 pb-6">
+              <div className="mb-4 border-b border-white/5 pb-4">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black">
+                  <span className="text-3xl font-black sm:text-4xl">
                     $
                     <span
                       className="plan-price"
@@ -779,57 +636,62 @@ export default function HomePage() {
                       690
                     </span>
                   </span>
-                  <span className="text-sm text-gray-400">
+                  <span className="text-xs text-gray-400 sm:text-sm">
                     MXN{' '}
-                    <em className="cycle-label text-xs not-italic text-gray-500">
+                    <em className="cycle-label text-[10px] not-italic text-gray-500 sm:text-xs">
                       /mes
                     </em>
                   </span>
                 </div>
               </div>
-              <ul className="mb-8 space-y-3 text-sm">
+              <ul className="mb-5 space-y-2 text-xs sm:text-sm">
                 {[
-                  'Acceso a sala general',
-                  '3 clases grupales / semana',
-                  'Plan base de entrenamiento',
-                  'Acceso al panel del atleta',
+                  { t: 'Acceso al gym con QR', hi: true },
+                  { t: 'Sala general' },
+                  { t: '3 clases grupales / semana' },
+                  { t: 'Plan base de entrenamiento' },
+                  { t: 'Panel del atleta + progreso' },
                 ].map((f) => (
-                  <li key={f} className="flex gap-3 text-gray-300">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />{' '}
-                    {f}
+                  <li key={f.t} className={`flex items-start gap-2 ${f.hi ? 'font-semibold text-white' : 'text-gray-300'}`}>
+                    {f.hi ? (
+                      <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
+                    ) : (
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
+                    )}
+                    <span>{f.t}</span>
                   </li>
                 ))}
               </ul>
               <Link
                 href="/register?redirect=/checkout/starter&product=starter&type=membership"
-                className="glass block w-full rounded-xl py-4 text-center text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10"
+                className="glass block w-full rounded-xl py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10"
               >
                 Elegir Starter
               </Link>
             </div>
 
             {/* Pro */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-orange-2 via-brand-orange to-brand-orange-3 p-[1px]">
-              <div className="absolute right-8 top-0 rounded-b-lg bg-brand-orange px-3 py-1 text-[10px] font-black uppercase tracking-widest text-black">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-orange-2 via-brand-orange to-brand-orange-3 p-[1px] sm:rounded-3xl">
+              <div className="absolute right-4 top-0 z-10 rounded-b-lg bg-brand-orange px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-black sm:right-6 sm:px-3 sm:py-1 sm:text-[10px]">
                 Más popular
               </div>
-              <div className="rounded-3xl bg-brand-gray p-8">
-                <div className="mb-6 flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-orange">
-                    <Flame className="h-5 w-5 text-black" />
+              <div className="rounded-2xl bg-brand-gray p-4 sm:rounded-3xl sm:p-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange sm:h-12 sm:w-12">
+                    <Flame className="h-4 w-4 text-black sm:h-5 sm:w-5" />
                   </div>
-                  <div>
-                    <h3 className="text-2xl font-black uppercase tracking-wide">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-xl font-black uppercase tracking-wide sm:text-2xl">
                       Pro
                     </h3>
-                    <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                    <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:text-xs">
                       Atleta regular
                     </p>
                   </div>
                 </div>
-                <div className="mb-6 border-b border-white/5 pb-6">
+                <div className="mb-4 border-b border-white/5 pb-4">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-gradient text-5xl font-black">
+                    <span className="text-gradient text-3xl font-black sm:text-4xl">
                       $
                       <span
                         className="plan-price"
@@ -840,31 +702,35 @@ export default function HomePage() {
                         1,290
                       </span>
                     </span>
-                    <span className="text-sm text-gray-400">
+                    <span className="text-xs text-gray-400 sm:text-sm">
                       MXN{' '}
-                      <em className="cycle-label text-xs not-italic text-gray-500">
+                      <em className="cycle-label text-[10px] not-italic text-gray-500 sm:text-xs">
                         /mes
                       </em>
                     </span>
                   </div>
                 </div>
-                <ul className="mb-8 space-y-3 text-sm">
+                <ul className="mb-5 space-y-2 text-xs sm:text-sm">
                   {[
-                    'Acceso ilimitado 6 días',
-                    'Clases grupales sin límite',
-                    'Plan personalizado por coach',
-                    '1 curso incluido / trimestre',
-                    'Check-in QR · Factura',
+                    { t: 'Acceso al gym con QR', hi: true },
+                    { t: 'Acceso ilimitado 6 días' },
+                    { t: 'Clases grupales sin límite' },
+                    { t: 'Plan personalizado por coach' },
+                    { t: '1 curso incluido / trimestre' },
                   ].map((f) => (
-                    <li key={f} className="flex gap-3 text-gray-300">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />{' '}
-                      {f}
+                    <li key={f.t} className={`flex items-start gap-2 ${f.hi ? 'font-semibold text-white' : 'text-gray-300'}`}>
+                      {f.hi ? (
+                        <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
+                      ) : (
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
+                      )}
+                      <span>{f.t}</span>
                     </li>
                   ))}
                 </ul>
                 <Link
                   href="/register?redirect=/checkout/pro&product=pro&type=membership"
-                  className="block w-full rounded-xl bg-brand-orange py-4 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(255,107,26,0.3)] transition hover:bg-brand-orange-2"
+                  className="block w-full rounded-xl bg-brand-orange py-3 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(255,107,26,0.3)] transition hover:bg-brand-orange-2"
                 >
                   Elegir Pro
                 </Link>
@@ -872,23 +738,23 @@ export default function HomePage() {
             </div>
 
             {/* Élite */}
-            <div className="glass-card rounded-3xl p-8">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-orange/10">
-                  <Crown className="h-5 w-5 text-brand-orange" />
+            <div className="glass-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 sm:h-12 sm:w-12">
+                  <Crown className="h-4 w-4 text-brand-orange sm:h-5 sm:w-5" />
                 </div>
-                <div>
-                  <h3 className="text-2xl font-black uppercase tracking-wide">
+                <div className="min-w-0">
+                  <h3 className="truncate text-xl font-black uppercase tracking-wide sm:text-2xl">
                     Élite
                   </h3>
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                  <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:text-xs">
                     Preparación deportiva
                   </p>
                 </div>
               </div>
-              <div className="mb-6 border-b border-white/5 pb-6">
+              <div className="mb-4 border-b border-white/5 pb-4">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black">
+                  <span className="text-3xl font-black sm:text-4xl">
                     $
                     <span
                       className="plan-price"
@@ -899,40 +765,44 @@ export default function HomePage() {
                       2,290
                     </span>
                   </span>
-                  <span className="text-sm text-gray-400">
+                  <span className="text-xs text-gray-400 sm:text-sm">
                     MXN{' '}
-                    <em className="cycle-label text-xs not-italic text-gray-500">
+                    <em className="cycle-label text-[10px] not-italic text-gray-500 sm:text-xs">
                       /mes
                     </em>
                   </span>
                 </div>
               </div>
-              <ul className="mb-8 space-y-3 text-sm">
+              <ul className="mb-5 space-y-2 text-xs sm:text-sm">
                 {[
-                  'Programa individualizado',
-                  'Prep física por deporte',
-                  '2 sesiones 1:1 / semana',
-                  'Nutrición incluida',
-                  'Análisis de video + PRs',
+                  { t: 'Acceso al gym con QR', hi: true },
+                  { t: 'Programa individualizado' },
+                  { t: 'Prep física por deporte' },
+                  { t: '2 sesiones 1:1 / semana' },
+                  { t: 'Nutrición + análisis de video' },
                 ].map((f) => (
-                  <li key={f} className="flex gap-3 text-gray-300">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />{' '}
-                    {f}
+                  <li key={f.t} className={`flex items-start gap-2 ${f.hi ? 'font-semibold text-white' : 'text-gray-300'}`}>
+                    {f.hi ? (
+                      <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
+                    ) : (
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
+                    )}
+                    <span>{f.t}</span>
                   </li>
                 ))}
               </ul>
               <Link
                 href="/register?redirect=/checkout/elite&product=elite&type=membership"
-                className="glass block w-full rounded-xl py-4 text-center text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10"
+                className="glass block w-full rounded-xl py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10"
               >
                 Elegir Élite
               </Link>
             </div>
           </div>
 
-          <p className="mt-10 flex items-center justify-center gap-2 text-center text-xs font-bold uppercase tracking-widest text-gray-500">
-            <ShieldCheck className="h-4 w-4 text-brand-orange" />
-            Cobros seguros con Mercado Pago · Cancela cuando quieras
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:mt-8 sm:text-xs">
+            <ShieldCheck className="h-3 w-3 text-brand-orange sm:h-4 sm:w-4" />
+            Pagos seguros · Mercado Pago · Cancela cuando quieras
           </p>
         </div>
       </section>
@@ -940,335 +810,10 @@ export default function HomePage() {
       {/* Marketplace Destacados */}
       <FeaturedProducts />
 
-      {/* Inscripción */}
-      <section id="inscripcion" className="overflow-hidden px-4 py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
-            <div>
-              <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
-                Inscripción
-              </span>
-              <h2 className="mb-6 text-3xl font-black uppercase leading-tight sm:text-4xl md:text-5xl">
-                Inscríbete en <br />
-                <span className="text-gradient">3 pasos</span>
-              </h2>
-              <p className="mb-10 max-w-lg text-base font-light leading-relaxed text-gray-400 md:text-lg">
-                Crea tu cuenta, elige tu plan y paga seguro con Mercado Pago. Listo
-                para entrenar hoy mismo.
-              </p>
-
-              <div className="mb-10 space-y-6">
-                {[
-                  {
-                    n: '01',
-                    t: 'Crea tu cuenta',
-                    b: 'Email, nombre, deporte. 20 segundos.',
-                  },
-                  {
-                    n: '02',
-                    t: 'Elige plan o curso',
-                    b: 'Starter, Pro, Élite o cursos individuales.',
-                  },
-                  {
-                    n: '03',
-                    t: 'Paga con Mercado Pago',
-                    b: 'Tarjeta, OXXO, SPEI o saldo MP. Factura al momento.',
-                  },
-                ].map((s, i) => (
-                  <div
-                    key={s.n}
-                    className={`flex gap-5 ${i < 2 ? 'border-b border-white/5 pb-6' : ''}`}
-                  >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-brand-orange text-lg font-black text-brand-orange">
-                      {s.n}
-                    </div>
-                    <div>
-                      <h4 className="mb-1 text-base font-black uppercase tracking-wide">
-                        {s.t}
-                      </h4>
-                      <p className="text-sm text-gray-400">{s.b}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mb-8 flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <ShieldCheck className="h-4 w-4 text-brand-orange" /> SSL · 3D
-                  Secure
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <FileCheck className="h-4 w-4 text-brand-orange" /> Factura
-                  electrónica
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <MessageCircle className="h-4 w-4 text-brand-orange" /> Soporte
-                  WhatsApp
-                </div>
-              </div>
-
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 rounded-xl bg-brand-orange px-8 py-4 text-xs font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(255,107,26,0.3)] transition hover:scale-105 sm:text-sm"
-              >
-                Comenzar ahora <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {/* Phone mockup */}
-            <div className="flex justify-center">
-              <div className="phone-frame">
-                <div className="phone-screen">
-                  <div className="flex h-full flex-col gap-3 p-4 pt-14">
-                    <div className="flex items-center justify-between pb-2 text-xs text-gray-400">
-                      <span>←</span>
-                      <span className="font-bold text-white">Pago</span>
-                      <span>
-                        <Lock className="inline h-3.5 w-3.5" />
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 rounded-2xl border border-brand-orange/40 bg-gradient-to-br from-brand-orange/20 to-brand-orange/5 p-4">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold uppercase tracking-widest text-gray-400">
-                          Plan
-                        </span>
-                        <b className="text-white">Pro · Mensual</b>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold uppercase tracking-widest text-gray-400">
-                          Renovación
-                        </span>
-                        <b className="text-white">15 may 2026</b>
-                      </div>
-                      <div className="flex items-baseline justify-between border-t border-brand-orange/20 pt-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                          Total hoy
-                        </span>
-                        <b className="text-3xl font-black text-white">
-                          $1,290{' '}
-                          <em className="text-xs font-normal not-italic text-gray-400">
-                            MXN
-                          </em>
-                        </b>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                        Método de pago
-                      </p>
-                      <div className="flex items-center gap-3 rounded-xl border border-brand-orange/40 bg-brand-orange/5 p-3">
-                        <div className="mp-badge shrink-0">
-                          <span>mercado</span>
-                          <b>pago</b>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-white">Mercado Pago</p>
-                          <p className="text-[10px] text-gray-400">
-                            Tarjeta · OXXO · SPEI
-                          </p>
-                        </div>
-                        <div className="h-4 w-4 shrink-0 rounded-full bg-brand-orange ring-2 ring-brand-orange/30 ring-offset-2 ring-offset-[#0a0908]" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                        Tarjeta
-                      </p>
-                      <div className="space-y-3 rounded-xl border border-white/10 bg-gradient-to-br from-[#1a120a] to-[#0a050a] p-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-black tracking-wider">
-                            VISA
-                          </span>
-                          <Wifi className="h-4 w-4 rotate-90 text-gray-400" />
-                        </div>
-                        <div className="font-mono text-sm tracking-widest">
-                          4509 •••• •••• 7321
-                        </div>
-                        <div className="flex gap-6 text-[10px] uppercase tracking-widest text-gray-400">
-                          <span>
-                            Vence <b className="text-white">12/29</b>
-                          </span>
-                          <span>
-                            CVV <b className="text-white">•••</b>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button className="mt-auto flex items-center justify-center gap-2 rounded-xl bg-brand-orange py-3.5 text-xs font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(255,107,26,0.3)]">
-                      Pagar $1,290 MXN <ArrowRight className="h-4 w-4" />
-                    </button>
-                    <p className="text-center text-[9px] uppercase tracking-widest text-gray-500">
-                      🔒 Procesado por Mercado Pago
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Panel del atleta teaser */}
-      <section
-        id="app"
-        className="overflow-hidden border-y border-white/5 bg-brand-gray py-16 sm:py-24"
-      >
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
-            <div className="order-2 flex justify-center lg:order-1">
-              <div className="glass-card w-full max-w-md space-y-5 rounded-3xl p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                      Buenos días,
-                    </p>
-                    <p className="text-2xl font-black uppercase">Andrés</p>
-                  </div>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-orange text-lg font-black text-black">
-                    A
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-brand-orange/40 bg-gradient-to-br from-brand-orange/20 to-brand-orange/5 p-5">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-orange">
-                    Hoy · Mar 14
-                  </p>
-                  <p className="mb-2 text-lg font-black uppercase tracking-wide">
-                    Pretemporada · Fuerza
-                  </p>
-                  <div className="mb-4 flex justify-between text-xs text-gray-300">
-                    <span>18:00 — 19:30</span>
-                    <span>Coach Nayo</span>
-                  </div>
-                  <Link
-                    href="/portal/qr"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-orange py-3 text-xs font-black uppercase tracking-widest text-black"
-                  >
-                    <QrCode className="h-4 w-4" /> Check-in QR
-                  </Link>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-white/5 bg-brand-dark p-4">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                      Asistencia
-                    </p>
-                    <p className="text-2xl font-black">
-                      92<span className="text-sm text-gray-400">%</span>
-                    </p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full bg-gradient-to-r from-brand-orange-3 to-brand-orange-2"
-                        style={{ width: '92%' }}
-                      />
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-white/5 bg-brand-dark p-4">
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                      PRs · mes
-                    </p>
-                    <p className="text-2xl font-black">3</p>
-                    <div className="mt-2 flex gap-1">
-                      <div className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-brand-orange-3 to-brand-orange-2" />
-                      <div className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-brand-orange-3 to-brand-orange-2" />
-                      <div className="h-1.5 flex-1 rounded-full bg-gradient-to-r from-brand-orange-3 to-brand-orange-2" />
-                      <div className="h-1.5 flex-1 rounded-full bg-white/10" />
-                      <div className="h-1.5 flex-1 rounded-full bg-white/10" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/5 bg-brand-dark p-4">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                    Curso activo
-                  </p>
-                  <p className="mb-2 text-sm font-black uppercase tracking-wide">
-                    Pretemporada Football
-                  </p>
-                  <div className="mb-1 h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full bg-gradient-to-r from-brand-orange-3 to-brand-orange-2"
-                      style={{ width: '62%' }}
-                    />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                    Semana 5 de 8 · 62%
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-[#009ee3]/30 bg-[#009ee3]/10 p-4">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                      Próximo cobro
-                    </p>
-                    <p className="text-sm font-bold">Pro · $1,290 MXN</p>
-                  </div>
-                  <div className="mp-badge">
-                    <span>mercado</span>
-                    <b>pago</b>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="order-1 text-center lg:order-2 lg:text-left">
-              <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
-                Panel del atleta
-              </span>
-              <h2 className="mb-6 text-3xl font-black uppercase leading-tight sm:text-4xl md:text-5xl">
-                Tu gimnasio <br />
-                <span className="text-gradient">en el bolsillo</span>
-              </h2>
-              <p className="mx-auto mb-8 max-w-lg text-base font-light leading-relaxed text-gray-400 md:text-lg lg:mx-0">
-                Check-in con QR, plan del día, progreso de PRs, facturación y
-                renovación automática. Como los atletas profesionales.
-              </p>
-              <ul className="mx-auto mb-10 max-w-md space-y-3 text-left lg:mx-0">
-                {[
-                  { icon: QrCode, text: 'Check-in con QR al llegar' },
-                  {
-                    icon: Calendar,
-                    text: 'Plan diario y calendario de clases',
-                  },
-                  { icon: TrendingUp, text: 'Progreso de PRs y carga semanal' },
-                  { icon: FileCheck, text: 'Renovación automática y factura' },
-                  { icon: MessageSquare, text: 'Chat directo con tu coach' },
-                ].map(({ icon: Icon, text }) => (
-                  <li key={text} className="flex items-center gap-3 text-gray-300">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-orange/20">
-                      <Icon className="h-3 w-3 text-brand-orange" />
-                    </div>
-                    {text}
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
-                <Link
-                  href="/register"
-                  className="rounded-xl bg-brand-orange px-8 py-4 text-center text-xs font-black uppercase tracking-widest text-black transition hover:scale-105"
-                >
-                  Crear cuenta
-                </Link>
-                <Link
-                  href="/login"
-                  className="glass rounded-xl px-8 py-4 text-center text-xs font-bold uppercase tracking-widest text-white transition hover:bg-white/10"
-                >
-                  Iniciar sesión
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Ubicación */}
       <section
         id="ubicacion"
-        className="relative overflow-hidden px-4 py-16 sm:py-24"
+        className="relative overflow-hidden px-4 py-10 sm:py-16"
       >
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">

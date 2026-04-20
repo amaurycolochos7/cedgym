@@ -35,17 +35,17 @@ export function KpiCard({
 
   const body = (
     <>
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-white/50 sm:text-[11px]">
           {label}
         </div>
         {Icon ? (
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange ring-1 ring-brand-orange/20">
-            <Icon className="h-4 w-4" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange ring-1 ring-brand-orange/20 sm:h-9 sm:w-9">
+            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </div>
         ) : null}
       </div>
-      <div className="mt-3 text-3xl font-bold text-white">{value}</div>
+      <div className="mt-3 truncate text-xl font-bold text-white sm:text-2xl md:text-3xl">{value}</div>
       <div className="mt-2 flex items-center gap-2 text-xs">
         {typeof delta === 'number' && (
           <span
@@ -76,7 +76,7 @@ export function KpiCard({
   );
 
   const base =
-    'relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5';
+    'relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-3 sm:p-5';
 
   if (href) {
     return (

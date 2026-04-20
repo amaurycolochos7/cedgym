@@ -84,14 +84,21 @@ export function PortalSidebar() {
 
   return (
     <>
-      {/* Mobile trigger */}
-      <button
-        className="fixed top-4 left-4 z-40 md:hidden p-2 rounded-lg bg-zinc-900/80 backdrop-blur border border-zinc-800"
-        onClick={() => setOpen(true)}
-        aria-label="Abrir menú"
-      >
-        <Menu className="w-5 h-5" />
-      </button>
+      {/* Mobile topbar */}
+      <div className="fixed top-0 left-0 right-0 z-40 md:hidden flex items-center justify-between h-12 px-3 bg-zinc-950/90 backdrop-blur border-b border-zinc-800">
+        <button
+          className="p-2 rounded-lg hover:bg-zinc-900 -ml-2"
+          onClick={() => setOpen(true)}
+          aria-label="Abrir menú"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Logo size="sm" imageOnly href={null} />
+          <span className="text-sm font-bold tracking-wider">CED·GYM</span>
+        </div>
+        <div className="w-9" />
+      </div>
 
       {/* Mobile overlay */}
       {open && (
@@ -104,7 +111,7 @@ export function PortalSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed md:sticky top-0 left-0 z-50 h-screen w-72 bg-zinc-950 border-r border-zinc-800 flex flex-col transition-transform',
+          'fixed md:sticky top-0 left-0 z-50 h-screen w-72 max-w-[85vw] bg-zinc-950 border-r border-zinc-800 flex flex-col transition-transform',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >

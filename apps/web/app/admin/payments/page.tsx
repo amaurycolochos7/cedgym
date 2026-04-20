@@ -104,11 +104,11 @@ export default function AdminPaymentsPage() {
         />
       </div>
 
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap">
         <Select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="h-9 max-w-[160px]"
+          className="h-9 w-full sm:max-w-[160px]"
         >
           <option value="">Todos los tipos</option>
           <option value="MEMBERSHIP">Membresía</option>
@@ -119,7 +119,7 @@ export default function AdminPaymentsPage() {
         <Select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="h-9 max-w-[160px]"
+          className="h-9 w-full sm:max-w-[160px]"
         >
           <option value="">Todos los estados</option>
           <option value="APPROVED">Aprobado</option>
@@ -132,20 +132,21 @@ export default function AdminPaymentsPage() {
           type="date"
           value={filters.from}
           onChange={(e) => setFilters({ ...filters, from: e.target.value })}
-          className="h-9 max-w-[160px]"
+          className="h-9 w-full sm:max-w-[160px]"
         />
         <Input
           type="date"
           value={filters.to}
           onChange={(e) => setFilters({ ...filters, to: e.target.value })}
-          className="h-9 max-w-[160px]"
+          className="h-9 w-full sm:max-w-[160px]"
         />
 
-        <div className="ml-auto">
+        <div className="col-span-2 sm:ml-auto">
           <Button
             variant="ghost"
             onClick={() => exportMut.mutate()}
             loading={exportMut.isPending}
+            className="w-full sm:w-auto"
           >
             <Download className="h-3 w-3" />
             Exportar CSV
