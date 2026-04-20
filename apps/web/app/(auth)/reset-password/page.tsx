@@ -22,8 +22,9 @@ import type { ApiError } from '@/lib/schemas';
 export default function ResetPasswordPage() {
   const router = useRouter();
   const params = useSearchParams();
+  // El query `phone` ya viene en E.164 desde el flujo de registro / modal.
   const rawPhone = params.get('phone') ?? '';
-  const phoneDigits = rawPhone.replace(/\D/g, '').slice(-10);
+  const e164Phone = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone.replace(/\D/g, '')}`;
   const [apiError, setApiError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
 
@@ -35,7 +36,7 @@ export default function ResetPasswordPage() {
   } = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      phone: phoneDigits,
+      phone: e164Phone,
       code: '',
       password: '',
       confirmPassword: '',
@@ -57,7 +58,7 @@ export default function ResetPasswordPage() {
   const onSubmit = (values: ResetPasswordInput) => {
     setApiError(null);
     mutation.mutate({
-      phone: `+52${values.phone}`,
+      phone: values.phone,
       code: values.code,
       password: values.password,
     });
@@ -77,7 +78,7 @@ export default function ResetPasswordPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         <FormError>{apiError}</FormError>
 
-        <DevOtpHint phone={`+52${phoneDigits}`} purpose="PASSWORD_RESET" />
+        <DevOtpHint phone={e164Phone} purpose="PASSWORD_RESET" />
 
         <Field label="Código de 6 dígitos" error={formState.errors.code?.message}>
           <Controller

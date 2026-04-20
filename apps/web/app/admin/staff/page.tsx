@@ -234,9 +234,8 @@ function CreateStaffModal({
 
   const create = useMutation({
     mutationFn: async () => {
-      const phone = form.phone.startsWith('+')
-        ? form.phone
-        : `+52${form.phone.replace(/\D/g, '')}`;
+      // PhoneInput ya devuelve E.164; sólo defensiva contra valores legacy.
+      const phone = form.phone.startsWith('+') ? form.phone : `+${form.phone.replace(/\D/g, '')}`;
       return (await api.post('/admin/staff', { ...form, phone })).data;
     },
     onSuccess: () => {

@@ -4,11 +4,15 @@ import { z } from 'zod';
  * Shared primitives
  * =========================================================================*/
 
-/** Mexican phone input format: 10 digits; we always prefix +52 on submit. */
-export const mxPhoneSchema = z
+/** E.164 international phone: "+" followed by 7-15 digits, first non-zero.
+ * El selector de país del PhoneInput emite siempre este formato. */
+export const e164PhoneSchema = z
   .string()
   .trim()
-  .regex(/^\d{10}$/, 'Ingresa 10 dígitos sin espacios');
+  .regex(/^\+[1-9]\d{6,14}$/, 'Número inválido (elige país y escribe tu número)');
+
+/** @deprecated Se mantiene el export para compat; apunta a E.164. */
+export const mxPhoneSchema = e164PhoneSchema;
 
 export const emailSchema = z
   .string()

@@ -31,8 +31,9 @@ function maskPhone(raw: string | null): string {
 export default function VerifyPage() {
   const router = useRouter();
   const params = useSearchParams();
+  // Phone en E.164 (viene del /register paso 1 que ahora sí lo manda completo).
   const rawPhone = params.get('phone') ?? '';
-  const phoneDigits = rawPhone.replace(/\D/g, '').slice(-10);
+  const e164Phone = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone.replace(/\D/g, '')}`;
   const { hydrateFromAuthResponse } = useAuth();
 
   const [code, setCode] = useState('');
@@ -101,7 +102,7 @@ export default function VerifyPage() {
   const onComplete = (value: string) => {
     setApiError(null);
     verify.mutate({
-      phone: `+52${phoneDigits}`,
+      phone: e164Phone,
       code: value,
     });
   };
@@ -129,7 +130,7 @@ export default function VerifyPage() {
 
       <FormError>{apiError}</FormError>
 
-      <DevOtpHint phone={`+52${phoneDigits}`} purpose="REGISTER" />
+      <DevOtpHint phone={e164Phone} purpose="REGISTER" />
 
       <OtpInput
         value={code}
@@ -166,7 +167,7 @@ export default function VerifyPage() {
         type="button"
         onClick={() =>
           resend.mutate({
-            phone: `+52${phoneDigits}`,
+            phone: e164Phone,
             purpose: 'REGISTER',
           })
         }

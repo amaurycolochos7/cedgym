@@ -40,11 +40,11 @@ import {
 import { audit, auditCtx } from '../lib/audit.js';
 
 // ── Zod schemas ──────────────────────────────────────────────
-// E.164 restricted to +52 (Mexico) per spec. Easy to widen later
-// by swapping the regex.
+// E.164 internacional: "+" + 7-15 dígitos, primero 1-9. Acepta MX
+// y cualquier otro país que el PhoneInput del front soporte.
 const phoneSchema = z
     .string()
-    .regex(/^\+52\d{10}$/, 'El teléfono debe ser +52 seguido de 10 dígitos');
+    .regex(/^\+[1-9]\d{6,14}$/, 'Teléfono inválido (elige país y escribe tu número completo)');
 
 const passwordSchema = z
     .string()

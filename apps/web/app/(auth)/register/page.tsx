@@ -101,7 +101,7 @@ export default function RegisterPage() {
     mutation.mutate({
       name: values.name,
       email: values.email,
-      phone: `+52${values.phone}`,
+      phone: values.phone,
       password: values.password,
     });
   };

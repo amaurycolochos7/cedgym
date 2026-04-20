@@ -100,7 +100,7 @@ export default function PortalPerfilPage() {
         emergency_contact: {
           name: ecName.trim(),
           relationship: ecRel,
-          phone: `+52${ecPhone}`,
+          phone: ecPhone, // ya viene en E.164 desde PhoneInput
           ...(ecNotes.trim() ? { medical_notes: ecNotes.trim() } : {}),
         },
       });
@@ -134,8 +134,8 @@ export default function PortalPerfilPage() {
       setEcError('Ingresa el nombre del contacto');
       return;
     }
-    if (!/^\d{10}$/.test(ecPhone)) {
-      setEcError('Ingresa un teléfono de 10 dígitos');
+    if (!/^\+[1-9]\d{6,14}$/.test(ecPhone)) {
+      setEcError('Elige país y escribe un teléfono válido');
       return;
     }
     saveEc.mutate();
