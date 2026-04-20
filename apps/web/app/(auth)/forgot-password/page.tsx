@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = (values: ForgotPasswordInput) => {
     setApiError(null);
-    mutation.mutate({ phone: `+52${values.phone}` });
+    mutation.mutate({ phone: values.phone });
   };
 
   return (
