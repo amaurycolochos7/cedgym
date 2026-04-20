@@ -111,6 +111,23 @@ services:
     networks:
       - dokploy-network
 
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-https://api.187-77-11-79.sslip.io}
+        NEXT_PUBLIC_MP_PUBLIC_KEY: ${MP_PUBLIC_KEY}
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-https://api.187-77-11-79.sslip.io}
+      NEXT_PUBLIC_MP_PUBLIC_KEY: ${MP_PUBLIC_KEY}
+      NODE_ENV: production
+    depends_on:
+      - api
+    networks:
+      - dokploy-network
+
   worker:
     build:
       context: ..
