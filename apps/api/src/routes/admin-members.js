@@ -239,7 +239,14 @@ export default async function adminMembersRoutes(fastify) {
       user.workspace_id,
       user.id,
     );
-    const buffer = await generateMembershipCard(user, user.membership, user.workspace, token);
+    // generateMembershipCard returns { buffer, url, key, storage } —
+    // we only need the Buffer for the HTTP response.
+    const { buffer } = await generateMembershipCard(
+      user,
+      user.membership,
+      user.workspace,
+      token,
+    );
     reply
       .header('Content-Type', 'application/pdf')
       .header(
