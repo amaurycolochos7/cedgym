@@ -194,33 +194,59 @@ export default async function adminMembersRoutes(fastify) {
 
     const uid = user.id;
 
-    // Cascade delete. Order matters: children first, then parent. Each
-    // deleteMany is safe — if a relation is already cascaded by the
-    // schema, the rows will be gone before we try.
-    await fastify.prisma.$transaction(async (tx) => {
-      await tx.checkIn.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.emergencyContact.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.refreshToken.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.otpCode.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.payment.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.productPurchase.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.productReview.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.classBooking.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.referral.deleteMany({
-        where: { OR: [{ referrer_id: uid }, { referred_id: uid }] },
-      }).catch(() => {});
-      await tx.userBadge.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.userProgress.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.bodyMeasurement.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.message.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.conversation.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.membershipFreeze.deleteMany({
-        where: { membership: { user_id: uid } },
-      }).catch(() => {});
-      await tx.membership.deleteMany({ where: { user_id: uid } }).catch(() => {});
-      await tx.automationJob.deleteMany({ where: { context: { path: ['user_id'], equals: uid } } }).catch(() => {});
-      await tx.user.delete({ where: { id: uid } });
-    });
+    // Cascade delete. Sequential (NOT inside a transaction) because
+    // Prisma poisons the whole tx on the first error — some of these
+    // relations are optional and the row may simply not exist. We run
+    // each deleteMany independently, swallow per-table errors, and
+    // finish with user.delete which is the only one that MUST succeed.
+    const prisma = fastify.prisma;
+    const safeDelete = async (fn) => {
+      try { await fn(); } catch (err) {
+        fastify.log.warn({ err: err?.message }, '[delete-user] step failed');
+      }
+    };
+
+    // OtpCode has `phone`, not `user_id` — we look them up by phone.
+    if (user.phone) {
+      await safeDelete(() => prisma.otpCode.deleteMany({ where: { phone: user.phone } }));
+    }
+    await safeDelete(() => prisma.checkIn.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.emergencyContact.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.refreshToken.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.payment.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.productPurchase.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.productReview.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.classBooking.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.referral.deleteMany({
+      where: { OR: [{ referrer_id: uid }, { referred_id: uid }] },
+    }));
+    await safeDelete(() => prisma.userBadge.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.userProgress.deleteMany({ where: { user_id: uid } }));
+    await safeDelete(() => prisma.bodyMeasurement.deleteMany({ where: { user_id: uid } }));
+    // Conversation.user_ids is a text[] — remove rows that include uid.
+    await safeDelete(() => prisma.conversation.deleteMany({
+      where: { user_ids: { has: uid } },
+    }));
+    await safeDelete(() => prisma.membershipFreeze.deleteMany({
+      where: { membership: { user_id: uid } },
+    }));
+    await safeDelete(() => prisma.membership.deleteMany({ where: { user_id: uid } }));
+
+    // Finally drop the user. If an FK still holds (unlikely), Prisma
+    // throws and we surface it to the client.
+    try {
+      await prisma.user.delete({ where: { id: uid } });
+    } catch (err) {
+      fastify.log.error({ err: err?.message, uid }, '[delete-user] final delete failed');
+      return reply.status(409).send({
+        error: {
+          code: 'DELETE_CONFLICT',
+          message:
+            'No se pudo eliminar: hay datos referenciados que no pudimos limpiar. Contacta a soporte.',
+          details: err?.message,
+        },
+      });
+    }
 
     // Best-effort audit (never blocks).
     audit(fastify, {
