@@ -20,6 +20,7 @@ import { z } from 'zod';
 import dayjs from 'dayjs';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
+import { audit, auditCtx } from '../lib/audit.js';
 import {
     rotateTokenForUser,
     getCurrentTokenForUser,
@@ -98,6 +99,10 @@ const scanBody = z.object({
 const manualBody = z.object({
     user_id: z.string().trim().min(1),
     method: z.enum(['MANUAL', 'BIOMETRIC']).default('MANUAL'),
+    // Flag para permitir reingreso dentro del cooldown (solo staff logueado).
+    // Cuando true, saltea el bloqueo DUPLICATE y registra en audit_log.
+    override: z.boolean().optional(),
+    reason: z.string().trim().max(200).optional(),
 });
 
 const historyQuery = z.object({
@@ -285,7 +290,10 @@ export default async function checkinsRoutes(fastify) {
                 });
             }
 
-            // 4. Anti-double-scan (<10 min)
+            // 4. Anti-double-scan (<10 min). Incluimos datos del socio en
+            //    la respuesta DUPLICATE para que la UI de recepción
+            //    pueda mostrar "Pedro González ya ingresó hace 4 min —
+            //    [Permitir reingreso]" sin un segundo round-trip.
             const lockKey = `checkin:lock:${userId}`;
             const acquired = await redis.set(lockKey, '1', 'EX', 10 * 60, 'NX');
             if (acquired !== 'OK') {
@@ -295,6 +303,8 @@ export default async function checkinsRoutes(fastify) {
                         code: 'DUPLICATE',
                         message: 'Ya hay un check-in reciente',
                         retry_after_sec: ttl,
+                        user_id: user.id,
+                        user_name: user.full_name || user.name,
                     },
                     statusCode: 409,
                 });
@@ -353,7 +363,7 @@ export default async function checkinsRoutes(fastify) {
         async (req) => {
             const parsed = manualBody.safeParse(req.body);
             if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
-            const { user_id, method } = parsed.data;
+            const { user_id, method, override, reason } = parsed.data;
             const staffId = req.user.sub || req.user.id;
 
             const user = await prisma.user.findUnique({
@@ -363,10 +373,17 @@ export default async function checkinsRoutes(fastify) {
             if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
 
             // Idempotency lock (shorter window — staff sometimes double-clicks)
+            // Cuando override=true, el staff FUERZA el reingreso y reseteamos
+            // el lock para el próximo ciclo — queda todo auditado.
             const lockKey = `checkin:lock:${user_id}`;
-            const acquired = await redis.set(lockKey, '1', 'EX', 5 * 60, 'NX');
-            if (acquired !== 'OK') {
-                throw err('DUPLICATE', 'Ya hay un check-in reciente', 409);
+            if (override) {
+                await redis.del(lockKey);
+                await redis.set(lockKey, '1', 'EX', 5 * 60); // reset cooldown
+            } else {
+                const acquired = await redis.set(lockKey, '1', 'EX', 5 * 60, 'NX');
+                if (acquired !== 'OK') {
+                    throw err('DUPLICATE', 'Ya hay un check-in reciente', 409);
+                }
             }
 
             const checkIn = await prisma.checkIn.create({
@@ -377,6 +394,23 @@ export default async function checkinsRoutes(fastify) {
                     staff_id: staffId,
                 },
             });
+
+            // Audit para overrides — deja rastro de quién autorizó el reingreso.
+            if (override) {
+                audit(fastify, {
+                    workspace_id: user.workspace_id,
+                    actor_id: staffId,
+                    action: 'checkin.override',
+                    target_type: 'user',
+                    target_id: user.id,
+                    metadata: {
+                        member_name: user.full_name || user.name,
+                        reason: reason || null,
+                        check_in_id: checkIn.id,
+                    },
+                    ...auditCtx(req),
+                }).catch(() => {});
+            }
 
             try {
                 await bumpGamification(prisma, user.id, checkIn.scanned_at);

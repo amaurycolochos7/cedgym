@@ -2,15 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2, XCircle, Camera } from 'lucide-react';
+import { CheckCircle2, XCircle, Camera, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
 declare global { interface Window { Html5Qrcode: any } }
 
+type ScanErrorData = {
+  code: string;
+  message: string;
+  retry_after_sec?: number;
+  user_id?: string;
+  user_name?: string;
+};
 type ScanResult =
   | { ok: true; member: any; message?: string }
-  | { ok: false; error: { code: string; message: string } };
+  | { ok: false; error: ScanErrorData };
 
 export default function StaffScanPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -37,9 +45,37 @@ export default function StaffScanPage() {
       setHistory((h) => [{ ...data, at: Date.now() }, ...h].slice(0, 20));
     },
     onError: (err: any) => {
-      const errObj = err?.response?.data?.error ?? { code: 'SCAN_ERROR', message: 'Error al validar' };
+      const errObj =
+        err?.response?.data?.error ?? { code: 'SCAN_ERROR', message: 'Error al validar' };
       setResult({ ok: false, error: errObj });
       beep(false);
+    },
+  });
+
+  // Override manual: permitir reingreso cuando el cooldown bloqueó.
+  const override = useMutation({
+    mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) =>
+      (
+        await api.post('/checkins/manual', {
+          user_id: userId,
+          method: 'MANUAL',
+          override: true,
+          reason: reason || undefined,
+        })
+      ).data,
+    onSuccess: (data) => {
+      toast.success('Reingreso autorizado');
+      beep(true);
+      setResult({
+        ok: true,
+        member: data.check_in ? { name: 'Reingreso autorizado' } : {},
+      } as ScanResult);
+      setHistory((h) => [{ member: { name: 'Override' }, at: Date.now() }, ...h].slice(0, 20));
+    },
+    onError: (err: any) => {
+      toast.error(
+        err?.response?.data?.error?.message || 'No se pudo autorizar el reingreso',
+      );
     },
   });
 
@@ -134,7 +170,41 @@ export default function StaffScanPage() {
                 <div className="text-sm text-zinc-300 mt-1">
                   {result.error.message}
                 </div>
+                {result.error.code === 'DUPLICATE' && result.error.user_name && (
+                  <div className="mt-2 text-xs text-zinc-400">
+                    {result.error.user_name}
+                    {typeof result.error.retry_after_sec === 'number' &&
+                      ` — espera ${Math.ceil(result.error.retry_after_sec / 60)} min`}
+                  </div>
+                )}
               </div>
+              {/* Override: permitir reingreso cuando es legítimo. */}
+              {result.error.code === 'DUPLICATE' && result.error.user_id && (
+                <div className="space-y-2 pt-2">
+                  <Button
+                    onClick={() => {
+                      const reason = window.prompt(
+                        'Motivo del reingreso (opcional): p.ej. "salió al auto"',
+                        '',
+                      );
+                      // Null = cancelled prompt → abortar. "" = aceptó vacío.
+                      if (reason === null) return;
+                      override.mutate({
+                        userId: result.error.user_id!,
+                        reason: reason.trim() || undefined,
+                      });
+                    }}
+                    className="w-full gap-2"
+                    loading={override.isPending}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Permitir reingreso
+                  </Button>
+                  <p className="text-center text-[11px] text-zinc-500">
+                    Queda registrado en auditoría con tu usuario.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
