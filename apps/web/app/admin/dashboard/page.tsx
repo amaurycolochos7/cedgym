@@ -62,6 +62,7 @@ export default function AdminDashboardPage() {
           label="Socios activos"
           value={kpis.data?.active_members ?? '—'}
           delta={kpis.data?.active_members_delta}
+          href="/admin/miembros?status=ACTIVE"
         />
         <KpiCard
           icon={DollarSign}
@@ -72,30 +73,35 @@ export default function AdminDashboardPage() {
               : '—'
           }
           delta={kpis.data?.revenue_mtd_delta}
+          href="/admin/payments"
         />
         <KpiCard
           icon={ScanLine}
           label="Check-ins hoy"
           value={kpis.data?.checkins_today ?? '—'}
           delta={kpis.data?.checkins_today_delta}
+          href="/admin/reports?kind=checkins-today"
         />
         <KpiCard
           icon={UserPlus}
           label="Altas MTD"
           value={kpis.data?.signups_mtd ?? '—'}
           delta={kpis.data?.signups_mtd_delta}
+          href="/admin/miembros?sort=created_desc"
         />
         <KpiCard
           icon={CalendarClock}
           label="Vencen en 7d"
           value={kpis.data?.expiring_7d ?? '—'}
           hint="Requiere follow-up"
+          href="/admin/memberships?expiring=7d"
         />
         <KpiCard
           icon={AlertTriangle}
           label="Vencen en 30d"
           value={kpis.data?.expiring_30d ?? '—'}
           hint="Para campañas"
+          href="/admin/memberships/expired"
         />
       </div>
 

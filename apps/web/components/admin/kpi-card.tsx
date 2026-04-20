@@ -1,6 +1,12 @@
 'use client';
 
-import { type LucideIcon, TrendingDown, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import {
+  type LucideIcon,
+  ArrowUpRight,
+  TrendingDown,
+  TrendingUp,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface KpiCardProps {
@@ -11,6 +17,8 @@ interface KpiCardProps {
   delta?: number;
   /** Small text under the value (e.g. "vs. last month"). */
   hint?: string;
+  /** If set, the card becomes a clickable Link. */
+  href?: string;
   className?: string;
 }
 
@@ -20,16 +28,13 @@ export function KpiCard({
   value,
   delta,
   hint,
+  href,
   className,
 }: KpiCardProps) {
   const positive = typeof delta === 'number' && delta >= 0;
-  return (
-    <div
-      className={cn(
-        'relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5',
-        className,
-      )}
-    >
+
+  const body = (
+    <>
       <div className="flex items-center justify-between gap-3">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
           {label}
@@ -62,6 +67,31 @@ export function KpiCard({
         )}
         {hint && <span className="text-white/40">{hint}</span>}
       </div>
-    </div>
+      {href && (
+        <div className="absolute right-3 top-3 text-white/20 transition group-hover:text-brand-orange">
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </div>
+      )}
+    </>
   );
+
+  const base =
+    'relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5';
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          base,
+          'group block transition-all hover:border-brand-orange/50 hover:from-white/[0.07] hover:shadow-[0_0_30px_rgba(255,107,26,0.08)] focus:outline-none focus:ring-2 focus:ring-brand-orange/40',
+          className,
+        )}
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  return <div className={cn(base, className)}>{body}</div>;
 }

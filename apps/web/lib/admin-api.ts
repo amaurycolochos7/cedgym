@@ -524,7 +524,9 @@ export const adminApi = {
   resetMemberPassword: (id: string) =>
     api.post(`/admin/miembros/${id}/reset-password`).then((r) => r.data),
   deleteMember: (id: string) =>
-    api.delete(`/admin/miembros/${id}`).then((r) => r.data),
+    // Fastify rechaza DELETE con Content-Type: application/json y body
+    // vacío; mandamos {} explícito para evitar FST_ERR_CTP_EMPTY_JSON_BODY.
+    api.delete(`/admin/miembros/${id}`, { data: {} }).then((r) => r.data),
   memberQrPng: (id: string) =>
     api
       .get<{ url: string }>(`/admin/members/${id}/qr`)
