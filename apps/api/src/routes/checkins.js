@@ -24,6 +24,7 @@ import {
     rotateTokenForUser,
     getCurrentTokenForUser,
     validateToken,
+    consumeToken,
     QR_TTL_SECONDS,
 } from '../lib/qr.js';
 
@@ -223,11 +224,13 @@ export default async function checkinsRoutes(fastify) {
             }
             const { token } = parsed.data;
 
-            // 1. Token validation
-            const resolved = await validateToken(redis, token);
+            // 1. Atomic consume — burns the token so a screenshot/copy
+            //    cannot re-enter within its 90 s TTL. If the token was
+            //    already used (or never existed) this returns null.
+            const resolved = await consumeToken(redis, token);
             if (!resolved) {
                 return reply.status(400).send({
-                    error: { code: 'EXPIRED_QR', message: 'QR inválido o expirado' },
+                    error: { code: 'EXPIRED_QR', message: 'QR inválido, expirado o ya usado' },
                     statusCode: 400,
                 });
             }

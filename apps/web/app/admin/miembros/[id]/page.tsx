@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import {
   ArrowLeft,
   ChevronsLeftRight,
-  FileText,
   KeyRound,
   Pause,
   Play,
@@ -74,15 +73,6 @@ export default function AdminMemberDetailPage() {
     }
   };
 
-  const openCarnet = async () => {
-    try {
-      const { url } = await adminApi.memberCarnetPdf(id);
-      window.open(url, '_blank');
-    } catch {
-      toast.error('No se pudo generar el PDF');
-    }
-  };
-
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -124,11 +114,7 @@ export default function AdminMemberDetailPage() {
           </Button>
           <Button variant="ghost" onClick={openQr}>
             <QrCode className="h-3 w-3" />
-            QR
-          </Button>
-          <Button variant="ghost" onClick={openCarnet}>
-            <FileText className="h-3 w-3" />
-            Carnet PDF
+            Ver QR
           </Button>
           <Button
             variant="ghost"
@@ -250,6 +236,12 @@ export default function AdminMemberDetailPage() {
           try {
             await adminApi.deleteMember(id);
             toast.success('Miembro eliminado');
+            // Forzamos refetch de las vistas afectadas para que al volver
+            // a la lista NO aparezca el socio recién borrado.
+            qc.removeQueries({ queryKey: ['admin', 'member', id] });
+            await qc.invalidateQueries({ queryKey: ['admin', 'members'] });
+            await qc.invalidateQueries({ queryKey: ['admin', 'memberships-active'] });
+            await qc.invalidateQueries({ queryKey: ['admin', 'kpis'] });
             router.replace('/admin/miembros');
           } catch (e: any) {
             toast.error(e?.response?.data?.error?.message || 'No se pudo eliminar');

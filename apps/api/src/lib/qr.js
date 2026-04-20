@@ -94,6 +94,31 @@ export async function validateToken(redis, token) {
 }
 
 /**
+ * Atomic consume: validates + burns the token in one shot. If the
+ * token is valid we return the resolved user AND invalidate all
+ * related Redis keys so a screenshot/copy cannot reuse it.
+ *
+ * This is what the scanner MUST call — validateToken alone leaves
+ * the token alive, which lets a screenshot enter twice in the 90s
+ * window. Use this instead.
+ */
+export async function consumeToken(redis, token) {
+    if (!token || typeof token !== 'string') return null;
+    const userId = await redis.get(tokenKey(token));
+    if (!userId) return null;
+    const workspaceId = await redis.get(metaKey(token));
+
+    // Burn all references so the QR can't be scanned again, even by a
+    // parallel request that might race ours.
+    await redis
+        .multi()
+        .del(tokenKey(token), metaKey(token), currentKey(userId))
+        .exec();
+
+    return { valid: true, userId, workspaceId: workspaceId || null };
+}
+
+/**
  * Revoke every token associated with `userId`. Called on logout or
  * when an admin suspends the account.
  */
