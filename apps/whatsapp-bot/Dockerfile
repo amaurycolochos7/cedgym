@@ -55,10 +55,11 @@ COPY packages/db/src ./packages/db/src/
 COPY apps/whatsapp-bot/package.json ./apps/whatsapp-bot/
 
 # Install dependencies for the bot + its workspace deps
-RUN pnpm install --filter @cedgym/whatsapp-bot... --prod --frozen-lockfile=false
+# (need dev deps so prisma CLI is available for generate)
+RUN pnpm install --filter @cedgym/whatsapp-bot... --frozen-lockfile=false
 
 # Generate Prisma client in the shared db package
-RUN pnpm --filter @cedgym/db prisma generate
+RUN pnpm --filter @cedgym/db exec prisma generate
 
 # Copy and run the patch script to fix whatsapp-web.js
 COPY apps/whatsapp-bot/patch-wwebjs.cjs ./apps/whatsapp-bot/patch-wwebjs.cjs
