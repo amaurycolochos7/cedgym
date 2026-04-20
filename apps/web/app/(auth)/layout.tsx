@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
 
+export const dynamic = 'force-dynamic';
+
 export default function AuthLayout({
   children,
 }: {

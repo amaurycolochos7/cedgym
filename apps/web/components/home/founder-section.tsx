@@ -1,3 +1,5 @@
+'use client';
+
 import { Award, Dumbbell, Medal, Shield, Star, Trophy } from 'lucide-react';
 
 type Category = 'football' | 'power' | 'rec';
