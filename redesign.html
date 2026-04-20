@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CED·GYM | Plataforma de preparación física para atletas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Outfit', 'sans-serif'] },
+          colors: {
+            brand: {
+              orange: '#ff6b1a',
+              'orange-2': '#ff8a3d',
+              'orange-3': '#e54b00',
+              dark: '#0a0a0a',
+              gray: '#1a1a1a',
+              light: '#f4f4f5'
+            }
+          },
+          animation: { blob: 'blob 7s infinite' },
+          keyframes: {
+            blob: {
+              '0%':   { transform: 'translate(0px, 0px) scale(1)' },
+              '33%':  { transform: 'translate(30px, -50px) scale(1.1)' },
+              '66%':  { transform: 'translate(-20px, 20px) scale(0.9)' },
+              '100%': { transform: 'translate(0px, 0px) scale(1)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0a0a0a;
+      color: #ffffff;
+      overflow-x: hidden;
+      width: 100%;
+      font-family: 'Outfit', sans-serif;
+    }
+    html, body { overflow-x: hidden; max-width: 100vw; }
+
+    /* Glassmorphism utilities */
+    .glass {
+      background: rgba(26, 26, 26, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .glass-card {
+      background: linear-gradient(145deg, rgba(30,30,30,0.9) 0%, rgba(15,15,15,0.9) 100%);
+      border: 1px solid rgba(255, 107, 26, 0.1);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(255, 107, 26, 0.5);
+      box-shadow: 0 12px 40px 0 rgba(255, 107, 26, 0.15);
+    }
+
+    .text-gradient {
+      background: linear-gradient(to right, #ff6b1a, #ff8a3d, #ffb074);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-bg {
+      background-image:
+        linear-gradient(to bottom, rgba(10,10,10,0.4) 0%, rgba(10,10,10,1) 100%),
+        url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+      background-attachment: scroll;
+    }
+    @media (min-width: 768px) {
+      .hero-bg { background-attachment: fixed; }
+    }
+
+    .insignia-bg {
+      background-image:
+        linear-gradient(to right, rgba(10,10,10,0.92) 0%, rgba(10,10,10,0.7) 100%),
+        url('https://images.unsplash.com/photo-1566577739112-5180d4bf9390?q=80&w=2071&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+    }
+
+    #navbar { transition: all 0.3s ease-in-out; }
+    #navbar.scrolled {
+      background: rgba(10, 10, 10, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .logo-font { font-weight: 900; letter-spacing: -0.02em; }
+    .smile-curve {
+      stroke-dasharray: 100;
+      stroke-dashoffset: 0;
+      animation: drawSmile 2s ease-out forwards;
+    }
+    @keyframes drawSmile {
+      0% { stroke-dashoffset: 100; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    ::selection { background: rgba(255, 107, 26, 0.3); color: white; }
+
+    /* rotator */
+    .rotator { position: relative; display: inline-block; min-width: 8ch; }
+    .rotator em {
+      font-style: normal;
+      position: absolute; left: 0; top: 0;
+      opacity: 0; transform: translateY(14px);
+      transition: opacity .5s ease, transform .5s ease;
+      white-space: nowrap;
+    }
+    .rotator em:first-child { position: relative; visibility: hidden; }
+    .rotator em.is-active { opacity: 1; transform: none; visibility: visible; }
+
+    /* mercado pago logo */
+    .mp-badge {
+      display: inline-flex; flex-direction: column; line-height: 1;
+      padding: 8px 12px; border-radius: 10px;
+      background: linear-gradient(135deg, #009ee3, #1f85d8);
+      color: #fff; font-family: 'Outfit', sans-serif;
+      letter-spacing: .01em;
+    }
+    .mp-badge span { font-weight: 400; font-size: .65rem; opacity: .92; }
+    .mp-badge b { font-weight: 700; font-size: .8rem; }
+
+    /* phone */
+    .phone-frame {
+      width: 300px; height: 620px;
+      padding: 12px; background: #000;
+      border-radius: 44px; position: relative;
+      box-shadow:
+        inset 0 0 0 1.5px rgba(255,255,255,.08),
+        0 40px 80px rgba(0,0,0,.6),
+        0 0 0 8px #14110e;
+    }
+    .phone-frame::before {
+      content: ''; position: absolute; top: 12px; left: 50%;
+      transform: translateX(-50%); width: 100px; height: 22px;
+      background: #000; border-radius: 0 0 14px 14px; z-index: 3;
+    }
+    .phone-screen {
+      height: 100%; border-radius: 32px; overflow: hidden;
+      background: linear-gradient(180deg, #0d0b09, #06040a);
+    }
+
+    @keyframes slide {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* modal */
+    .modal { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal.is-open { display: flex; }
+    .modal-bg { position: absolute; inset: 0; background: rgba(5,5,5,.7); backdrop-filter: blur(14px); }
+    .modal-card {
+      position: relative; width: min(460px, 100%);
+      padding: 32px; border-radius: 24px;
+      background: linear-gradient(145deg, rgba(30,30,30,0.95) 0%, rgba(15,15,15,0.95) 100%);
+      border: 1px solid rgba(255,107,26,.15);
+      box-shadow: 0 40px 90px rgba(0,0,0,.6);
+      animation: pop .4s cubic-bezier(.16,1,.3,1);
+    }
+    @keyframes pop {
+      from { opacity: 0; transform: translateY(20px) scale(.96); }
+      to { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- Decorative background blobs -->
+  <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none hidden md:block">
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand-orange/10 rounded-full mix-blend-screen filter blur-[100px] animate-blob"></div>
+    <div class="absolute top-[40%] right-[-10%] w-96 h-96 bg-brand-orange/5 rounded-full mix-blend-screen filter blur-[100px] animate-blob" style="animation-delay: 2s;"></div>
+    <div class="absolute bottom-[10%] left-[30%] w-96 h-96 bg-brand-orange/5 rounded-full mix-blend-screen filter blur-[100px] animate-blob" style="animation-delay: 4s;"></div>
+  </div>
+
+  <!-- Navegación -->
+  <nav id="navbar" class="fixed w-full z-50 py-3 md:py-4 top-0 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center">
+        <!-- Logo -->
+        <a href="#inicio" class="flex flex-col relative group cursor-pointer inline-block z-50">
+          <span class="text-2xl md:text-3xl lg:text-4xl logo-font tracking-tight">
+            <span class="text-brand-orange transition-colors duration-300">ced</span><span class="text-white">gym</span>
+          </span>
+          <svg class="absolute -bottom-1.5 md:-bottom-2 right-0 w-full h-3 md:h-4 text-brand-orange smile-curve transform group-hover:scale-105 transition-transform"
+               viewBox="0 0 100 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M 5 8 Q 50 24 95 6" />
+            <path d="M 85 2 L 95 6 L 89 15" />
+          </svg>
+        </a>
+
+        <!-- Desktop Menu -->
+        <div class="hidden lg:flex items-center space-x-10 font-bold uppercase text-xs tracking-widest text-gray-300">
+          <a href="#inicio" class="hover:text-brand-orange transition-colors relative after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-brand-orange hover:after:w-full after:transition-all">Inicio</a>
+          <a href="#disciplinas" class="hover:text-brand-orange transition-colors relative after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-brand-orange hover:after:w-full after:transition-all">Deportes</a>
+          <a href="#insignia" class="hover:text-brand-orange transition-colors relative after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-brand-orange hover:after:w-full after:transition-all">Football Élite</a>
+          <a href="#cursos" class="hover:text-brand-orange transition-colors relative after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-brand-orange hover:after:w-full after:transition-all">Cursos</a>
+          <a href="#planes" class="hover:text-brand-orange transition-colors relative after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-brand-orange hover:after:w-full after:transition-all">Planes</a>
+          <a href="#ubicacion" class="hover:text-brand-orange transition-colors relative after:absolute after:-bottom-2 after:left-0 after:w-0 after:h-0.5 after:bg-brand-orange hover:after:w-full after:transition-all">Contacto</a>
+        </div>
+
+        <!-- CTA Buttons Desktop -->
+        <div class="hidden lg:flex items-center gap-3">
+          <button data-open="login" class="text-white/80 hover:text-white font-bold uppercase text-xs tracking-widest transition">Iniciar sesión</button>
+          <button data-open="signup" class="group relative px-6 py-2.5 rounded-full font-bold uppercase text-xs overflow-hidden bg-brand-orange text-black shadow-[0_0_20px_rgba(255,107,26,0.3)] hover:shadow-[0_0_30px_rgba(255,107,26,0.5)] transition-all">
+            <span class="relative z-10 flex items-center gap-2">
+              <span>Crear cuenta</span>
+              <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+            </span>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-btn" class="lg:hidden text-white hover:text-brand-orange transition p-2 z-50 focus:outline-none" aria-label="Toggle menu">
+          <i data-lucide="menu" class="w-7 h-7" id="menu-icon"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 bg-brand-dark/98 backdrop-blur-2xl z-40 transform translate-x-full transition-transform duration-300 flex flex-col pt-24 px-6 lg:hidden overflow-y-auto">
+      <div class="flex flex-col space-y-8 text-xl sm:text-2xl font-black uppercase tracking-wider mt-4">
+        <a href="#inicio" class="mobile-link text-white hover:text-brand-orange transition border-b border-white/10 pb-4">Inicio</a>
+        <a href="#disciplinas" class="mobile-link text-white hover:text-brand-orange transition border-b border-white/10 pb-4">Deportes</a>
+        <a href="#insignia" class="mobile-link text-white hover:text-brand-orange transition border-b border-white/10 pb-4">Football Élite</a>
+        <a href="#cursos" class="mobile-link text-white hover:text-brand-orange transition border-b border-white/10 pb-4">Cursos</a>
+        <a href="#planes" class="mobile-link text-white hover:text-brand-orange transition border-b border-white/10 pb-4">Membresías</a>
+        <a href="#app" class="mobile-link text-white hover:text-brand-orange transition border-b border-white/10 pb-4">Panel del atleta</a>
+        <a href="#ubicacion" class="mobile-link text-white hover:text-brand-orange transition">Contacto</a>
+      </div>
+      <div class="mt-8 pb-12 space-y-4">
+        <button data-open="signup" class="w-full text-center flex items-center justify-center gap-2 bg-brand-orange text-black py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-[0_4px_20px_rgba(255,107,26,0.3)]">
+          <i data-lucide="user-plus" class="w-5 h-5"></i> Crear cuenta
+        </button>
+        <button data-open="login" class="w-full text-center flex items-center justify-center gap-2 glass text-white py-4 rounded-xl font-bold uppercase tracking-widest text-sm">
+          <i data-lucide="log-in" class="w-5 h-5"></i> Iniciar sesión
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ================================================== Hero -->
+  <section id="inicio" class="hero-bg min-h-[100svh] flex items-center justify-center relative pt-20 pb-16">
+    <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30"></div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 w-full relative z-10 lg:pl-8 text-center md:text-left mt-8 md:mt-0" data-aos="fade-up" data-aos-duration="1000">
+      <div class="max-w-3xl mx-auto md:mx-0">
+        <div class="inline-flex items-center justify-center md:justify-start gap-2 glass px-4 py-2 rounded-full mb-6 border-brand-orange/30 w-auto">
+          <span class="w-2 h-2 rounded-full bg-brand-orange animate-pulse"></span>
+          <span class="text-xs sm:text-sm font-bold uppercase tracking-widest text-brand-orange">Chihuahua · Desde 2016</span>
+        </div>
+
+        <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black mb-4 sm:mb-6 leading-[1.05] uppercase tracking-tight">
+          Preparación<br class="hidden sm:block">
+          física para <br class="hidden sm:block">
+          <span class="rotator text-gradient leading-tight">
+            <em class="is-active">todos los deportes.</em>
+            <em>fútbol americano.</em>
+            <em>fútbol soccer.</em>
+            <em>básquetbol.</em>
+            <em>tenis.</em>
+            <em>beisbol.</em>
+            <em>MMA.</em>
+            <em>powerlifting.</em>
+            <em>HYROX.</em>
+          </span>
+        </h1>
+
+        <p class="text-base sm:text-lg md:text-xl text-gray-300 mb-8 sm:mb-10 max-w-2xl mx-auto md:mx-0 font-light leading-relaxed px-4 md:px-0">
+          Más que un gimnasio, un <strong class="text-white">ecosistema para atletas</strong>. Inscríbete, toma cursos, paga tu membresía y lleva tu progreso — todo en un solo lugar.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-4 sm:gap-5 justify-center md:justify-start px-4 md:px-0">
+          <button data-open="signup" class="w-full sm:w-auto bg-brand-orange text-black px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-brand-orange-2 transition transform hover:-translate-y-1 text-center shadow-[0_10px_30px_rgba(255,107,26,0.3)] flex justify-center items-center gap-2">
+            <i data-lucide="flame" class="w-5 h-5"></i>
+            Inscríbete hoy
+          </button>
+          <a href="#planes" class="w-full sm:w-auto glass text-white px-8 py-4 rounded-xl font-bold uppercase text-sm tracking-widest hover:bg-white/10 transition flex items-center justify-center gap-3 group">
+            Ver planes
+            <i data-lucide="arrow-down" class="w-4 h-4 group-hover:translate-y-1 transition-transform"></i>
+          </a>
+        </div>
+
+        <!-- Mini metrics row -->
+        <div class="grid grid-cols-3 gap-6 mt-12 max-w-md mx-auto md:mx-0 md:max-w-lg">
+          <div class="text-center md:text-left">
+            <p class="text-3xl sm:text-4xl font-black text-white">+500</p>
+            <p class="text-gray-400 text-[10px] sm:text-xs uppercase font-bold tracking-widest mt-1">Atletas activos</p>
+          </div>
+          <div class="text-center md:text-left">
+            <p class="text-3xl sm:text-4xl font-black text-white">10</p>
+            <p class="text-gray-400 text-[10px] sm:text-xs uppercase font-bold tracking-widest mt-1">Años formando</p>
+          </div>
+          <div class="text-center md:text-left">
+            <p class="text-3xl sm:text-4xl font-black text-white">12+</p>
+            <p class="text-gray-400 text-[10px] sm:text-xs uppercase font-bold tracking-widest mt-1">Deportes</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="hidden md:flex absolute bottom-8 left-1/2 transform -translate-x-1/2 flex-col items-center animate-bounce">
+      <span class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Explorar</span>
+      <i data-lucide="chevron-down" class="text-brand-orange"></i>
+    </div>
+  </section>
+
+  <!-- Highlights Banner -->
+  <section class="py-6 sm:py-8 bg-brand-orange relative z-20 overflow-hidden">
+    <div class="flex whitespace-nowrap overflow-hidden items-center group">
+      <div class="flex animate-[slide_25s_linear_infinite] group-hover:[animation-play-state:paused] items-center text-black font-black uppercase text-lg sm:text-xl md:text-2xl tracking-widest">
+        <span class="mx-4 sm:mx-8">•</span> FÁBRICA DE MONSTRUOS
+        <span class="mx-4 sm:mx-8">•</span> PREP FÍSICA DE ÉLITE
+        <span class="mx-4 sm:mx-8">•</span> COACHES CERTIFICADOS
+        <span class="mx-4 sm:mx-8">•</span> ACADEMIA ONLINE
+        <span class="mx-4 sm:mx-8">•</span> COMUNIDAD REAL
+        <span class="mx-4 sm:mx-8">•</span> PAGO CON MERCADO PAGO
+        <span class="mx-4 sm:mx-8">•</span> FÁBRICA DE MONSTRUOS
+        <span class="mx-4 sm:mx-8">•</span> PREP FÍSICA DE ÉLITE
+        <span class="mx-4 sm:mx-8">•</span> COACHES CERTIFICADOS
+        <span class="mx-4 sm:mx-8">•</span> ACADEMIA ONLINE
+        <span class="mx-4 sm:mx-8">•</span> COMUNIDAD REAL
+        <span class="mx-4 sm:mx-8">•</span> PAGO CON MERCADO PAGO
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Deportes -->
+  <section id="disciplinas" class="py-16 sm:py-24 px-4 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12 sm:mb-20" data-aos="fade-up">
+        <span class="text-brand-orange font-bold tracking-widest uppercase text-xs sm:text-sm mb-3 block">La plataforma</span>
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black uppercase mb-4 px-2">Preparamos al atleta <br class="sm:hidden"><span class="text-gradient">por deporte</span></h2>
+        <p class="text-gray-400 max-w-2xl mx-auto text-base sm:text-lg mt-6 font-light">Cada disciplina tiene demandas únicas. Entrenamos específico por deporte y por posición.</p>
+        <div class="w-20 sm:w-24 h-1.5 bg-brand-orange mx-auto rounded-full mt-8"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 relative z-10">
+        <!-- Football -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl group relative z-10" data-aos="fade-up" data-aos-delay="0">
+          <div class="w-14 h-14 sm:w-16 sm:h-16 bg-brand-gray rounded-2xl flex items-center justify-center mb-6 sm:mb-8 border border-white/5 relative overflow-hidden group-hover:border-brand-orange/50 transition">
+            <div class="absolute inset-0 bg-brand-orange/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+            <i data-lucide="shield" class="text-white group-hover:text-brand-orange w-7 h-7 sm:w-8 sm:h-8 relative z-10 transition-colors"></i>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black mb-3 sm:mb-4 uppercase tracking-wide">Fútbol Americano</h3>
+          <p class="text-gray-400 leading-relaxed mb-6 text-sm sm:text-base">Fuerza, potencia, velocidad y resistencia HYROX. Programa insignia de la casa.</p>
+          <button data-open="signup" class="inline-flex items-center text-brand-orange font-bold text-xs sm:text-sm uppercase tracking-widest hover:text-white transition">
+            Inscribirme <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Soccer -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl group relative z-10" data-aos="fade-up" data-aos-delay="100">
+          <div class="w-14 h-14 sm:w-16 sm:h-16 bg-brand-gray rounded-2xl flex items-center justify-center mb-6 sm:mb-8 border border-white/5 relative overflow-hidden group-hover:border-brand-orange/50 transition">
+            <div class="absolute inset-0 bg-brand-orange/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+            <i data-lucide="circle-dot" class="text-white group-hover:text-brand-orange w-7 h-7 sm:w-8 sm:h-8 relative z-10 transition-colors"></i>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black mb-3 sm:mb-4 uppercase tracking-wide">Fútbol Soccer</h3>
+          <p class="text-gray-400 leading-relaxed mb-6 text-sm sm:text-base">Explosividad, cambio de dirección, core y prevención de lesiones por posición.</p>
+          <button data-open="signup" class="inline-flex items-center text-brand-orange font-bold text-xs sm:text-sm uppercase tracking-widest hover:text-white transition">
+            Inscribirme <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Básquetbol -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl group relative z-10" data-aos="fade-up" data-aos-delay="200">
+          <div class="w-14 h-14 sm:w-16 sm:h-16 bg-brand-gray rounded-2xl flex items-center justify-center mb-6 sm:mb-8 border border-white/5 relative overflow-hidden group-hover:border-brand-orange/50 transition">
+            <div class="absolute inset-0 bg-brand-orange/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+            <i data-lucide="dribbble" class="text-white group-hover:text-brand-orange w-7 h-7 sm:w-8 sm:h-8 relative z-10 transition-colors"></i>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black mb-3 sm:mb-4 uppercase tracking-wide">Básquetbol</h3>
+          <p class="text-gray-400 leading-relaxed mb-6 text-sm sm:text-base">Salto vertical, aceleración y control bajo fatiga durante 4 cuartos.</p>
+          <button data-open="signup" class="inline-flex items-center text-brand-orange font-bold text-xs sm:text-sm uppercase tracking-widest hover:text-white transition">
+            Inscribirme <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Tenis -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl group relative z-10" data-aos="fade-up" data-aos-delay="0">
+          <div class="w-14 h-14 sm:w-16 sm:h-16 bg-brand-gray rounded-2xl flex items-center justify-center mb-6 sm:mb-8 border border-white/5 relative overflow-hidden group-hover:border-brand-orange/50 transition">
+            <div class="absolute inset-0 bg-brand-orange/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+            <i data-lucide="gamepad-2" class="text-white group-hover:text-brand-orange w-7 h-7 sm:w-8 sm:h-8 relative z-10 transition-colors"></i>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black mb-3 sm:mb-4 uppercase tracking-wide">Tenis / Pádel</h3>
+          <p class="text-gray-400 leading-relaxed mb-6 text-sm sm:text-base">Rotación, hombro sano, reacción y consistencia de fuerza en set largo.</p>
+          <button data-open="signup" class="inline-flex items-center text-brand-orange font-bold text-xs sm:text-sm uppercase tracking-widest hover:text-white transition">
+            Inscribirme <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Powerlifting -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl group relative z-10" data-aos="fade-up" data-aos-delay="100">
+          <div class="w-14 h-14 sm:w-16 sm:h-16 bg-brand-gray rounded-2xl flex items-center justify-center mb-6 sm:mb-8 border border-white/5 relative overflow-hidden group-hover:border-brand-orange/50 transition">
+            <div class="absolute inset-0 bg-brand-orange/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+            <i data-lucide="dumbbell" class="text-white group-hover:text-brand-orange w-7 h-7 sm:w-8 sm:h-8 relative z-10 transition-colors"></i>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black mb-3 sm:mb-4 uppercase tracking-wide">Powerlifting</h3>
+          <p class="text-gray-400 leading-relaxed mb-6 text-sm sm:text-base">Sentadilla, press banca, peso muerto. Programación basada en ciencia.</p>
+          <button data-open="signup" class="inline-flex items-center text-brand-orange font-bold text-xs sm:text-sm uppercase tracking-widest hover:text-white transition">
+            Inscribirme <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Kids -->
+        <div class="glass-card p-6 sm:p-10 rounded-3xl group relative z-10" data-aos="fade-up" data-aos-delay="200">
+          <div class="w-14 h-14 sm:w-16 sm:h-16 bg-brand-gray rounded-2xl flex items-center justify-center mb-6 sm:mb-8 border border-white/5 relative overflow-hidden group-hover:border-brand-orange/50 transition">
+            <div class="absolute inset-0 bg-brand-orange/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+            <i data-lucide="baby" class="text-white group-hover:text-brand-orange w-7 h-7 sm:w-8 sm:h-8 relative z-10 transition-colors"></i>
+          </div>
+          <h3 class="text-xl sm:text-2xl font-black mb-3 sm:mb-4 uppercase tracking-wide">Escuela Kids</h3>
+          <p class="text-gray-400 leading-relaxed mb-6 text-sm sm:text-base">Coordinación y bases deportivas para 6–13 años con maestros certificados.</p>
+          <button data-open="signup" class="inline-flex items-center text-brand-orange font-bold text-xs sm:text-sm uppercase tracking-widest hover:text-white transition">
+            Inscribirme <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Ecosistema (programas especiales) -->
+  <section id="ecosistema" class="py-16 sm:py-20 bg-brand-gray border-y border-white/5 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="flex flex-col lg:flex-row items-center gap-10 lg:gap-12">
+        <div class="w-full lg:w-1/2 grid grid-cols-2 gap-3 sm:gap-4 order-2 lg:order-1" data-aos="fade-up">
+          <div class="bg-brand-dark p-4 sm:p-6 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center transform hover:scale-105 transition">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-brand-orange flex items-center justify-center text-brand-orange mb-2 sm:mb-3">
+              <i data-lucide="user-plus" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <h4 class="font-black uppercase text-xs sm:text-sm mb-1">Cuenta</h4>
+            <p class="text-[10px] sm:text-xs text-gray-500 uppercase">Tu perfil de atleta</p>
+          </div>
+          <div class="bg-brand-dark p-4 sm:p-6 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center transform hover:scale-105 transition sm:translate-y-4">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-brand-orange flex items-center justify-center text-brand-orange mb-2 sm:mb-3">
+              <i data-lucide="book-open" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <h4 class="font-black uppercase text-xs sm:text-sm mb-1">Cursos</h4>
+            <p class="text-[10px] sm:text-xs text-gray-500 uppercase">Academia online</p>
+          </div>
+          <div class="bg-brand-dark p-4 sm:p-6 rounded-2xl border border-white/5 text-center flex flex-col items-center justify-center transform hover:scale-105 transition">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-brand-orange flex items-center justify-center text-brand-orange mb-2 sm:mb-3">
+              <i data-lucide="credit-card" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <h4 class="font-black uppercase text-xs sm:text-sm mb-1">Mercado Pago</h4>
+            <p class="text-[10px] sm:text-xs text-gray-500 uppercase">Pago seguro</p>
+          </div>
+          <div class="bg-brand-dark p-4 sm:p-6 rounded-2xl border border-brand-orange/30 text-center flex flex-col items-center justify-center transform hover:scale-105 transition sm:translate-y-4 relative overflow-hidden group">
+            <div class="absolute inset-0 bg-brand-orange/10 group-hover:bg-brand-orange/20 transition"></div>
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-brand-orange flex items-center justify-center text-black mb-2 sm:mb-3 relative z-10">
+              <i data-lucide="layout-dashboard" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            </div>
+            <h4 class="font-black uppercase text-xs sm:text-sm mb-1 relative z-10 text-brand-orange">Panel</h4>
+            <p class="text-[10px] sm:text-xs text-gray-400 uppercase relative z-10">Tu progreso</p>
+          </div>
+        </div>
+
+        <div class="w-full lg:w-1/2 lg:pl-10 text-center lg:text-left order-1 lg:order-2" data-aos="fade-up" data-aos-delay="100">
+          <span class="text-brand-orange font-bold tracking-widest uppercase text-xs sm:text-sm mb-2 block">Más que entrenar</span>
+          <h2 class="text-3xl sm:text-4xl md:text-5xl font-black uppercase mb-4 sm:mb-6 leading-tight">El ecosistema <br class="hidden sm:block"><span class="text-gradient">CED·GYM</span></h2>
+          <p class="text-gray-400 mb-6 sm:mb-8 text-base md:text-lg leading-relaxed px-2 lg:px-0">
+            Cuenta, cursos, membresías, pagos y panel — todo conectado en una sola plataforma. Como las grandes, pero para el atleta real.
+          </p>
+          <ul class="space-y-3 sm:space-y-4 mb-8 text-left max-w-md mx-auto lg:mx-0">
+            <li class="flex items-start sm:items-center text-gray-300 font-medium text-sm sm:text-base">
+              <div class="shrink-0 w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center mr-3 sm:mr-4 mt-0.5 sm:mt-0">
+                <i data-lucide="check" class="w-3 h-3 sm:w-4 sm:h-4 text-brand-orange"></i>
+              </div>
+              <span>Inscripción en minutos, acceso inmediato</span>
+            </li>
+            <li class="flex items-start sm:items-center text-gray-300 font-medium text-sm sm:text-base">
+              <div class="shrink-0 w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center mr-3 sm:mr-4 mt-0.5 sm:mt-0">
+                <i data-lucide="check" class="w-3 h-3 sm:w-4 sm:h-4 text-brand-orange"></i>
+              </div>
+              <span>Seguimiento de PRs, asistencia y carga semanal</span>
+            </li>
+            <li class="flex items-start sm:items-center text-gray-300 font-medium text-sm sm:text-base">
+              <div class="shrink-0 w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center mr-3 sm:mr-4 mt-0.5 sm:mt-0">
+                <i data-lucide="check" class="w-3 h-3 sm:w-4 sm:h-4 text-brand-orange"></i>
+              </div>
+              <span>Cobros seguros con Mercado Pago y factura automática</span>
+            </li>
+            <li class="flex items-start sm:items-center text-gray-300 font-medium text-sm sm:text-base">
+              <div class="shrink-0 w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center mr-3 sm:mr-4 mt-0.5 sm:mt-0">
+                <i data-lucide="check" class="w-3 h-3 sm:w-4 sm:h-4 text-brand-orange"></i>
+              </div>
+              <span>Cursos incluidos o comprados por separado</span>
+            </li>
+          </ul>
+          <button data-open="signup" class="bg-brand-orange text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-xs sm:text-sm hover:scale-105 transition transform inline-flex justify-center items-center gap-2">
+            Crear cuenta gratis <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Football Élite (Programa insignia) -->
+  <section id="insignia" class="py-16 sm:py-24 insignia-bg relative overflow-hidden">
+    <div class="absolute inset-0 bg-black/70 md:bg-black/60"></div>
+    <div class="max-w-7xl mx-auto px-4 relative z-10">
+      <div class="bg-brand-dark/90 md:bg-brand-dark/80 backdrop-blur-xl border border-white/10 rounded-3xl md:rounded-[2.5rem] p-6 sm:p-8 md:p-16 flex flex-col lg:flex-row items-center gap-10 md:gap-12 shadow-2xl overflow-hidden" data-aos="zoom-in">
+
+        <div class="w-full lg:w-3/5 text-center lg:text-left order-2 lg:order-1">
+          <div class="flex items-center justify-center lg:justify-start space-x-3 mb-4 sm:mb-6">
+            <div class="px-3 py-1 bg-white text-black font-black uppercase text-[10px] sm:text-xs tracking-widest rounded-sm border-l-4 border-brand-orange inline-block">PROGRAMA INSIGNIA</div>
+          </div>
+          <h2 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase mb-4 sm:mb-6 leading-[1.05] text-white">
+            Prep Física para <br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-orange-2 to-brand-orange">Football</span>
+          </h2>
+          <p class="text-gray-300 text-sm sm:text-base md:text-lg mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0">
+            Programa insignia de la casa. Fuerza, potencia, velocidad, resistencia y agilidad en un solo sistema diseñado para jugadores de <strong class="text-white">fútbol americano</strong>.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-10 text-left">
+            <div class="glass p-4 sm:p-5 rounded-xl flex sm:block items-center sm:items-start gap-4 sm:gap-0">
+              <i data-lucide="zap" class="text-brand-orange sm:mb-2 w-8 h-8 shrink-0"></i>
+              <div>
+                <h4 class="font-bold uppercase text-xs sm:text-sm text-white">Fuerza + Velocidad</h4>
+                <p class="text-[11px] sm:text-xs text-gray-400 mt-1">Potencia real para el contacto y el sprint.</p>
+              </div>
+            </div>
+            <div class="glass p-4 sm:p-5 rounded-xl flex sm:block items-center sm:items-start gap-4 sm:gap-0">
+              <i data-lucide="medal" class="text-brand-orange sm:mb-2 w-8 h-8 shrink-0"></i>
+              <div>
+                <h4 class="font-bold uppercase text-xs sm:text-sm text-white">Coach Nayo</h4>
+                <p class="text-[11px] sm:text-xs text-gray-400 mt-1">+10 años preparando atletas de football.</p>
+              </div>
+            </div>
+            <div class="glass p-4 sm:p-5 rounded-xl flex sm:block items-center sm:items-start gap-4 sm:gap-0">
+              <i data-lucide="timer" class="text-brand-orange sm:mb-2 w-8 h-8 shrink-0"></i>
+              <div>
+                <h4 class="font-bold uppercase text-xs sm:text-sm text-white">HYROX</h4>
+                <p class="text-[11px] sm:text-xs text-gray-400 mt-1">Para aguantar 4 cuartos al mismo nivel.</p>
+              </div>
+            </div>
+            <div class="glass p-4 sm:p-5 rounded-xl flex sm:block items-center sm:items-start gap-4 sm:gap-0">
+              <i data-lucide="users" class="text-brand-orange sm:mb-2 w-8 h-8 shrink-0"></i>
+              <div>
+                <h4 class="font-bold uppercase text-xs sm:text-sm text-white">Por posición</h4>
+                <p class="text-[11px] sm:text-xs text-gray-400 mt-1">QB, RB, WR, OL, DL — prep específica.</p>
+              </div>
+            </div>
+          </div>
+
+          <button data-open="signup" class="w-full sm:w-auto bg-brand-orange text-black font-black px-6 sm:px-10 py-4 sm:py-5 rounded-xl sm:rounded-full uppercase tracking-widest text-xs sm:text-sm hover:scale-105 transition transform inline-flex justify-center items-center">
+            Inscribirme al programa <i data-lucide="chevron-right" class="ml-2 w-4 h-4 sm:w-5 sm:h-5"></i>
+          </button>
+        </div>
+
+        <div class="w-full lg:w-2/5 relative flex justify-center order-1 lg:order-2 mb-6 lg:mb-0">
+          <div class="absolute inset-0 bg-brand-orange/20 rounded-full filter blur-[40px] md:blur-[60px] animate-pulse"></div>
+          <div class="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full border-[6px] md:border-[10px] border-brand-dark overflow-hidden shadow-[0_0_30px_rgba(255,107,26,0.3)]">
+            <img src="https://images.unsplash.com/photo-1566577739112-5180d4bf9390?q=80&w=2071&auto=format&fit=crop" alt="Football training" class="w-full h-full object-cover grayscale hover:grayscale-0 transition duration-700">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Cursos / Academia -->
+  <section id="cursos" class="py-16 sm:py-24 px-4 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12 sm:mb-20" data-aos="fade-up">
+        <span class="text-brand-orange font-bold tracking-widest uppercase text-xs sm:text-sm mb-3 block">Academia</span>
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black uppercase mb-4 px-2">Cursos con <br class="sm:hidden"><span class="text-gradient">entrenadores reales</span></h2>
+        <p class="text-gray-400 max-w-2xl mx-auto text-base sm:text-lg mt-6 font-light">Compra cursos individuales o inclúyelos en tu membresía. Acceso inmediato desde tu panel.</p>
+        <div class="w-20 sm:w-24 h-1.5 bg-brand-orange mx-auto rounded-full mt-8"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Curso 1 -->
+        <div class="glass-card rounded-3xl overflow-hidden group" data-aos="fade-up" data-aos-delay="0">
+          <div class="h-40 relative overflow-hidden" style="background: radial-gradient(circle at 30% 40%, rgba(255,107,26,.5), transparent 55%), linear-gradient(135deg, #2a1004, #0a0503);">
+            <div class="absolute top-4 left-4 flex gap-2">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">Intermedio</span>
+            </div>
+            <div class="absolute top-4 right-4">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">8 semanas</span>
+            </div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-black uppercase mb-2 tracking-wide">Pretemporada Football</h3>
+            <p class="text-gray-400 text-sm mb-4 leading-relaxed">Fuerza, potencia y condición para llegar al campo al 100%.</p>
+            <div class="flex items-end justify-between pt-4 border-t border-white/5">
+              <div>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Desde</p>
+                <p class="text-2xl font-black">$2,490 <span class="text-xs text-gray-400 font-normal">MXN</span></p>
+              </div>
+              <button data-open="checkout" data-plan="course-preseason" class="bg-brand-orange text-black px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-brand-orange-2 transition">
+                Inscribirme
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Curso 2 -->
+        <div class="glass-card rounded-3xl overflow-hidden group" data-aos="fade-up" data-aos-delay="100">
+          <div class="h-40 relative overflow-hidden" style="background: radial-gradient(circle at 70% 30%, rgba(255,138,61,.45), transparent 55%), linear-gradient(135deg, #1a0f04, #0a0502);">
+            <div class="absolute top-4 left-4 flex gap-2">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">Avanzado</span>
+            </div>
+            <div class="absolute top-4 right-4">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">12 semanas</span>
+            </div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-black uppercase mb-2 tracking-wide">Powerlifting 12W</h3>
+            <p class="text-gray-400 text-sm mb-4 leading-relaxed">Programa SBD basado en ciencia con revisión por video semanal.</p>
+            <div class="flex items-end justify-between pt-4 border-t border-white/5">
+              <div>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Desde</p>
+                <p class="text-2xl font-black">$3,190 <span class="text-xs text-gray-400 font-normal">MXN</span></p>
+              </div>
+              <button data-open="checkout" data-plan="course-pl12" class="bg-brand-orange text-black px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-brand-orange-2 transition">
+                Inscribirme
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Curso 3 -->
+        <div class="glass-card rounded-3xl overflow-hidden group" data-aos="fade-up" data-aos-delay="200">
+          <div class="h-40 relative overflow-hidden" style="background: radial-gradient(circle at 40% 60%, rgba(255,107,26,.4), transparent 55%), linear-gradient(135deg, #200c04, #0a0402);">
+            <div class="absolute top-4 left-4 flex gap-2">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">Online</span>
+            </div>
+            <div class="absolute top-4 right-4">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">6 lecciones</span>
+            </div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-black uppercase mb-2 tracking-wide">Nutrición Deportiva</h3>
+            <p class="text-gray-400 text-sm mb-4 leading-relaxed">Plan alimenticio por objetivo con seguimiento semanal.</p>
+            <div class="flex items-end justify-between pt-4 border-t border-white/5">
+              <div>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Desde</p>
+                <p class="text-2xl font-black">$1,290 <span class="text-xs text-gray-400 font-normal">MXN</span></p>
+              </div>
+              <button data-open="checkout" data-plan="course-nutri" class="bg-brand-orange text-black px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-brand-orange-2 transition">
+                Inscribirme
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Curso 4 -->
+        <div class="glass-card rounded-3xl overflow-hidden group" data-aos="fade-up" data-aos-delay="300">
+          <div class="h-40 relative overflow-hidden" style="background: radial-gradient(circle at 60% 40%, rgba(255,176,116,.5), transparent 55%), linear-gradient(135deg, #2a1a04, #0a0604);">
+            <div class="absolute top-4 left-4 flex gap-2">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">Kids</span>
+            </div>
+            <div class="absolute top-4 right-4">
+              <span class="px-2 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-md text-[10px] font-bold uppercase tracking-widest">Mensual</span>
+            </div>
+          </div>
+          <div class="p-6">
+            <h3 class="text-lg font-black uppercase mb-2 tracking-wide">Escuela Infantil</h3>
+            <p class="text-gray-400 text-sm mb-4 leading-relaxed">Lun–Vie PM · grupos por edad · maestros certificados.</p>
+            <div class="flex items-end justify-between pt-4 border-t border-white/5">
+              <div>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Desde</p>
+                <p class="text-2xl font-black">$890 <span class="text-xs text-gray-400 font-normal">/mes</span></p>
+              </div>
+              <button data-open="checkout" data-plan="course-kids" class="bg-brand-orange text-black px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-brand-orange-2 transition">
+                Inscribirme
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Planes / Membresías -->
+  <section id="planes" class="py-16 sm:py-24 bg-brand-gray border-y border-white/5 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="text-center mb-12" data-aos="fade-up">
+        <span class="text-brand-orange font-bold tracking-widest uppercase text-xs sm:text-sm mb-3 block">Membresías</span>
+        <h2 class="text-3xl sm:text-4xl md:text-5xl font-black uppercase mb-4 px-2">Elige tu <span class="text-gradient">nivel</span></h2>
+        <p class="text-gray-400 max-w-2xl mx-auto text-base sm:text-lg mt-6 font-light">Mensual, trimestral o anual. Cancela cuando quieras. Cobros seguros con Mercado Pago.</p>
+        <div class="w-20 sm:w-24 h-1.5 bg-brand-orange mx-auto rounded-full mt-8"></div>
+      </div>
+
+      <!-- cycle toggle -->
+      <div class="flex justify-center mb-12">
+        <div class="inline-flex glass rounded-full p-1.5 gap-1">
+          <button class="cycle-btn is-active px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition" data-cycle="month">Mensual</button>
+          <button class="cycle-btn px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition flex items-center gap-2" data-cycle="q">
+            Trimestral <span class="bg-brand-orange/20 text-brand-orange px-2 py-0.5 rounded text-[10px]">−10%</span>
+          </button>
+          <button class="cycle-btn px-5 py-2 rounded-full text-xs font-black uppercase tracking-widest transition flex items-center gap-2" data-cycle="y">
+            Anual <span class="bg-brand-orange/20 text-brand-orange px-2 py-0.5 rounded text-[10px]">−20%</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Starter -->
+        <div class="glass-card p-8 rounded-3xl plan" data-aos="fade-up" data-aos-delay="0">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 rounded-xl bg-brand-orange/10 flex items-center justify-center">
+              <i data-lucide="zap" class="text-brand-orange w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-2xl font-black uppercase tracking-wide">Starter</h3>
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-widest">Para empezar</p>
+            </div>
+          </div>
+          <div class="pb-6 mb-6 border-b border-white/5">
+            <div class="flex items-baseline gap-2">
+              <span class="text-5xl font-black">$<span class="plan-price" data-month="690" data-q="1864" data-y="6624">690</span></span>
+              <span class="text-gray-400 text-sm">MXN <em class="not-italic text-xs text-gray-500 cycle-label">/mes</em></span>
+            </div>
+          </div>
+          <ul class="space-y-3 mb-8 text-sm">
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Acceso a sala general</li>
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> 3 clases grupales / semana</li>
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Plan base de entrenamiento</li>
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Acceso al panel del atleta</li>
+          </ul>
+          <button data-open="checkout" data-plan="starter" class="w-full glass text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl hover:bg-white/10 transition">
+            Elegir Starter
+          </button>
+        </div>
+
+        <!-- Pro -->
+        <div class="rounded-3xl plan relative overflow-hidden p-[1px] bg-gradient-to-br from-brand-orange-2 via-brand-orange to-brand-orange-3" data-aos="fade-up" data-aos-delay="100">
+          <div class="absolute top-0 right-8 bg-brand-orange text-black text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-b-lg">
+            Más popular
+          </div>
+          <div class="bg-brand-gray rounded-3xl p-8">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-12 h-12 rounded-xl bg-brand-orange flex items-center justify-center">
+                <i data-lucide="flame" class="text-black w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-2xl font-black uppercase tracking-wide">Pro</h3>
+                <p class="text-xs text-gray-500 uppercase font-bold tracking-widest">Atleta regular</p>
+              </div>
+            </div>
+            <div class="pb-6 mb-6 border-b border-white/5">
+              <div class="flex items-baseline gap-2">
+                <span class="text-5xl font-black text-gradient">$<span class="plan-price" data-month="1290" data-q="3483" data-y="12384">1,290</span></span>
+                <span class="text-gray-400 text-sm">MXN <em class="not-italic text-xs text-gray-500 cycle-label">/mes</em></span>
+              </div>
+            </div>
+            <ul class="space-y-3 mb-8 text-sm">
+              <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Acceso ilimitado 6 días</li>
+              <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Clases grupales sin límite</li>
+              <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Plan personalizado por coach</li>
+              <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> 1 curso incluido / trimestre</li>
+              <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Check-in QR · Factura</li>
+            </ul>
+            <button data-open="checkout" data-plan="pro" class="w-full bg-brand-orange text-black font-black uppercase tracking-widest text-xs py-4 rounded-xl hover:bg-brand-orange-2 transition shadow-[0_10px_30px_rgba(255,107,26,0.3)]">
+              Elegir Pro
+            </button>
+          </div>
+        </div>
+
+        <!-- Élite -->
+        <div class="glass-card p-8 rounded-3xl plan" data-aos="fade-up" data-aos-delay="200">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 rounded-xl bg-brand-orange/10 flex items-center justify-center">
+              <i data-lucide="crown" class="text-brand-orange w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-2xl font-black uppercase tracking-wide">Élite</h3>
+              <p class="text-xs text-gray-500 uppercase font-bold tracking-widest">Preparación deportiva</p>
+            </div>
+          </div>
+          <div class="pb-6 mb-6 border-b border-white/5">
+            <div class="flex items-baseline gap-2">
+              <span class="text-5xl font-black">$<span class="plan-price" data-month="2290" data-q="6183" data-y="21984">2,290</span></span>
+              <span class="text-gray-400 text-sm">MXN <em class="not-italic text-xs text-gray-500 cycle-label">/mes</em></span>
+            </div>
+          </div>
+          <ul class="space-y-3 mb-8 text-sm">
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Programa individualizado</li>
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Prep física por deporte</li>
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> 2 sesiones 1:1 / semana</li>
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Nutrición incluida</li>
+            <li class="flex gap-3 text-gray-300"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Análisis de video + PRs</li>
+          </ul>
+          <button data-open="checkout" data-plan="elite" class="w-full glass text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl hover:bg-white/10 transition">
+            Elegir Élite
+          </button>
+        </div>
+      </div>
+
+      <p class="text-center text-xs text-gray-500 mt-10 uppercase tracking-widest font-bold flex items-center justify-center gap-2">
+        <i data-lucide="shield-check" class="w-4 h-4 text-brand-orange"></i>
+        Cobros seguros con Mercado Pago · Cancela cuando quieras
+      </p>
+    </div>
+  </section>
+
+  <!-- ================================================== Inscripción / Checkout preview -->
+  <section id="inscripcion" class="py-16 sm:py-24 px-4 overflow-hidden">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div data-aos="fade-up">
+          <span class="text-brand-orange font-bold tracking-widest uppercase text-xs sm:text-sm mb-3 block">Inscripción</span>
+          <h2 class="text-3xl sm:text-4xl md:text-5xl font-black uppercase mb-6 leading-tight">
+            Inscríbete en <br><span class="text-gradient">3 pasos</span>
+          </h2>
+          <p class="text-gray-400 text-base md:text-lg mb-10 leading-relaxed font-light max-w-lg">
+            Crea tu cuenta, elige tu plan y paga seguro con Mercado Pago. Listo para entrenar hoy mismo.
+          </p>
+
+          <div class="space-y-6 mb-10">
+            <div class="flex gap-5 pb-6 border-b border-white/5">
+              <div class="shrink-0 w-12 h-12 rounded-full border-2 border-brand-orange flex items-center justify-center text-brand-orange font-black text-lg">01</div>
+              <div>
+                <h4 class="font-black uppercase tracking-wide text-base mb-1">Crea tu cuenta</h4>
+                <p class="text-gray-400 text-sm">Email, nombre, deporte. 20 segundos.</p>
+              </div>
+            </div>
+            <div class="flex gap-5 pb-6 border-b border-white/5">
+              <div class="shrink-0 w-12 h-12 rounded-full border-2 border-brand-orange flex items-center justify-center text-brand-orange font-black text-lg">02</div>
+              <div>
+                <h4 class="font-black uppercase tracking-wide text-base mb-1">Elige plan o curso</h4>
+                <p class="text-gray-400 text-sm">Starter, Pro, Élite o cursos individuales.</p>
+              </div>
+            </div>
+            <div class="flex gap-5">
+              <div class="shrink-0 w-12 h-12 rounded-full border-2 border-brand-orange flex items-center justify-center text-brand-orange font-black text-lg">03</div>
+              <div>
+                <h4 class="font-black uppercase tracking-wide text-base mb-1">Paga con Mercado Pago</h4>
+                <p class="text-gray-400 text-sm">Tarjeta, OXXO, SPEI o saldo MP. Factura al momento.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-4 mb-8">
+            <div class="flex items-center gap-2 text-gray-400 text-sm">
+              <i data-lucide="shield-check" class="w-4 h-4 text-brand-orange"></i> SSL · 3D Secure
+            </div>
+            <div class="flex items-center gap-2 text-gray-400 text-sm">
+              <i data-lucide="file-check" class="w-4 h-4 text-brand-orange"></i> Factura electrónica
+            </div>
+            <div class="flex items-center gap-2 text-gray-400 text-sm">
+              <i data-lucide="message-circle" class="w-4 h-4 text-brand-orange"></i> Soporte WhatsApp
+            </div>
+          </div>
+
+          <button data-open="signup" class="bg-brand-orange text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-xs sm:text-sm hover:scale-105 transition transform inline-flex items-center gap-2 shadow-[0_10px_30px_rgba(255,107,26,0.3)]">
+            Comenzar ahora <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Phone mockup -->
+        <div class="flex justify-center" data-aos="fade-up" data-aos-delay="150">
+          <div class="phone-frame">
+            <div class="phone-screen">
+              <div class="p-4 pt-14 h-full flex flex-col gap-3">
+                <div class="flex justify-between items-center text-xs text-gray-400 pb-2">
+                  <span>←</span>
+                  <span class="text-white font-bold">Pago</span>
+                  <span><i data-lucide="lock" class="w-3.5 h-3.5 inline"></i></span>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-gradient-to-br from-brand-orange/20 to-brand-orange/5 border border-brand-orange/40 space-y-2">
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-gray-400 uppercase tracking-widest font-bold">Plan</span>
+                    <b class="text-white">Pro · Mensual</b>
+                  </div>
+                  <div class="flex justify-between items-center text-xs">
+                    <span class="text-gray-400 uppercase tracking-widest font-bold">Renovación</span>
+                    <b class="text-white">15 may 2026</b>
+                  </div>
+                  <div class="flex justify-between items-baseline pt-2 border-t border-brand-orange/20">
+                    <span class="text-gray-400 uppercase tracking-widest font-bold text-[10px]">Total hoy</span>
+                    <b class="text-3xl font-black text-white">$1,290 <em class="text-xs text-gray-400 font-normal not-italic">MXN</em></b>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Método de pago</p>
+                  <div class="p-3 rounded-xl bg-brand-orange/5 border border-brand-orange/40 flex items-center gap-3">
+                    <div class="mp-badge shrink-0">
+                      <span>mercado</span><b>pago</b>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-bold text-white">Mercado Pago</p>
+                      <p class="text-[10px] text-gray-400">Tarjeta · OXXO · SPEI</p>
+                    </div>
+                    <div class="w-4 h-4 rounded-full bg-brand-orange ring-2 ring-brand-orange/30 ring-offset-2 ring-offset-[#0a0908] shrink-0"></div>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Tarjeta</p>
+                  <div class="p-4 rounded-xl bg-gradient-to-br from-[#1a120a] to-[#0a050a] border border-white/10 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="font-black text-sm tracking-wider">VISA</span>
+                      <i data-lucide="wifi" class="w-4 h-4 text-gray-400 rotate-90"></i>
+                    </div>
+                    <div class="text-sm font-mono tracking-widest">4509 •••• •••• 7321</div>
+                    <div class="flex gap-6 text-[10px] text-gray-400 uppercase tracking-widest">
+                      <span>Vence <b class="text-white">12/29</b></span>
+                      <span>CVV <b class="text-white">•••</b></span>
+                    </div>
+                  </div>
+                </div>
+
+                <button class="mt-auto bg-brand-orange text-black py-3.5 rounded-xl font-black uppercase text-xs tracking-widest shadow-[0_10px_30px_rgba(255,107,26,0.3)] flex items-center justify-center gap-2">
+                  Pagar $1,290 MXN <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+                <p class="text-center text-[9px] text-gray-500 uppercase tracking-widest">🔒 Procesado por Mercado Pago</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Panel del atleta -->
+  <section id="app" class="py-16 sm:py-24 bg-brand-gray border-y border-white/5 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+        <!-- Dashboard mockup -->
+        <div class="flex justify-center order-2 lg:order-1" data-aos="fade-up">
+          <div class="w-full max-w-md glass-card rounded-3xl p-6 space-y-5">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs text-gray-400 uppercase tracking-widest font-bold">Buenos días,</p>
+                <p class="text-2xl font-black uppercase">Andrés</p>
+              </div>
+              <div class="w-12 h-12 rounded-full bg-brand-orange text-black font-black text-lg flex items-center justify-center">A</div>
+            </div>
+
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-brand-orange/20 to-brand-orange/5 border border-brand-orange/40">
+              <p class="text-[10px] text-brand-orange uppercase tracking-widest font-bold mb-1">Hoy · Mar 14</p>
+              <p class="font-black uppercase text-lg tracking-wide mb-2">Pretemporada · Fuerza</p>
+              <div class="flex justify-between text-xs text-gray-300 mb-4">
+                <span>18:00 — 19:30</span>
+                <span>Coach Nayo</span>
+              </div>
+              <button class="w-full bg-brand-orange text-black py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+                <i data-lucide="qr-code" class="w-4 h-4"></i> Check-in QR
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="p-4 rounded-xl bg-brand-dark border border-white/5">
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Asistencia</p>
+                <p class="text-2xl font-black">92<span class="text-gray-400 text-sm">%</span></p>
+                <div class="h-1.5 bg-white/10 rounded-full mt-2 overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-brand-orange-3 to-brand-orange-2" style="width: 92%"></div>
+                </div>
+              </div>
+              <div class="p-4 rounded-xl bg-brand-dark border border-white/5">
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">PRs · mes</p>
+                <p class="text-2xl font-black">3</p>
+                <div class="flex gap-1 mt-2">
+                  <div class="flex-1 h-1.5 bg-gradient-to-r from-brand-orange-3 to-brand-orange-2 rounded-full"></div>
+                  <div class="flex-1 h-1.5 bg-gradient-to-r from-brand-orange-3 to-brand-orange-2 rounded-full"></div>
+                  <div class="flex-1 h-1.5 bg-gradient-to-r from-brand-orange-3 to-brand-orange-2 rounded-full"></div>
+                  <div class="flex-1 h-1.5 bg-white/10 rounded-full"></div>
+                  <div class="flex-1 h-1.5 bg-white/10 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-brand-dark border border-white/5">
+              <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Curso activo</p>
+              <p class="font-black uppercase text-sm mb-2 tracking-wide">Pretemporada Football</p>
+              <div class="h-2 bg-white/10 rounded-full overflow-hidden mb-1">
+                <div class="h-full bg-gradient-to-r from-brand-orange-3 to-brand-orange-2" style="width: 62%"></div>
+              </div>
+              <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Semana 5 de 8 · 62%</p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-[#009ee3]/10 border border-[#009ee3]/30 flex items-center justify-between">
+              <div>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Próximo cobro</p>
+                <p class="font-bold text-sm">Pro · $1,290 MXN</p>
+              </div>
+              <div class="mp-badge"><span>mercado</span><b>pago</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-1 lg:order-2 text-center lg:text-left" data-aos="fade-up" data-aos-delay="100">
+          <span class="text-brand-orange font-bold tracking-widest uppercase text-xs sm:text-sm mb-3 block">Panel del atleta</span>
+          <h2 class="text-3xl sm:text-4xl md:text-5xl font-black uppercase mb-6 leading-tight">
+            Tu gimnasio <br><span class="text-gradient">en el bolsillo</span>
+          </h2>
+          <p class="text-gray-400 text-base md:text-lg mb-8 leading-relaxed font-light max-w-lg mx-auto lg:mx-0">
+            Check-in con QR, plan del día, progreso de PRs, facturación y renovación automática. Como los atletas profesionales.
+          </p>
+          <ul class="space-y-3 mb-10 text-left max-w-md mx-auto lg:mx-0">
+            <li class="flex items-center gap-3 text-gray-300">
+              <div class="w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center shrink-0">
+                <i data-lucide="qr-code" class="w-3 h-3 text-brand-orange"></i>
+              </div>
+              Check-in con QR al llegar
+            </li>
+            <li class="flex items-center gap-3 text-gray-300">
+              <div class="w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center shrink-0">
+                <i data-lucide="calendar" class="w-3 h-3 text-brand-orange"></i>
+              </div>
+              Plan diario y calendario de clases
+            </li>
+            <li class="flex items-center gap-3 text-gray-300">
+              <div class="w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center shrink-0">
+                <i data-lucide="trending-up" class="w-3 h-3 text-brand-orange"></i>
+              </div>
+              Progreso de PRs y carga semanal
+            </li>
+            <li class="flex items-center gap-3 text-gray-300">
+              <div class="w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center shrink-0">
+                <i data-lucide="file-check" class="w-3 h-3 text-brand-orange"></i>
+              </div>
+              Renovación automática y factura
+            </li>
+            <li class="flex items-center gap-3 text-gray-300">
+              <div class="w-6 h-6 rounded-full bg-brand-orange/20 flex items-center justify-center shrink-0">
+                <i data-lucide="message-square" class="w-3 h-3 text-brand-orange"></i>
+              </div>
+              Chat directo con tu coach
+            </li>
+          </ul>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <button data-open="signup" class="bg-brand-orange text-black font-black px-8 py-4 rounded-xl uppercase tracking-widest text-xs hover:scale-105 transition">Crear cuenta</button>
+            <button data-open="login" class="glass text-white font-bold px-8 py-4 rounded-xl uppercase tracking-widest text-xs hover:bg-white/10 transition">Iniciar sesión</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Ubicación -->
+  <section id="ubicacion" class="py-16 sm:py-24 px-4 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+        <div data-aos="fade-up" class="order-2 lg:order-1">
+          <span class="text-brand-orange font-bold uppercase tracking-widest text-[10px] sm:text-sm mb-2 block text-center lg:text-left">Contacto directo</span>
+          <h2 class="text-3xl sm:text-4xl md:text-6xl font-black uppercase mb-8 sm:mb-10 text-white text-center lg:text-left">Visita nuestras <br class="hidden sm:block"> <span class="text-gradient">instalaciones</span></h2>
+
+          <div class="space-y-4 sm:space-y-6 mb-10 bg-brand-dark p-6 sm:p-8 rounded-[1.5rem] sm:rounded-3xl border border-white/5 mx-auto max-w-md lg:max-w-none">
+            <div class="flex items-start group cursor-pointer">
+              <div class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-brand-orange/10 flex items-center justify-center mr-4 sm:mr-6 group-hover:bg-brand-orange transition mt-1 sm:mt-0">
+                <i data-lucide="map-pin" class="text-brand-orange group-hover:text-black transition w-5 h-5 sm:w-6 sm:h-6"></i>
+              </div>
+              <div>
+                <p class="font-bold text-lg sm:text-xl uppercase tracking-wide text-white mb-1">Av. Tecnológico, Santo Niño</p>
+                <p class="text-gray-400 text-xs sm:text-sm">Deportiva, Chihuahua, México.</p>
+              </div>
+            </div>
+
+            <div class="w-full h-px bg-white/5"></div>
+
+            <a href="https://wa.me/526141970660" class="flex items-center group">
+              <div class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/10 flex items-center justify-center mr-4 sm:mr-6 group-hover:bg-green-500 transition">
+                <i data-lucide="phone" class="text-green-500 group-hover:text-white transition w-5 h-5 sm:w-6 sm:h-6"></i>
+              </div>
+              <div>
+                <p class="text-gray-400 text-[10px] sm:text-xs uppercase font-bold tracking-widest mb-1">WhatsApp</p>
+                <p class="text-lg sm:text-xl font-medium text-white group-hover:text-green-400 transition">614 197 0660</p>
+              </div>
+            </a>
+
+            <div class="w-full h-px bg-white/5"></div>
+
+            <a href="https://instagram.com/ced.gym.chih" target="_blank" class="flex items-center group">
+              <div class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-pink-500/10 flex items-center justify-center mr-4 sm:mr-6 group-hover:bg-gradient-to-tr hover:from-yellow-400 hover:to-pink-600 transition">
+                <i data-lucide="instagram" class="text-pink-500 group-hover:text-white transition w-5 h-5 sm:w-6 sm:h-6"></i>
+              </div>
+              <div>
+                <p class="text-gray-400 text-[10px] sm:text-xs uppercase font-bold tracking-widest mb-1">Síguenos</p>
+                <p class="text-lg sm:text-xl font-medium text-white group-hover:text-pink-400 transition">@ced.gym.chih</p>
+              </div>
+            </a>
+
+            <div class="w-full h-px bg-white/5"></div>
+
+            <div class="flex items-start">
+              <div class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-brand-orange/10 flex items-center justify-center mr-4 sm:mr-6 mt-1 sm:mt-0">
+                <i data-lucide="clock" class="text-brand-orange w-5 h-5 sm:w-6 sm:h-6"></i>
+              </div>
+              <div>
+                <p class="text-gray-400 text-[10px] sm:text-xs uppercase font-bold tracking-widest mb-1">Horario</p>
+                <p class="text-base sm:text-lg font-medium text-white">Lun — Vie · 7:00 — 21:00</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative h-[350px] sm:h-[450px] lg:h-[600px] w-full rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl group order-1 lg:order-2" data-aos="fade-up">
+          <iframe
+            src="https://www.google.com/maps?q=CED+Gym+Av.+Tecnologico+Santo+Nino+Chihuahua&output=embed&z=16"
+            width="100%"
+            height="100%"
+            style="border:0; filter: grayscale(100%) invert(90%) contrast(1.2);"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            class="absolute inset-0 z-0 transition duration-700 lg:group-hover:filter-none">
+          </iframe>
+
+          <div class="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 bg-brand-dark/95 backdrop-blur-md p-4 sm:p-6 rounded-2xl border border-white/10 z-10 flex justify-between items-center">
+            <div>
+              <p class="font-black uppercase text-base sm:text-xl text-white">CED·GYM</p>
+              <p class="text-brand-orange font-bold text-xs sm:text-sm">Fábrica de Monstruos · Chihuahua</p>
+            </div>
+            <a href="https://maps.app.goo.gl/hjCPfR18PnDXEFqr7" target="_blank" class="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center text-black hover:bg-brand-orange transition shrink-0 ml-4">
+              <i data-lucide="navigation" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== Footer -->
+  <footer class="pt-16 pb-8 border-t border-white/5 bg-brand-dark relative z-10">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12 mb-12 text-center md:text-left">
+
+        <div class="lg:col-span-2 flex flex-col items-center md:items-start">
+          <a href="#inicio" class="flex flex-col relative inline-block mb-6 group cursor-pointer w-auto">
+            <span class="text-3xl sm:text-4xl logo-font tracking-tight">
+              <span class="text-brand-orange">ced</span><span class="text-white">gym</span>
+            </span>
+            <svg class="absolute -bottom-1.5 sm:-bottom-2 right-0 w-full h-3 sm:h-4 text-brand-orange smile-curve transform group-hover:scale-105 transition-transform"
+                 viewBox="0 0 100 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 5 8 Q 50 24 95 6" />
+              <path d="M 85 2 L 95 6 L 89 15" />
+            </svg>
+          </a>
+          <p class="text-gray-400 text-sm sm:text-base max-w-sm mb-8 leading-relaxed mx-auto md:mx-0">
+            Plataforma de preparación física para atletas. Forjando monstruos con disciplina, comunidad y datos reales.
+          </p>
+          <div class="flex space-x-4 justify-center md:justify-start">
+            <a href="https://instagram.com/ced.gym.chih" target="_blank" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-[#E4405F] hover:text-white transition">
+              <i data-lucide="instagram" class="w-5 h-5"></i>
+            </a>
+            <a href="https://wa.me/526141970660" target="_blank" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-[#25D366] hover:text-white transition">
+              <i data-lucide="message-circle" class="w-5 h-5"></i>
+            </a>
+            <a href="tel:+526141970660" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-brand-orange hover:text-black transition">
+              <i data-lucide="phone" class="w-5 h-5"></i>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-white font-black uppercase tracking-widest text-xs sm:text-sm mb-5 sm:mb-6">Plataforma</h4>
+          <ul class="space-y-3 sm:space-y-4 text-sm sm:text-base">
+            <li><a href="#disciplinas" class="text-gray-400 hover:text-brand-orange transition">Deportes</a></li>
+            <li><a href="#cursos" class="text-gray-400 hover:text-brand-orange transition">Cursos</a></li>
+            <li><a href="#planes" class="text-gray-400 hover:text-brand-orange transition">Membresías</a></li>
+            <li><a href="#app" class="text-gray-400 hover:text-brand-orange transition">Panel del atleta</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-white font-black uppercase tracking-widest text-xs sm:text-sm mb-5 sm:mb-6">Cuenta</h4>
+          <ul class="space-y-3 sm:space-y-4 text-sm sm:text-base">
+            <li><button data-open="login" class="text-gray-400 hover:text-brand-orange transition">Iniciar sesión</button></li>
+            <li><button data-open="signup" class="text-gray-400 hover:text-brand-orange transition">Crear cuenta</button></li>
+            <li><a href="#inscripcion" class="text-gray-400 hover:text-brand-orange transition">Inscripción</a></li>
+            <li><a href="#ubicacion" class="text-gray-400 hover:text-brand-orange transition">Contacto</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+        <p class="text-gray-500 text-xs sm:text-sm font-medium">
+          © <span id="year"></span> CED·GYM. Todos los derechos reservados.
+        </p>
+        <p class="text-gray-600 text-[10px] sm:text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+          Pagos por <span class="mp-badge" style="padding: 4px 8px;"><span style="font-size:.55rem;">mercado</span><b style="font-size:.65rem;">pago</b></span>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- WhatsApp Floating Button -->
+  <a href="https://wa.me/526141970660" target="_blank" class="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 md:bottom-10 md:right-10 w-14 h-14 sm:w-16 sm:h-16 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(37,211,102,0.4)] hover:shadow-[0_8px_30px_rgba(37,211,102,0.6)] hover:-translate-y-2 transition-all duration-300 z-40 group">
+    <i data-lucide="message-circle" class="w-6 h-6 sm:w-8 sm:h-8 group-hover:scale-110 transition-transform"></i>
+    <div class="absolute inset-0 bg-[#25D366] rounded-full animate-ping opacity-40"></div>
+  </a>
+
+  <!-- ========== MODALS ========== -->
+  <div class="modal" id="modalLogin" aria-hidden="true">
+    <div class="modal-bg" data-close></div>
+    <div class="modal-card space-y-4">
+      <button data-close class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+      <span class="text-brand-orange font-bold uppercase tracking-widest text-xs block">Entrar</span>
+      <h3 class="text-2xl sm:text-3xl font-black uppercase tracking-wide">Bienvenido de vuelta</h3>
+      <label class="block">
+        <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Email</span>
+        <input type="email" placeholder="tu@email.com" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+      </label>
+      <label class="block">
+        <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Contraseña</span>
+        <input type="password" placeholder="••••••••" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+      </label>
+      <button class="w-full bg-brand-orange text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-brand-orange-2 transition shadow-[0_10px_30px_rgba(255,107,26,0.3)]">
+        Entrar
+      </button>
+      <p class="text-center text-sm text-gray-400">¿No tienes cuenta? <a href="#" data-open="signup" class="text-brand-orange font-bold hover:underline">Regístrate</a></p>
+    </div>
+  </div>
+
+  <div class="modal" id="modalSignup" aria-hidden="true">
+    <div class="modal-bg" data-close></div>
+    <div class="modal-card space-y-4">
+      <button data-close class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+      <span class="text-brand-orange font-bold uppercase tracking-widest text-xs block">Registro</span>
+      <h3 class="text-2xl sm:text-3xl font-black uppercase tracking-wide">Crear cuenta</h3>
+      <label class="block">
+        <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Nombre completo</span>
+        <input type="text" placeholder="Tu nombre" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+      </label>
+      <label class="block">
+        <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Email</span>
+        <input type="email" placeholder="tu@email.com" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+      </label>
+      <label class="block">
+        <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Contraseña</span>
+        <input type="password" placeholder="mínimo 8 caracteres" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+      </label>
+      <label class="block">
+        <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Deporte principal</span>
+        <select class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+          <option>Fútbol Americano</option><option>Fútbol Soccer</option><option>Básquetbol</option>
+          <option>Tenis / Pádel</option><option>Beisbol</option><option>MMA</option><option>Powerlifting</option>
+          <option>HYROX</option><option>Kids</option><option>General</option>
+        </select>
+      </label>
+      <button class="w-full bg-brand-orange text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-brand-orange-2 transition shadow-[0_10px_30px_rgba(255,107,26,0.3)]">
+        Crear cuenta
+      </button>
+      <p class="text-center text-sm text-gray-400">¿Ya tienes cuenta? <a href="#" data-open="login" class="text-brand-orange font-bold hover:underline">Inicia sesión</a></p>
+    </div>
+  </div>
+
+  <div class="modal" id="modalCheckout" aria-hidden="true">
+    <div class="modal-bg" data-close></div>
+    <div class="modal-card" style="max-width: 720px; padding: 0;">
+      <button data-close class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/70 hover:text-white transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+      <div class="grid grid-cols-1 md:grid-cols-2">
+        <div class="p-8 bg-gradient-to-br from-brand-orange/10 to-brand-orange/0 space-y-4 border-r border-white/5">
+          <span class="text-brand-orange font-bold uppercase tracking-widest text-xs block">Inscripción</span>
+          <h3 class="text-2xl font-black uppercase tracking-wide">Completa tu pago</h3>
+          <div class="flex justify-between items-baseline p-3 rounded-xl bg-black/30 border border-white/5">
+            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Plan</span>
+            <strong id="coPlan" class="font-black uppercase tracking-wide text-sm">Pro · Mensual</strong>
+          </div>
+          <div class="flex justify-between items-baseline p-3 rounded-xl bg-black/30 border border-white/5">
+            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Total</span>
+            <strong id="coTotal" class="font-black text-xl text-white">$1,290 MXN</strong>
+          </div>
+          <ul class="space-y-2 pt-2 text-sm text-gray-300">
+            <li class="flex gap-2 items-start"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Acceso inmediato al panel</li>
+            <li class="flex gap-2 items-start"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Cancelación sin penalización</li>
+            <li class="flex gap-2 items-start"><i data-lucide="check" class="text-brand-orange w-4 h-4 mt-0.5 shrink-0"></i> Factura electrónica disponible</li>
+          </ul>
+          <div class="p-3 rounded-xl bg-black/30 border border-white/5 flex items-center gap-3">
+            <div class="mp-badge"><span>mercado</span><b>pago</b></div>
+            <span class="text-xs text-gray-400">Procesado de forma segura</span>
+          </div>
+        </div>
+        <div class="p-8 space-y-3">
+          <span class="text-brand-orange font-bold uppercase tracking-widest text-xs block">Datos de tarjeta</span>
+          <label class="block">
+            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Número</span>
+            <input placeholder="4509 1234 5678 9012" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Vence</span>
+              <input placeholder="MM/AA" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+            </label>
+            <label class="block">
+              <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">CVV</span>
+              <input placeholder="123" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+            </label>
+          </div>
+          <label class="block">
+            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold block mb-1.5">Titular</span>
+            <input placeholder="Como aparece en la tarjeta" class="w-full px-4 py-3 bg-brand-dark border border-white/10 rounded-xl text-white focus:border-brand-orange focus:outline-none transition">
+          </label>
+          <button class="w-full bg-brand-orange text-black py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-brand-orange-2 transition shadow-[0_10px_30px_rgba(255,107,26,0.3)] flex items-center justify-center gap-2 mt-2">
+            <i data-lucide="lock" class="w-4 h-4"></i> Pagar con Mercado Pago
+          </button>
+          <p class="text-center text-[10px] text-gray-500 uppercase tracking-widest font-bold pt-1">🔒 Encriptación SSL · 3D Secure</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    lucide.createIcons();
+
+    AOS.init({
+      once: true,
+      offset: 30,
+      duration: 600,
+      easing: 'ease-out-cubic',
+    });
+
+    // Year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Navbar scroll
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 10) navbar.classList.add('scrolled', 'shadow-2xl');
+      else navbar.classList.remove('scrolled', 'shadow-2xl');
+    });
+
+    // Mobile menu
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const menuIcon = document.getElementById('menu-icon');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileLinks = document.querySelectorAll('.mobile-link');
+    let menuOpen = false;
+    function toggleMenu() {
+      menuOpen = !menuOpen;
+      if (menuOpen) {
+        mobileMenu.classList.remove('translate-x-full');
+        document.body.classList.add('overflow-hidden');
+        menuIcon.setAttribute('data-lucide', 'x');
+        navbar.classList.add('bg-brand-dark/95');
+      } else {
+        mobileMenu.classList.add('translate-x-full');
+        document.body.classList.remove('overflow-hidden');
+        menuIcon.setAttribute('data-lucide', 'menu');
+        if (window.scrollY < 10) navbar.classList.remove('bg-brand-dark/95');
+      }
+      lucide.createIcons();
+    }
+    mobileBtn.addEventListener('click', toggleMenu);
+    mobileLinks.forEach(link => link.addEventListener('click', () => { if (menuOpen) toggleMenu(); }));
+
+    // Hero rotator
+    const rotator = document.querySelector('.rotator');
+    if (rotator) {
+      const words = rotator.querySelectorAll('em');
+      let i = 0;
+      setInterval(() => {
+        words[i].classList.remove('is-active');
+        i = (i + 1) % words.length;
+        words[i].classList.add('is-active');
+      }, 2400);
+    }
+
+    // Cycle toggle
+    const cycleLabels = { month: '/mes', q: '/mes · cobro trimestral', y: '/mes · cobro anual' };
+    document.querySelectorAll('.cycle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.cycle-btn').forEach(b => {
+          b.classList.remove('is-active', 'bg-brand-orange', 'text-black');
+          b.classList.add('text-white/70');
+        });
+        btn.classList.add('is-active', 'bg-brand-orange', 'text-black');
+        btn.classList.remove('text-white/70');
+        const mode = btn.dataset.cycle;
+        document.querySelectorAll('.plan-price').forEach(el => {
+          const v = parseInt(el.dataset[mode] || el.dataset.month, 10);
+          const monthly = mode === 'month' ? v : mode === 'q' ? Math.round(v / 3) : Math.round(v / 12);
+          el.textContent = monthly.toLocaleString('es-MX');
+        });
+        document.querySelectorAll('.cycle-label').forEach(el => el.textContent = cycleLabels[mode]);
+      });
+    });
+    // initial state styling
+    document.querySelectorAll('.cycle-btn').forEach(b => b.classList.add('text-white/70'));
+    const initBtn = document.querySelector('.cycle-btn.is-active');
+    if (initBtn) { initBtn.classList.add('bg-brand-orange', 'text-black'); initBtn.classList.remove('text-white/70'); }
+
+    // Modals
+    const modals = {
+      login: document.getElementById('modalLogin'),
+      signup: document.getElementById('modalSignup'),
+      checkout: document.getElementById('modalCheckout'),
+    };
+    const PLAN_INFO = {
+      starter: { label: 'Starter · Mensual', total: 690 },
+      pro: { label: 'Pro · Mensual', total: 1290 },
+      elite: { label: 'Élite · Mensual', total: 2290 },
+      'course-preseason': { label: 'Pretemporada Football', total: 2490 },
+      'course-pl12': { label: 'Powerlifting 12W', total: 3190 },
+      'course-nutri': { label: 'Nutrición Deportiva', total: 1290 },
+      'course-kids': { label: 'Escuela Infantil · Mensual', total: 890 },
+    };
+    function openModal(key, ctx) {
+      Object.values(modals).forEach(m => m && m.classList.remove('is-open'));
+      const m = modals[key]; if (!m) return;
+      m.classList.add('is-open');
+      m.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      if (key === 'checkout' && ctx?.plan) {
+        const info = PLAN_INFO[ctx.plan] || PLAN_INFO.pro;
+        document.getElementById('coPlan').textContent = info.label;
+        document.getElementById('coTotal').textContent = '$' + info.total.toLocaleString('es-MX') + ' MXN';
+      }
+    }
+    function closeModal() {
+      Object.values(modals).forEach(m => { if (m) { m.classList.remove('is-open'); m.setAttribute('aria-hidden', 'true'); } });
+      document.body.style.overflow = '';
+    }
+    document.querySelectorAll('[data-open]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        openModal(btn.dataset.open, { plan: btn.dataset.plan });
+      });
+    });
+    document.querySelectorAll('[data-close]').forEach(el => el.addEventListener('click', closeModal));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  </script>
+</body>
+</html>

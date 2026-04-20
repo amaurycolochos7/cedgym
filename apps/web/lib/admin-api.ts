@@ -1,0 +1,870 @@
+/**
+ * Thin typed wrappers around admin + staff endpoints. All calls go through
+ * the shared axios instance (`lib/api.ts`) so JWT refresh + auth headers are
+ * applied automatically.
+ *
+ * Every endpoint here follows the contract documented in ULTRAPLAN.md
+ * (API blueprint). Where the backend has not yet shipped an endpoint, it's
+ * marked with TODO and the call will surface as a 404 at runtime.
+ */
+import { api } from './api';
+
+/* =========================================================================
+ * Types (frontend-side; server is source of truth)
+ * =========================================================================*/
+
+export interface AdminKpis {
+  active_members: number;
+  active_members_delta?: number;
+  revenue_mtd: number;
+  revenue_mtd_delta?: number;
+  checkins_today: number;
+  checkins_today_delta?: number;
+  signups_mtd: number;
+  signups_mtd_delta?: number;
+  expiring_7d: number;
+  expiring_30d: number;
+}
+
+export interface RevenuePoint {
+  bucket: string;
+  amount_mxn: number;
+}
+
+export interface RetentionPoint {
+  month: string;
+  renewals_pct: number;
+}
+
+export interface CheckinHeatCell {
+  day: number; // 0..6 (Mon=0)
+  hour: number; // 0..23
+  count: number;
+}
+
+export interface TopItem {
+  name: string;
+  value: number;
+  subtitle?: string;
+}
+
+export interface ChurnRiskMember {
+  id: string;
+  name: string;
+  phone: string;
+  expected_checkins: number;
+  actual_checkins: number;
+  attendance_pct: number;
+  plan_name?: string;
+  expires_at?: string;
+}
+
+export interface AdminMember {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  status: 'active' | 'frozen' | 'expired' | 'cancelled';
+  plan_code?: string;
+  plan_name?: string;
+  expires_at?: string;
+  last_checkin_at?: string;
+  xp?: number;
+  created_at: string;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminMembershipPlan {
+  id: string;
+  code: 'starter' | 'pro' | 'elite' | string;
+  name: string;
+  monthly_price_mxn: number;
+  quarterly_price_mxn: number;
+  yearly_price_mxn: number;
+  features?: string[];
+  enabled: boolean;
+}
+
+export interface AdminCourse {
+  id: string;
+  name: string;
+  description?: string;
+  sport?: string;
+  trainer_id?: string;
+  trainer_name?: string;
+  capacity: number;
+  price_mxn: number;
+  starts_at?: string;
+  ends_at?: string;
+  schedule?:
+    | { days: number[]; hour: string; duration_min: number }
+    | { rows: { day: number; hour: string; duration_min: number }[] }
+    | Record<string, unknown>;
+  published: boolean;
+  enrolled_count?: number;
+}
+
+export interface AdminClass {
+  id: string;
+  name: string;
+  sport?: string;
+  trainer_id?: string;
+  coach_name?: string;
+  starts_at: string;
+  ends_at: string;
+  duration_min?: number;
+  capacity: number;
+  booked: number;
+  location?: string;
+  min_plan?: 'STARTER' | 'PRO' | 'ELITE' | null;
+  status?: 'scheduled' | 'cancelled' | 'completed';
+}
+
+export interface AdminPayment {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  type: 'MEMBERSHIP' | 'COURSE' | 'POS' | 'PRODUCT';
+  status:
+    | 'PENDING'
+    | 'APPROVED'
+    | 'REJECTED'
+    | 'CANCELLED'
+    | 'REFUNDED';
+  amount_mxn: number;
+  method?: string;
+  mp_payment_id?: string;
+  mp_status_detail?: string;
+  created_at: string;
+}
+
+export interface AdminProduct {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+  author_id?: string;
+  author_name?: string;
+  price_mxn: number;
+  published: boolean;
+  featured?: boolean;
+  rejected?: boolean;
+  rejected_reason?: string;
+  cover_url?: string;
+  description?: string;
+  type?: 'ROUTINE' | 'NUTRITION_PLAN' | 'EBOOK' | 'VIDEO_COURSE' | 'BUNDLE';
+  sport?: string;
+  level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'ALL_LEVELS';
+  duration_weeks?: number | null;
+  sale_price_mxn?: number | null;
+  content?: ProductContent | Record<string, unknown>;
+  video_urls?: string[];
+  pdf_url?: string | null;
+  sales_count?: number;
+  created_at: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  sku: string;
+  name: string;
+  category?: string | null;
+  price_mxn: number;
+  cost_mxn?: number | null;
+  stock: number;
+  min_stock?: number;
+  image_url?: string;
+  description?: string | null;
+  enabled: boolean;
+}
+
+// ─── Product content (routine editor JSON shape) ─────────────────
+export interface RoutineExercise {
+  name: string;
+  sets?: number;
+  reps?: string;
+  notes?: string;
+}
+export interface RoutineDay {
+  label?: string;
+  exercises: RoutineExercise[];
+}
+export interface RoutineWeek {
+  label?: string;
+  days: RoutineDay[];
+}
+export interface ProductContent {
+  weeks?: RoutineWeek[];
+  [k: string]: unknown;
+}
+
+export interface AdminProductCreateInput {
+  type: 'ROUTINE' | 'NUTRITION_PLAN' | 'EBOOK' | 'VIDEO_COURSE' | 'BUNDLE';
+  title: string;
+  description: string;
+  sport?: string;
+  level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'ALL_LEVELS';
+  duration_weeks?: number | null;
+  price_mxn: number;
+  sale_price_mxn?: number | null;
+  cover_url?: string | null;
+  content?: ProductContent | Record<string, unknown>;
+  pdf_url?: string | null;
+  video_urls?: string[];
+  author_id?: string;
+  published?: boolean;
+  featured?: boolean;
+}
+
+export type AutomationActionType =
+  | 'whatsapp.send_template'
+  | 'push.notify'
+  | 'email.send';
+
+export interface Automation {
+  id: string;
+  name: string;
+  trigger_event: string;
+  filter?: Record<string, unknown>;
+  delay_minutes: number;
+  action_type: AutomationActionType;
+  template_id?: string;
+  enabled: boolean;
+  created_at: string;
+  last_run_at?: string;
+  runs_24h?: number;
+  failures_24h?: number;
+}
+
+export interface AutomationJob {
+  id: string;
+  automation_id: string;
+  status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED';
+  created_at: string;
+  finished_at?: string;
+  user_id?: string;
+  user_name?: string;
+  error?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface MessageTemplate {
+  id: string;
+  code: string;
+  name: string;
+  channel: 'whatsapp' | 'push' | 'email';
+  body: string;
+  variables?: string[];
+  updated_at: string;
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  type: 'PERCENT' | 'FIXED' | 'FREE_DAYS';
+  value: number;
+  applies_to: 'MEMBERSHIP' | 'PRODUCT' | 'ANY';
+  max_uses?: number;
+  used_count?: number;
+  expires_at?: string;
+  enabled: boolean;
+}
+
+export interface WhatsAppStatus {
+  status: 'DISCONNECTED' | 'STARTING' | 'CONNECTED';
+  phone_number?: string;
+  last_activity_at?: string;
+  qr_png_base64?: string;
+}
+
+export interface Referral {
+  id: string;
+  referrer_id: string;
+  referrer_name: string;
+  referee_id?: string;
+  referee_name?: string;
+  status: 'PENDING' | 'CONFIRMED' | 'PAID';
+  credit_mxn?: number;
+  created_at: string;
+}
+
+export interface ReferralLeader {
+  user_id: string;
+  name: string;
+  confirmed_count: number;
+  credit_earned_mxn: number;
+}
+
+export interface GymSettings {
+  name: string;
+  logo_url?: string;
+  timezone: string;
+  opening_hours?: Record<string, { open: string; close: string } | null>;
+  mp_connected?: boolean;
+  mp_public_key?: string;
+}
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'RECEPTIONIST' | 'TRAINER' | 'ADMIN' | 'SUPERADMIN';
+  enabled: boolean;
+}
+
+/* =========================================================================
+ * Admin endpoints
+ * =========================================================================*/
+
+export const adminApi = {
+  // Dashboard — mapea la respuesta del backend al shape que esperan los
+  // componentes de la UI. El backend devuelve objetos con metadata +
+  // array anidado; la UI pide arrays simples.
+  kpis: () =>
+    api.get<any>('/admin/dashboard/overview').then((r) => {
+      const d = r.data ?? {};
+      return {
+        active_members: d.active_members ?? 0,
+        revenue_mtd: d.revenue_mtd ?? d.total_revenue_mtd ?? 0,
+        checkins_today: d.checkins_today ?? 0,
+        signups_mtd: d.new_members_mtd ?? d.signups_mtd ?? 0,
+        expiring_7d: d.expiring_7d ?? 0,
+        expiring_30d: d.expiring_30d ?? 0,
+      } as AdminKpis;
+    }),
+
+  revenueSeries: (range: 'day' | 'week' | 'month') => {
+    const groupBy = range === 'day' ? 'day' : range === 'week' ? 'week' : 'month';
+    return api
+      .get<any>('/admin/dashboard/revenue', { params: { groupBy } })
+      .then((r) => {
+        const series = r.data?.series ?? [];
+        return series.map(
+          (p: any): RevenuePoint => ({
+            bucket: p.bucket,
+            amount_mxn: Number(p.revenue_mxn ?? p.amount_mxn ?? 0),
+          }),
+        );
+      });
+  },
+
+  retentionSeries: () =>
+    api.get<any>('/admin/dashboard/retention').then((r) => {
+      const d = r.data ?? {};
+      // El backend actual devuelve un solo agregado {retention_rate,...}.
+      // Lo envolvemos como 1 punto para que la UI no rompa.
+      if (Array.isArray(d)) return d as RetentionPoint[];
+      return [
+        {
+          month: d.period ?? 'periodo',
+          renewals_pct: Math.round((d.retention_rate ?? 0) * 100),
+        },
+      ];
+    }),
+
+  checkinHeatmap: () =>
+    api.get<any>('/admin/dashboard/heatmap').then((r) => {
+      const matrix = r.data?.matrix ?? [];
+      // Si el backend devuelve una matriz [day][hour], aplanamos a cells.
+      if (Array.isArray(matrix) && Array.isArray(matrix[0])) {
+        const cells: CheckinHeatCell[] = [];
+        matrix.forEach((row: number[], day: number) => {
+          row.forEach((count: number, hour: number) => {
+            if (count > 0) cells.push({ day, hour, count });
+          });
+        });
+        return cells;
+      }
+      return (matrix as CheckinHeatCell[]) ?? [];
+    }),
+
+  topSports: () =>
+    api.get<any>('/admin/dashboard/top-sports').then((r) => {
+      const arr = r.data?.sports ?? [];
+      return arr.map(
+        (s: any): TopItem => ({
+          name: s.sport ?? s.name ?? '—',
+          value: Number(s.check_ins ?? s.value ?? 0),
+        }),
+      );
+    }),
+
+  topCoaches: () =>
+    api.get<any>('/admin/dashboard/top-coaches').then((r) => {
+      const arr = r.data?.coaches ?? [];
+      return arr.map(
+        (c: any): TopItem => ({
+          name: c.name ?? '—',
+          value: Number(c.classes ?? c.attended ?? c.value ?? 0),
+          subtitle: c.trainer_id,
+        }),
+      );
+    }),
+
+  churnRisk: () =>
+    api.get<any>('/admin/dashboard/churn-risk').then((r) => {
+      const users = r.data?.users ?? [];
+      const expected = r.data?.expected_checkins ?? 12;
+      return users.map(
+        (u: any): ChurnRiskMember => ({
+          id: u.user_id ?? u.id,
+          name: u.name ?? '—',
+          phone: u.phone ?? '',
+          expected_checkins: expected,
+          actual_checkins: Number(u.check_ins ?? 0),
+          attendance_pct: Math.round((Number(u.checkin_ratio ?? 0)) * 100),
+          plan_name: u.plan,
+          expires_at: u.expires_at,
+        }),
+      );
+    }),
+
+  failedJobsCount: () =>
+    api
+      .get<any>('/admin/automations/jobs/failed-count')
+      .then((r) => ({ count: Number(r.data?.count ?? 0) }))
+      .catch(() => ({ count: 0 })),
+
+  // Members
+  listMembers: (params: {
+    q?: string;
+    status?: string;
+    plan?: string;
+    sport?: string;
+    page?: number;
+    page_size?: number;
+  }) =>
+    api
+      .get<Paginated<AdminMember>>('/admin/members', { params })
+      .then((r) => r.data),
+  getMember: (id: string) =>
+    api.get<AdminMember & Record<string, unknown>>(`/admin/members/${id}`).then((r) => r.data),
+  createMember: (input: {
+    name: string;
+    phone: string;
+    email?: string;
+    plan_code?: string;
+  }) => api.post<AdminMember>('/admin/members', input).then((r) => r.data),
+  suspendMember: (id: string) =>
+    api.post(`/admin/members/${id}/suspend`).then((r) => r.data),
+  reactivateMember: (id: string) =>
+    api.post(`/admin/members/${id}/reactivate`).then((r) => r.data),
+  resetMemberPassword: (id: string) =>
+    api.post(`/admin/members/${id}/reset-password`).then((r) => r.data),
+  memberQrPng: (id: string) =>
+    api
+      .get<{ url: string }>(`/admin/members/${id}/qr`)
+      .then((r) => r.data),
+  memberCarnetPdf: (id: string) =>
+    api
+      .get<{ url: string }>(`/admin/members/${id}/carnet.pdf`)
+      .then((r) => r.data),
+  sendManualWhatsapp: (id: string, body: string) =>
+    api
+      .post(`/admin/members/${id}/whatsapp`, { body })
+      .then((r) => r.data),
+  exportMembersCsv: () =>
+    api
+      .get<{ url: string }>('/admin/members/export.csv')
+      .then((r) => r.data),
+
+  // Memberships
+  listMembershipPlans: () =>
+    api.get<AdminMembershipPlan[]>('/admin/memberships/plans').then((r) => r.data),
+  updateMembershipPlan: (id: string, patch: Partial<AdminMembershipPlan>) =>
+    api.patch(`/admin/memberships/plans/${id}`, patch).then((r) => r.data),
+  listActiveMemberships: (params: { q?: string; plan?: string; page?: number }) =>
+    api
+      .get<Paginated<AdminMember>>('/admin/memberships', { params })
+      .then((r) => r.data),
+  broadcastMembershipReminder: (memberIds: string[]) =>
+    api
+      .post('/admin/memberships/broadcast', { member_ids: memberIds })
+      .then((r) => r.data),
+
+  // Courses
+  listCourses: () =>
+    api.get<AdminCourse[] | { courses: AdminCourse[] }>('/admin/courses').then((r) => {
+      const d: any = r.data;
+      if (Array.isArray(d)) return d as AdminCourse[];
+      return (d?.courses ?? d?.items ?? []) as AdminCourse[];
+    }),
+  createCourse: (input: Partial<AdminCourse> & { name: string }) =>
+    api.post<{ course: AdminCourse } | AdminCourse>('/admin/courses', input).then((r) => {
+      const d: any = r.data;
+      return (d?.course ?? d) as AdminCourse;
+    }),
+  updateCourse: (id: string, patch: Partial<AdminCourse>) =>
+    api.patch<{ course: AdminCourse } | AdminCourse>(`/admin/courses/${id}`, patch).then((r) => {
+      const d: any = r.data;
+      return (d?.course ?? d) as AdminCourse;
+    }),
+  deleteCourse: (id: string) =>
+    api.delete(`/admin/courses/${id}`).then((r) => r.data),
+  getCourse: (id: string) =>
+    api.get<AdminCourse & { enrolled: AdminMember[] }>(`/admin/courses/${id}`).then((r) => r.data),
+  publishCourse: (id: string, publish: boolean) =>
+    api
+      .post(`/admin/courses/${id}/${publish ? 'publish' : 'unpublish'}`)
+      .then((r) => r.data),
+  courseEnrollments: (id: string) =>
+    api
+      .get<{
+        total: number;
+        enrollments: {
+          user: { id: string; name?: string; full_name?: string; email?: string; phone?: string };
+          payment_id: string;
+          amount_mxn: number;
+          paid_at?: string;
+        }[];
+      }>(`/admin/courses/${id}/enrollments`)
+      .then((r) => r.data),
+
+  // Classes
+  listClasses: (params: { from: string; to: string }) =>
+    api
+      .get<AdminClass[] | { classes: AdminClass[] }>('/admin/classes', { params })
+      .then((r) => {
+        const d: any = r.data;
+        if (Array.isArray(d)) return d as AdminClass[];
+        return (d?.classes ?? d?.items ?? []) as AdminClass[];
+      }),
+  createClass: (input: {
+    name: string;
+    sport: string;
+    trainer_id: string;
+    starts_at: string;
+    duration_min: number;
+    capacity: number;
+    location: string;
+    min_plan?: 'STARTER' | 'PRO' | 'ELITE' | null;
+    repeat_weeks?: number;
+  }) =>
+    api
+      .post<{ created_count: number; classes: AdminClass[] }>('/admin/classes', input)
+      .then((r) => r.data),
+  updateClass: (id: string, patch: Partial<AdminClass>) =>
+    api.patch(`/admin/classes/${id}`, patch).then((r) => r.data),
+  createRecurringClass: (input: {
+    name: string;
+    coach_id?: string;
+    days: number[];
+    hour: string;
+    duration_min: number;
+    capacity: number;
+    until: string;
+  }) => api.post('/admin/classes/recurring', input).then((r) => r.data),
+  cancelClass: (id: string, reason?: string) =>
+    api.post(`/admin/classes/${id}/cancel`, { reason }).then((r) => r.data),
+  getClass: (id: string) =>
+    api
+      .get<AdminClass & { bookings: AdminMember[] }>(`/admin/classes/${id}`)
+      .then((r) => r.data),
+
+  // Payments
+  listPayments: (params: {
+    type?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    user_id?: string;
+    page?: number;
+  }) =>
+    api
+      .get<Paginated<AdminPayment>>('/admin/payments', { params })
+      .then((r) => r.data),
+  paymentsSeries: (range: 'day' | 'week' | 'month') =>
+    api
+      .get<RevenuePoint[]>('/admin/payments/series', { params: { range } })
+      .then((r) => r.data),
+  exportPaymentsCsv: (params: Record<string, unknown>) =>
+    api
+      .get<{ url: string }>('/admin/payments/export.csv', { params })
+      .then((r) => r.data),
+  // TODO: endpoint not yet implemented on backend
+  refundPayment: (id: string) =>
+    api.post(`/admin/payments/${id}/refund`).then((r) => r.data),
+
+  // Marketplace approval
+  listProducts: (tab: 'pending' | 'published' | 'rejected') =>
+    api
+      .get<Paginated<AdminProduct>>('/admin/products', { params: { tab } })
+      .then((r) => r.data),
+  approveProduct: (id: string) =>
+    api.post(`/admin/products/${id}/approve`).then((r) => r.data),
+  rejectProduct: (id: string, reason: string) =>
+    api
+      .post(`/admin/products/${id}/reject`, { reason })
+      .then((r) => r.data),
+  featureProduct: (id: string, featured: boolean) =>
+    api
+      .post(`/admin/products/${id}/${featured ? 'feature' : 'unfeature'}`)
+      .then((r) => r.data),
+  createAdminProduct: (input: AdminProductCreateInput) =>
+    api
+      .post<{ product: AdminProduct }>('/admin/products/create', input)
+      .then((r) => r.data?.product ?? ((r.data as any) as AdminProduct)),
+  updateAdminProduct: (id: string, patch: Partial<AdminProductCreateInput>) =>
+    api
+      .patch<{ product: AdminProduct }>(`/admin/products/${id}`, patch)
+      .then((r) => r.data?.product ?? ((r.data as any) as AdminProduct)),
+  topSellingProducts: () =>
+    api.get<AdminProduct[]>('/admin/products/top').then((r) => r.data),
+  payoutsPending: () =>
+    api
+      .get<
+        {
+          trainer_id: string;
+          trainer_name: string;
+          amount_mxn: number;
+          orders: number;
+        }[]
+      >('/admin/products/payouts-pending')
+      .then((r) => r.data),
+
+  // Inventory — API uses `sku` as the stable key (not a UUID id). We
+  // fall back to `id` when present so the frontend can keep using an
+  // identifier-agnostic shape. The list endpoint lives at `/inventory`
+  // (staff + admin); admin-only writes go through `/admin/inventory/*`.
+  listInventory: () =>
+    api
+      .get<InventoryItem[] | { items: InventoryItem[] }>('/inventory')
+      .then((r) => {
+        const d: any = r.data;
+        const arr: InventoryItem[] = Array.isArray(d)
+          ? d
+          : (d?.items ?? []);
+        return arr.map((it) => ({ ...it, id: it.id ?? it.sku }));
+      }),
+  createInventoryItem: (input: Omit<InventoryItem, 'id'>) =>
+    api
+      .post<{ item: InventoryItem } | InventoryItem>('/admin/inventory', input)
+      .then((r) => {
+        const d: any = r.data;
+        const item: InventoryItem = d?.item ?? d;
+        return { ...item, id: item.id ?? item.sku };
+      }),
+  updateInventoryItem: (sku: string, patch: Partial<InventoryItem>) =>
+    api
+      .patch<{ item: InventoryItem } | InventoryItem>(
+        `/admin/inventory/${sku}`,
+        patch,
+      )
+      .then((r) => {
+        const d: any = r.data;
+        const item: InventoryItem = d?.item ?? d;
+        return { ...item, id: item.id ?? item.sku };
+      }),
+  adjustStock: (sku: string, delta: number, reason?: string) =>
+    api
+      .post<{ item: InventoryItem }>(`/admin/inventory/${sku}/stock`, {
+        delta,
+        reason,
+      })
+      .then((r) => r.data),
+  inventoryAudit: (sku: string) =>
+    api
+      .get<{
+        sku: string;
+        audit: {
+          at: string;
+          delta: number;
+          new_stock: number;
+          reason?: string | null;
+          source?: string;
+        }[];
+      }>(`/admin/inventory/${sku}/audit`)
+      .then((r) => r.data),
+
+  // Automations
+  listAutomations: () =>
+    api.get<Automation[]>('/admin/automations').then((r) => r.data),
+  getAutomation: (id: string) =>
+    api.get<Automation>(`/admin/automations/${id}`).then((r) => r.data),
+  createAutomation: (
+    input: Omit<Automation, 'id' | 'created_at' | 'last_run_at' | 'runs_24h' | 'failures_24h'>,
+  ) => api.post<Automation>('/admin/automations', input).then((r) => r.data),
+  updateAutomation: (id: string, patch: Partial<Automation>) =>
+    api.patch(`/admin/automations/${id}`, patch).then((r) => r.data),
+  deleteAutomation: (id: string) =>
+    api.delete(`/admin/automations/${id}`).then((r) => r.data),
+  automationJobs: (id: string) =>
+    api
+      .get<AutomationJob[]>(`/admin/automations/${id}/jobs`)
+      .then((r) => r.data),
+  automationTriggers: () =>
+    api
+      .get<{ event: string; description: string }[]>(
+        '/admin/automations/triggers',
+      )
+      .then((r) => r.data),
+
+  // Templates
+  listTemplates: () =>
+    api.get<MessageTemplate[]>('/admin/templates').then((r) => r.data),
+  createTemplate: (input: Omit<MessageTemplate, 'id' | 'updated_at'>) =>
+    api.post<MessageTemplate>('/admin/templates', input).then((r) => r.data),
+  updateTemplate: (id: string, patch: Partial<MessageTemplate>) =>
+    api.patch(`/admin/templates/${id}`, patch).then((r) => r.data),
+  deleteTemplate: (id: string) =>
+    api.delete(`/admin/templates/${id}`).then((r) => r.data),
+  previewTemplate: (id: string, context?: Record<string, unknown>) =>
+    api
+      .post<{ preview: string }>(`/admin/templates/${id}/preview`, {
+        context,
+      })
+      .then((r) => r.data),
+
+  // WhatsApp
+  whatsappStatus: () =>
+    api.get<WhatsAppStatus>('/admin/whatsapp/status').then((r) => r.data),
+  whatsappStart: () =>
+    api.post('/admin/whatsapp/start').then((r) => r.data),
+  whatsappLogout: () =>
+    api.post('/admin/whatsapp/logout').then((r) => r.data),
+  whatsappMessages7d: () =>
+    api
+      .get<{ day: string; count: number }[]>('/admin/whatsapp/messages-7d')
+      .then((r) => r.data),
+  whatsappRecent: () =>
+    api
+      .get<
+        {
+          id: string;
+          to: string;
+          body: string;
+          template?: string;
+          status: string;
+          sent_at: string;
+        }[]
+      >('/admin/whatsapp/recent')
+      .then((r) => r.data),
+
+  // Promocodes
+  listPromocodes: () =>
+    api.get<PromoCode[]>('/admin/promocodes').then((r) => r.data),
+  createPromocode: (input: Omit<PromoCode, 'id' | 'used_count'>) =>
+    api.post<PromoCode>('/admin/promocodes', input).then((r) => r.data),
+  updatePromocode: (id: string, patch: Partial<PromoCode>) =>
+    api.patch(`/admin/promocodes/${id}`, patch).then((r) => r.data),
+  deletePromocode: (id: string) =>
+    api.delete(`/admin/promocodes/${id}`).then((r) => r.data),
+  promocodeStats: (id: string) =>
+    api
+      .get<{
+        total_uses: number;
+        revenue_mxn: number;
+        by_day: { day: string; uses: number }[];
+      }>(`/admin/promocodes/${id}/stats`)
+      .then((r) => r.data),
+
+  // Referrals
+  referralLeaderboard: (month?: string) =>
+    api
+      .get<ReferralLeader[]>('/admin/referrals/leaderboard', {
+        params: { month },
+      })
+      .then((r) => r.data),
+  listReferrals: (params: { status?: string; page?: number }) =>
+    api
+      .get<Paginated<Referral>>('/admin/referrals', { params })
+      .then((r) => r.data),
+
+  // Reports
+  report: (kind: string, params?: Record<string, unknown>) =>
+    api
+      .get<{ url: string }>(`/admin/reports/${kind}`, { params })
+      .then((r) => r.data),
+
+  // Settings
+  getSettings: () => api.get<GymSettings>('/admin/settings').then((r) => r.data),
+  updateSettings: (patch: Partial<GymSettings>) =>
+    api.patch('/admin/settings', patch).then((r) => r.data),
+  listStaff: () =>
+    api.get<StaffUser[]>('/admin/settings/staff').then((r) => r.data),
+  createStaff: (input: Omit<StaffUser, 'id' | 'enabled'>) =>
+    api.post<StaffUser>('/admin/settings/staff', input).then((r) => r.data),
+  updateStaff: (id: string, patch: Partial<StaffUser>) =>
+    api.patch(`/admin/settings/staff/${id}`, patch).then((r) => r.data),
+};
+
+/* =========================================================================
+ * Staff endpoints
+ * =========================================================================*/
+
+export interface StaffCheckinResult {
+  ok: boolean;
+  reason?: string;
+  member?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+    plan_name?: string;
+    expires_at?: string;
+    current_streak_days?: number;
+    next_badge?: { name: string; target_days: number };
+  };
+}
+
+export const staffApi = {
+  scan: (token: string) =>
+    api
+      .post<StaffCheckinResult>('/checkins/scan', { token })
+      .then((r) => r.data),
+  todayCount: () =>
+    api
+      .get<{ count: number }>('/staff/checkins/today-count')
+      .then((r) => r.data),
+  recentScans: () =>
+    api
+      .get<
+        {
+          id: string;
+          member_name: string;
+          status: 'ok' | 'denied';
+          reason?: string;
+          created_at: string;
+        }[]
+      >('/staff/checkins/recent')
+      .then((r) => r.data),
+  search: (q: string) =>
+    api
+      .get<AdminMember[]>('/staff/members/search', { params: { q } })
+      .then((r) => r.data),
+  manualCheckin: (memberId: string) =>
+    api
+      .post<StaffCheckinResult>('/staff/checkins/manual', {
+        member_id: memberId,
+      })
+      .then((r) => r.data),
+
+  // POS
+  posCheckout: (input: {
+    items: { inventory_id: string; qty: number }[];
+    method: 'CASH' | 'CARD' | 'MP_LINK';
+    member_id?: string;
+  }) =>
+    api
+      .post<{
+        sale_id: string;
+        total_mxn: number;
+        mp_init_point?: string;
+      }>('/staff/pos/sale', input)
+      .then((r) => r.data),
+
+  // Attendance
+  dayClasses: (date: string) =>
+    api
+      .get<AdminClass[]>('/staff/classes/by-day', { params: { date } })
+      .then((r) => r.data),
+  markAttendance: (bookingId: string, attended: boolean) =>
+    api
+      .post(`/staff/bookings/${bookingId}/attendance`, { attended })
+      .then((r) => r.data),
+};

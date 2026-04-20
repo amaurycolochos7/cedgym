@@ -1,0 +1,159 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════
+# CEDGYM — Dokploy Compose
+# Variante del docker-compose.yml raíz optimizada para Dokploy.
+# Diferencias clave vs. docker-compose.yml:
+#   - db y redis NO exponen puertos al host (sólo red interna).
+#   - api (3001) y whatsapp-bot (3002) sí exponen al host (acceso via IP:puerto).
+#   - Healthchecks en todos los servicios aplicables.
+#   - Labels dokploy.ignore=false para que Dokploy administre los contenedores.
+#   - Todas las credenciales vienen de variables ${...} inyectadas por Dokploy.
+#   - Servicio opcional `adminer` en :8080 para inspección rápida de DB.
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cedgym-db
+    labels:
+      - "dokploy.ignore=false"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # NO ports externos — sólo red interna de Dokploy.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: cedgym-redis
+    labels:
+      - "dokploy.ignore=false"
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    # NO ports externos — sólo red interna.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: cedgym-api
+    labels:
+      - "dokploy.ignore=false"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@cedgym-db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://cedgym-redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_PUBLIC_KEY: ${MP_PUBLIC_KEY}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+      WHATSAPP_BOT_URL: http://cedgym-whatsapp-bot:3002
+      WHATSAPP_BOT_KEY: ${WHATSAPP_BOT_KEY}
+      API_PORT: 3001
+      API_HOST: 0.0.0.0
+      NODE_ENV: ${NODE_ENV:-production}
+      API_PUBLIC_URL: ${API_PUBLIC_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  whatsapp-bot:
+    build:
+      context: .
+      dockerfile: apps/whatsapp-bot/Dockerfile
+    container_name: cedgym-whatsapp-bot
+    labels:
+      - "dokploy.ignore=false"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@cedgym-db:5432/${POSTGRES_DB}
+      API_KEY: ${WHATSAPP_BOT_KEY}
+      PORT: 3002
+      NODE_ENV: ${NODE_ENV:-production}
+    volumes:
+      - wwebjs_auth:/app/data/wwebjs_auth
+    ports:
+      - "3002:3002"
+    shm_size: '512mb'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: cedgym-worker
+    labels:
+      - "dokploy.ignore=false"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@cedgym-db:5432/${POSTGRES_DB}
+      REDIS_URL: redis://cedgym-redis:6379
+      WHATSAPP_BOT_URL: http://cedgym-whatsapp-bot:3002
+      WHATSAPP_BOT_KEY: ${WHATSAPP_BOT_KEY}
+      NODE_ENV: ${NODE_ENV:-production}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────
+  # Adminer (GUI de DB) — OPCIONAL, sólo para troubleshooting.
+  # Activa comentando la línea `profiles` si necesitás acceso.
+  # Acceso: http://187.77.11.79:8080  (server: cedgym-db, user/pass/db de envs).
+  # ──────────────────────────────────────────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: cedgym-adminer
+    labels:
+      - "dokploy.ignore=false"
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: cedgym-db
+    depends_on:
+      - db
+    restart: unless-stopped
+    profiles:
+      - debug   # docker compose --profile debug up -d adminer
+
+volumes:
+  pgdata:
+  redisdata:
+  wwebjs_auth:

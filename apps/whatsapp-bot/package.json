@@ -1,0 +1,19 @@
+{
+    "name": "@cedgym/whatsapp-bot",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "node --watch src/index.js",
+        "start": "node src/index.js",
+        "build": "echo \"(no build step for whatsapp-bot)\" && exit 0"
+    },
+    "dependencies": {
+        "@cedgym/db": "workspace:*",
+        "cors": "^2.8.5",
+        "dotenv": "^16.5.0",
+        "express": "^5.1.0",
+        "qrcode": "^1.5.4",
+        "whatsapp-web.js": "^1.26.0"
+    }
+}

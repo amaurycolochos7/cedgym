@@ -1,0 +1,11 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm --filter @cedgym/web build",
+  "installCommand": "pnpm install",
+  "rewrites": [
+    {
+      "source": "/api/backend/:path*",
+      "destination": "http://localhost:3001/:path*"
+    }
+  ]
+}

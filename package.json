@@ -1,0 +1,22 @@
+{
+  "name": "cedgym",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CED-GYM ecosystem: multi-sport gym SaaS with WhatsApp automation",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "db:migrate": "pnpm --filter @cedgym/api prisma migrate dev",
+    "db:generate": "pnpm --filter @cedgym/api prisma generate",
+    "db:studio": "pnpm --filter @cedgym/api prisma studio",
+    "db:seed": "pnpm --filter @cedgym/api db:seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.12.0"
+}

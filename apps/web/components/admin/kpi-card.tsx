@@ -1,0 +1,67 @@
+'use client';
+
+import { type LucideIcon, TrendingDown, TrendingUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface KpiCardProps {
+  icon?: LucideIcon;
+  label: string;
+  value: string | number;
+  /** Percentage delta vs. previous period (signed). */
+  delta?: number;
+  /** Small text under the value (e.g. "vs. last month"). */
+  hint?: string;
+  className?: string;
+}
+
+export function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  delta,
+  hint,
+  className,
+}: KpiCardProps) {
+  const positive = typeof delta === 'number' && delta >= 0;
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5',
+        className,
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-white/50">
+          {label}
+        </div>
+        {Icon ? (
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange ring-1 ring-brand-orange/20">
+            <Icon className="h-4 w-4" />
+          </div>
+        ) : null}
+      </div>
+      <div className="mt-3 text-3xl font-bold text-white">{value}</div>
+      <div className="mt-2 flex items-center gap-2 text-xs">
+        {typeof delta === 'number' && (
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
+              positive
+                ? 'bg-emerald-500/15 text-emerald-300'
+                : 'bg-red-500/15 text-red-300',
+            )}
+          >
+            {positive ? (
+              <TrendingUp className="h-3 w-3" />
+            ) : (
+              <TrendingDown className="h-3 w-3" />
+            )}
+            {positive ? '+' : ''}
+            {delta.toFixed(1)}%
+          </span>
+        )}
+        {hint && <span className="text-white/40">{hint}</span>}
+      </div>
+    </div>
+  );
+}

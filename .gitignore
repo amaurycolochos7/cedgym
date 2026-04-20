@@ -1,5 +1,56 @@
-.claude/settings.local.json
+.claude/
 .DS_Store
 Thumbs.db
+
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Logs
 *.log
+logs/
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env
+.env
+.env.local
+.env.production
+.env.*.local
+!.env.example
+
+# Build
+dist/
+build/
+.next/
+.turbo/
+.vercel/
+out/
+
+# Prisma
+apps/*/prisma/migrations/dev.db*
+
+# WhatsApp bot session data (huge, per-install)
+apps/whatsapp-bot/.wwebjs_auth/
+apps/whatsapp-bot/.wwebjs_cache/
+wwebjs_auth/
+
+# OS
+*.bak
+*.tmp
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Docker volumes (local)
+pgdata/
+redisdata/
+miniodata/
+
+# Deploy secrets (NEVER commit)
+deploy/.secrets.local
+deploy/.env.production
