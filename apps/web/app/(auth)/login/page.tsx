@@ -132,7 +132,7 @@ export default function LoginPage() {
         ¿No tienes cuenta?{' '}
         <Link
           href={
-            redirect !== '/dashboard'
+            redirect && redirect !== '/dashboard'
               ? `/register?redirect=${encodeURIComponent(redirect)}`
               : '/register'
           }
