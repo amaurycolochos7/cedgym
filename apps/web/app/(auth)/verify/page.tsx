@@ -74,7 +74,10 @@ export default function VerifyPage() {
         return; // modal handles navigation
       }
       lsDelete(POST_REGISTER_REDIRECT_KEY);
-      const fallback = stored?.path ?? '/complete-profile';
+      // Post-OTP the account is active — land directly on the portal
+      // dashboard. Profile/emergency contact are now optional and live at
+      // /portal/perfil (promoted via a dismissible banner).
+      const fallback = stored?.path ?? '/portal/dashboard';
       router.push(fallback);
     },
     onError: (err) => {
@@ -109,6 +112,9 @@ export default function VerifyPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col items-center gap-2 text-center">
+        <span className="inline-block rounded-full border border-brand-orange/30 bg-brand-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-brand-orange">
+          Paso 2 de 2
+        </span>
         <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-orange/15 text-brand-orange">
           <MessageCircle size={22} />
         </span>

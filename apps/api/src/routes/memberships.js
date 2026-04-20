@@ -21,6 +21,7 @@ import { z } from 'zod';
 import dayjs from 'dayjs';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
+import { audit, auditCtx } from '../lib/audit.js';
 import {
     PLAN_CATALOG,
     VALID_PLANS,
@@ -72,6 +73,10 @@ const adminPatchBody = z.object({
     expires_at: z.string().optional(),
     auto_renew: z.boolean().optional(),
     sport: z.string().optional(),
+});
+
+const adminDeleteBody = z.object({
+    reason: z.string().trim().min(10).max(500),
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -538,11 +543,93 @@ export default async function membershipsRoutes(fastify) {
             const data = { ...parsed.data };
             if (data.expires_at) data.expires_at = new Date(data.expires_at);
 
+            // Tenant guard: refuse to update a membership that doesn't
+            // belong to the admin's workspace (IDOR defense).
+            const existing = await prisma.membership.findFirst({
+                where: {
+                    id: req.params.id,
+                    workspace_id: req.user.workspace_id,
+                },
+                select: { id: true },
+            });
+            if (!existing) {
+                throw err('NOT_FOUND', 'Membresía no encontrada en este workspace', 404);
+            }
             const updated = await prisma.membership.update({
                 where: { id: req.params.id },
                 data,
             });
             return { membership: updated };
+        }
+    );
+
+    // ─── DELETE /admin/memberships/:id ────────────────────────────
+    // Hard-delete con motivo obligatorio. Reception + admin pueden borrar;
+    // el AuditLog queda como evidencia LFPDPPP de quién y por qué.
+    fastify.delete(
+        '/admin/memberships/:id',
+        {
+            preHandler: [
+                fastify.authenticate,
+                fastify.requireRole('ADMIN', 'SUPERADMIN', 'RECEPTIONIST'),
+            ],
+        },
+        async (req) => {
+            const parsed = adminDeleteBody.safeParse(req.body || {});
+            if (!parsed.success) {
+                throw err(
+                    'BAD_BODY',
+                    'El motivo de eliminación debe tener entre 10 y 500 caracteres',
+                    400
+                );
+            }
+            const { reason } = parsed.data;
+            const membershipId = req.params.id;
+
+            // Tenant guard: the membership must belong to the caller's
+            // workspace; prevents cross-workspace deletion (IDOR).
+            const membership = await prisma.membership.findFirst({
+                where: {
+                    id: membershipId,
+                    workspace_id: req.user.workspace_id,
+                },
+                include: {
+                    user: {
+                        select: { id: true, name: true, full_name: true, email: true, phone: true },
+                    },
+                },
+            });
+            if (!membership) {
+                throw err('MEMBERSHIP_NOT_FOUND', 'Membresía no encontrada', 404);
+            }
+
+            // Write audit first (best-effort, never throws).
+            const actorId = req.user?.sub || req.user?.id || null;
+            await audit(fastify, {
+                workspace_id: membership.workspace_id,
+                actor_id: actorId,
+                action: 'membership.deleted',
+                target_type: 'membership',
+                target_id: membershipId,
+                metadata: {
+                    reason,
+                    user_id: membership.user_id,
+                    user_name: membership.user?.full_name || membership.user?.name || null,
+                    user_email: membership.user?.email || null,
+                    user_phone: membership.user?.phone || null,
+                    plan: membership.plan,
+                    billing_cycle: membership.billing_cycle,
+                    status_at_delete: membership.status,
+                    expires_at: membership.expires_at,
+                    actor_role: req.user?.role || null,
+                },
+                ...auditCtx(req),
+            });
+
+            // Hard delete (Prisma will cascade to freezes via schema FKs).
+            await prisma.membership.delete({ where: { id: membershipId } });
+
+            return { ok: true, deleted_id: membershipId };
         }
     );
 }

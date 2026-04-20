@@ -14,10 +14,7 @@ import { Button } from '@/components/ui/button';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { registerSchema, type RegisterInput } from '@/lib/schemas';
 import { authApi, normalizeError } from '@/lib/api';
-import {
-  lsSetJSON,
-  lsDelete,
-} from '@/lib/utils';
+import { lsSetJSON, lsDelete } from '@/lib/utils';
 import {
   POST_REGISTER_REDIRECT_KEY,
   type PostRegisterRedirect,
@@ -57,7 +54,6 @@ export default function RegisterPage() {
       email: '',
       phone: '',
       password: '',
-      confirmPassword: '',
     },
   });
   const { register, handleSubmit, setValue, watch, formState } = form;
@@ -102,11 +98,14 @@ export default function RegisterPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 text-center">
+        <span className="mx-auto inline-block rounded-full border border-brand-orange/30 bg-brand-orange/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-brand-orange">
+          Paso 1 de 2
+        </span>
         <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
           Crea tu cuenta
         </h1>
         <p className="text-sm text-white/60">
-          Un perfil, todos los deportes. Empieza en menos de 1 minuto.
+          Solo necesitamos 4 datos. Menos de 1 minuto.
         </p>
       </div>
 
@@ -145,6 +144,7 @@ export default function RegisterPage() {
             id="email"
             type="email"
             autoComplete="email"
+            inputMode="email"
             placeholder="tu@correo.com"
             {...register('email')}
           />
@@ -191,23 +191,14 @@ export default function RegisterPage() {
           </div>
         </Field>
 
-        <Field
-          id="confirmPassword"
-          label="Confirmar contraseña"
-          error={formState.errors.confirmPassword?.message}
-        >
-          <Input
-            id="confirmPassword"
-            type={showPw ? 'text' : 'password'}
-            autoComplete="new-password"
-            placeholder="••••••••"
-            {...register('confirmPassword')}
-          />
-        </Field>
-
         <Button type="submit" size="lg" loading={mutation.isPending}>
-          Crear cuenta
+          Continuar
         </Button>
+
+        <p className="text-center text-[11px] text-white/40">
+          Al continuar aceptas recibir un código por WhatsApp para verificar tu
+          cuenta.
+        </p>
       </form>
 
       <div className="flex flex-col items-center gap-1 text-center text-sm text-white/60">

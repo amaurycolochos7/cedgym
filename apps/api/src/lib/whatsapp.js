@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // CED-GYM — Canonical WhatsApp sender (fire-and-forget friendly).
 // ═══════════════════════════════════════════════════════════════
+import { detectGender } from './gender.js';
 
 /**
  * Send a plain WhatsApp message through the local bot.
@@ -46,11 +47,23 @@ export async function sendWhatsAppMessage({ workspaceId, phone, message, logger 
  */
 export function renderWelcomeMessage({ name, gymName = 'CED·GYM', appUrl }) {
     const portal = appUrl || process.env.API_PUBLIC_URL?.replace('api.', 'cedgym.') || 'https://cedgym.187-77-11-79.sslip.io';
-    const firstName = (name || '').split(' ')[0] || '¡Bienvenid@!';
+    const firstName = (name || '').split(' ')[0] || '';
+    const gender = detectGender(firstName);
+    // Greeting adapts to detected gender; 'X' (unknown) falls back to
+    // the neutral "Bienvenid@" so we never mis-gender.
+    let greeting;
+    if (gender === 'M') {
+        greeting = `💪 ¡Hola ${firstName}! Bienvenido a *${gymName}*, listo para entrenar.`;
+    } else if (gender === 'F') {
+        greeting = `💪 ¡Hola ${firstName}! Bienvenida a *${gymName}*, lista para entrenar.`;
+    } else {
+        const safeName = firstName || 'atleta';
+        greeting = `💪 ¡Hola ${safeName}! Bienvenid@ a *${gymName}* — Fábrica de Monstruos.`;
+    }
     return [
-        `💪 ¡Hola ${firstName}! Bienvenid@ a *${gymName}* — Fábrica de Monstruos.`,
+        greeting,
         ``,
-        `Tu cuenta está lista 👊. Ahora elegí tu plan y activá tu membresía:`,
+        `Tu cuenta está lista 👊. Ahora elige tu plan y activa tu membresía:`,
         `👉 ${portal}/planes`,
         ``,
         `*Beneficios*`,
@@ -58,26 +71,33 @@ export function renderWelcomeMessage({ name, gymName = 'CED·GYM', appUrl }) {
         `✅ Seguimiento de progreso en la app`,
         `✅ Cursos y rutinas de coaches certificados`,
         ``,
-        `¿Tenés dudas? Respondé este chat y te ayudamos.`,
+        `¿Tienes dudas? Responde este chat y te ayudamos.`,
     ].join('\n');
 }
 
 /**
  * Upsell message for users registered ≥48h ago with no active membership.
- * Softer tone: "notamos que aún no eligís plan — acá tenés un código".
+ * Softer tone: "notamos que aún no eliges plan — acá tienes un código".
  */
 export function renderUpsellMessage({ name, gymName = 'CED·GYM', appUrl, promoCode }) {
     const portal = appUrl || process.env.API_PUBLIC_URL?.replace('api.', 'cedgym.') || 'https://cedgym.187-77-11-79.sslip.io';
     const firstName = (name || '').split(' ')[0] || 'amig@';
-    const promoLine = promoCode ? `\n🎁 Usá el código *${promoCode}* y ahorrá en tu primer mes.` : '';
+    const gender = detectGender(firstName);
+    const listoLine =
+        gender === 'M'
+            ? `¿Listo para entrenar? Elige el plan que mejor te queda:`
+            : gender === 'F'
+            ? `¿Lista para entrenar? Elige el plan que mejor te queda:`
+            : `Elige el plan que mejor te queda:`;
+    const promoLine = promoCode ? `\n🎁 Usa el código *${promoCode}* y ahorra en tu primer mes.` : '';
     return [
         `Hola ${firstName} 👋`,
         ``,
         `Notamos que tu cuenta en ${gymName} todavía no tiene plan activo.${promoLine}`,
         ``,
-        `Elegí el que mejor te queda:`,
+        listoLine,
         `👉 ${portal}/planes`,
         ``,
-        `Tu primera semana sumá *fuerza, potencia y hábito*. Te acompañamos.`,
+        `Tu primera semana suma *fuerza, potencia y hábito*. Te acompañamos.`,
     ].join('\n');
 }

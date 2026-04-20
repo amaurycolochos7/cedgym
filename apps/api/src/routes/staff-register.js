@@ -34,6 +34,7 @@ import {
     daysRemaining,
 } from '../lib/memberships.js';
 import { createPreference } from '../lib/mercadopago.js';
+import { detectGender } from '../lib/gender.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 const PAYMENT_METHODS = ['CASH', 'CARD_TERMINAL', 'MP_LINK'];
@@ -100,8 +101,16 @@ async function sendWalkinWelcome(fastify, { phone, name, tempPassword, qrDeepLin
     const key = process.env.WHATSAPP_BOT_KEY;
     if (!url || !key) return { ok: false, error: 'bot_not_configured' };
 
+    const gender = detectGender(name);
+    const salutation =
+        gender === 'M'
+            ? `🏋️ *¡Bienvenido a CED-GYM, ${name}!*`
+            : gender === 'F'
+            ? `🏋️ *¡Bienvenida a CED-GYM, ${name}!*`
+            : `🏋️ *¡Bienvenid@ a CED-GYM, ${name}!*`;
+
     const message =
-        `🏋️ *¡Bienvenid@ a CED-GYM, ${name}!*\n\n` +
+        `${salutation}\n\n` +
         `Tu acceso digital está listo.\n\n` +
         `📱 Teléfono: ${phone}\n` +
         `🔑 Contraseña temporal: *${tempPassword}*\n\n` +

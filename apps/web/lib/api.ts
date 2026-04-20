@@ -144,7 +144,21 @@ api.interceptors.response.use(
   },
 );
 
+/**
+ * Turn any thrown value into our flat `ApiError` shape so forms have a
+ * single, predictable `.message` field to render.
+ *
+ * Call-sites routinely re-normalize inside `onError` handlers, and the
+ * axios response interceptor also rejects with an already-normalized
+ * `ApiError`. Both cases must fall through cleanly — otherwise the UI
+ * was showing "Error desconocido" on any server error because the
+ * second pass lost the original payload.
+ */
 export function normalizeError(err: unknown): ApiError {
+  // Pass-through: already normalized by the response interceptor (or by
+  // a caller further up the stack).
+  if (isApiError(err)) return err;
+
   if (axios.isAxiosError(err)) {
     const status = err.response?.status ?? 0;
     // The Fastify API returns `{ error: { code, message }, statusCode }`
@@ -161,22 +175,44 @@ export function normalizeError(err: unknown): ApiError {
       | undefined;
     const nestedCode = body?.error?.code;
     const nestedMessage = body?.error?.message;
+
+    // Network/offline: no response at all → give a user-friendly hint
+    // rather than the raw axios string like "Network Error".
+    const networkFallback =
+      status === 0
+        ? 'No pudimos conectar con el servidor. Revisa tu conexión e intenta de nuevo.'
+        : 'Ocurrió un error. Intenta de nuevo en unos segundos.';
+
     return {
       status,
       code: body?.code ?? nestedCode,
       message:
         body?.message ??
         nestedMessage ??
-        err.message ??
-        'Error de red. Intenta de nuevo en unos segundos.',
+        (err.message && err.message !== 'Network Error'
+          ? err.message
+          : networkFallback),
       details: body?.details,
     };
   }
+  if (err instanceof Error) {
+    return { status: 0, message: err.message };
+  }
   return {
     status: 0,
-    message:
-      err instanceof Error ? err.message : 'Error desconocido',
+    message: 'Ocurrió un error inesperado. Intenta de nuevo.',
   };
+}
+
+function isApiError(v: unknown): v is ApiError {
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    typeof (v as { message?: unknown }).message === 'string' &&
+    typeof (v as { status?: unknown }).status === 'number' &&
+    !(v instanceof Error) &&
+    !axios.isAxiosError(v)
+  );
 }
 
 /* =========================================================================

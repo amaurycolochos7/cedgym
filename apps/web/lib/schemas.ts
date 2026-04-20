@@ -30,18 +30,12 @@ export const otpSchema = z
  * Auth schemas
  * =========================================================================*/
 
-export const registerSchema = z
-  .object({
-    name: z.string().trim().min(2, 'Nombre demasiado corto').max(80),
-    email: emailSchema,
-    phone: mxPhoneSchema,
-    password: passwordSchema,
-    confirmPassword: z.string(),
-  })
-  .refine((v) => v.password === v.confirmPassword, {
-    path: ['confirmPassword'],
-    message: 'Las contraseñas no coinciden',
-  });
+export const registerSchema = z.object({
+  name: z.string().trim().min(2, 'Nombre demasiado corto').max(80),
+  email: emailSchema,
+  phone: mxPhoneSchema,
+  password: passwordSchema,
+});
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
@@ -101,6 +95,7 @@ export const emergencyContactSchema = z.object({
   name: z.string().trim().min(2, 'Nombre requerido'),
   relationship: relationshipEnum,
   phone: mxPhoneSchema,
+  medical_notes: z.string().trim().max(500).optional(),
 });
 export type EmergencyContact = z.infer<typeof emergencyContactSchema>;
 

@@ -24,19 +24,56 @@ export default function PortalDashboardPage() {
     queryFn: async () => (await api.get('/checkins/me/history?limit=30')).data,
   });
 
-  const streak = progress?.current_streak_days ?? 0;
-  const xp = progress?.xp ?? 0;
-  const level = progress?.level ?? 1;
-  const xpForNext = progress?.xp_to_next_level ?? 100;
-  const xpProgress = progress?.level_progress_pct ?? 0;
+  // Backend returns { progress:{...}, level:{...}, earned:[], next_badges:[] }
+  // Unwrap safely — these are all nullable on boot.
+  const p = progress?.progress ?? {};
+  const lvl = progress?.level ?? {};
+  const streak = p.current_streak_days ?? 0;
+  const xp = p.xp ?? 0;
+  const level = p.level ?? 1;
+  const xpForNext = lvl.xp_to_next ?? 100;
+  const xpProgress = lvl.pct ?? 0;
+  const totalCheckins = p.total_checkins ?? 0;
+  // count_this_month from the history array
+  const now = new Date();
+  const thisMonthCount = Array.isArray(checkins?.check_ins)
+    ? checkins.check_ins.filter((c: any) => {
+        const d = new Date(c.scanned_at ?? c.created_at ?? 0);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      }).length
+    : 0;
 
   return (
     <div className="space-y-6">
       {/* Greeting */}
       <div>
-        <h1 className="text-3xl font-bold">Hola, {user?.name?.split(' ')[0] ?? 'Atleta'} 👋</h1>
-        <p className="text-zinc-400 mt-1">Sigue tu progreso, tus clases y tus logros.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">Hola, {user?.name?.split(' ')[0] ?? 'Atleta'} 👋</h1>
+        <p className="text-zinc-400 mt-1 text-sm sm:text-base">Sigue tu progreso, tus clases y tus logros.</p>
       </div>
+
+      {/* Mi QR de acceso — top, prominent */}
+      <Link
+        href="/portal/qr"
+        className="group block overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/15 via-orange-500/10 to-zinc-900 p-5 sm:p-6 transition hover:border-orange-400/60 hover:from-orange-500/25"
+      >
+        <div className="flex items-center gap-4">
+          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-300 shadow-inner shadow-orange-500/10 transition group-hover:bg-orange-500/30">
+            <QrCode className="h-7 w-7" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-orange-300/80">
+              Entrada al gym
+            </div>
+            <div className="text-lg sm:text-xl font-bold text-white truncate">
+              Mi QR de acceso
+            </div>
+            <div className="mt-0.5 text-xs sm:text-sm text-zinc-400 truncate">
+              Muéstralo al staff en la entrada.
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 shrink-0 text-orange-300 transition group-hover:translate-x-1" />
+        </div>
+      </Link>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -55,13 +92,13 @@ export default function PortalDashboardPage() {
         <KpiCard
           icon={<Trophy className="w-5 h-5 text-emerald-400" />}
           label="Check-ins totales"
-          value={(progress?.total_checkins ?? 0).toLocaleString()}
+          value={totalCheckins.toLocaleString()}
           hint="De toda la historia"
         />
         <KpiCard
           icon={<Activity className="w-5 h-5 text-sky-400" />}
           label="Este mes"
-          value={`${checkins?.count_this_month ?? 0}`}
+          value={`${thisMonthCount}`}
           hint="Visitas"
         />
       </div>

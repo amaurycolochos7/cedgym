@@ -26,10 +26,7 @@ import {
     checkAndBumpOtpRateLimit,
     OTP_MAX_ATTEMPTS,
 } from '../lib/otp.js';
-import {
-    sendWhatsAppMessage,
-    renderWelcomeMessage,
-} from '../lib/whatsapp.js';
+import { scheduleWelcomeDrip } from '../lib/welcome-drip.js';
 import {
     signAccess,
     mintRefreshToken,
@@ -277,7 +274,15 @@ export default async function authRoutes(fastify) {
     );
 
     // ── POST /auth/verify-register ──────────────────────────
-    fastify.post('/verify-register', async (request, reply) => {
+    fastify.post('/verify-register', {
+        config: {
+            rateLimit: {
+                max: 10,
+                timeWindow: '15 minutes',
+                keyGenerator: (req) => req.body?.phone || req.ip,
+            },
+        },
+    }, async (request, reply) => {
         const parsed = verifyRegisterSchema.safeParse(request.body);
         if (!parsed.success) {
             return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
@@ -341,13 +346,10 @@ export default async function authRoutes(fastify) {
 
         reply.setCookie(REFRESH_COOKIE_NAME, refreshRaw, refreshCookieOptions(updatedUser.role));
 
-        // Fire-and-forget welcome (marketing). Never blocks the login response.
-        sendWhatsAppMessage({
-            workspaceId: updatedUser.workspace_id,
-            phone: updatedUser.phone,
-            message: renderWelcomeMessage({ name: updatedUser.full_name || updatedUser.name }),
-            logger: request.log,
-        }).catch(() => {});
+        // Schedule the welcome WhatsApp for T+2min via AutomationJob.
+        // Restart-safe (DB-backed) and won't block the login response.
+        // On queue failure we silently ignore — the drip is nice-to-have.
+        scheduleWelcomeDrip({ user: updatedUser, logger: request.log }).catch(() => {});
 
         return reply.send({
             success: true,
@@ -476,7 +478,9 @@ export default async function authRoutes(fastify) {
     );
 
     // ── POST /auth/refresh ──────────────────────────────────
-    fastify.post('/refresh', async (request, reply) => {
+    fastify.post('/refresh', {
+        config: { rateLimit: { max: 30, timeWindow: '15 minutes' } },
+    }, async (request, reply) => {
         // Aceptamos el refresh token desde cookie (preferido, httpOnly) o
         // desde el body como fallback. El fallback permite que clientes que
         // no envían cookies (mobile nativo, tests) puedan refrescar.

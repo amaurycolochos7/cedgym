@@ -8,6 +8,10 @@ import { useAuth } from '@/lib/auth';
 import { useIdleLogout } from '@/lib/use-idle-logout';
 import { toast } from 'sonner';
 
+// Module-level constants: stable identity so the useIdleLogout effect
+// dependencies don't re-subscribe on every render.
+const IDLE_ROLES = ['ADMIN', 'SUPERADMIN'] as const;
+
 const TITLES: Record<string, string> = {
   '/admin/dashboard': 'Dashboard',
   '/admin/miembros': 'Miembros',
@@ -19,7 +23,6 @@ const TITLES: Record<string, string> = {
   '/admin/products': 'Marketplace',
   '/admin/inventory': 'Inventario',
   '/admin/automations': 'Automaciones',
-  '/admin/templates': 'Plantillas',
   '/admin/whatsapp': 'WhatsApp',
   '/admin/promocodes': 'Promocodes',
   '/admin/referrals': 'Referidos',
@@ -40,7 +43,7 @@ export default function AdminLayout({
   // Auto-logout tras 30 min de inactividad, solo ADMIN y SUPERADMIN.
   // Warning 2 min antes del corte.
   useIdleLogout({
-    applyToRoles: ['ADMIN', 'SUPERADMIN'],
+    applyToRoles: IDLE_ROLES as unknown as string[],
     idleMinutes: 30,
     warnBeforeMinutes: 2,
   });

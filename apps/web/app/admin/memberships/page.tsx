@@ -3,14 +3,23 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Send } from 'lucide-react';
+import { Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { DataTable } from '@/components/admin/data-table';
 import { adminApi, type AdminMember, type AdminMembershipPlan } from '@/lib/admin-api';
 import type { ColumnDef } from '@tanstack/react-table';
+import { useAuth } from '@/lib/auth';
 
 const MXN = new Intl.NumberFormat('es-MX', {
   style: 'currency',
@@ -20,6 +29,12 @@ const MXN = new Intl.NumberFormat('es-MX', {
 
 export default function AdminMembershipsPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const canDelete =
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPERADMIN' ||
+    user?.role === 'RECEPTIONIST';
+
   const { data: plans } = useQuery({
     queryKey: ['admin', 'plans'],
     queryFn: adminApi.listMembershipPlans,
@@ -37,6 +52,7 @@ export default function AdminMembershipsPage() {
   });
 
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [toDelete, setToDelete] = React.useState<AdminMember | null>(null);
 
   const broadcast = useMutation({
     mutationFn: () => adminApi.broadcastMembershipReminder([...selected]),
@@ -45,6 +61,22 @@ export default function AdminMembershipsPage() {
       setSelected(new Set());
     },
     onError: () => toast.error('No se pudo enviar'),
+  });
+
+  const del = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      adminApi.deleteMembership(id, reason),
+    onSuccess: () => {
+      toast.success('Membresía eliminada');
+      setToDelete(null);
+      qc.invalidateQueries({ queryKey: ['admin', 'memberships-active'] });
+    },
+    onError: (e: any) => {
+      const msg =
+        e?.response?.data?.error?.message ||
+        'No se pudo eliminar la membresía';
+      toast.error(msg);
+    },
   });
 
   const columns = React.useMemo<ColumnDef<AdminMember>[]>(
@@ -94,8 +126,30 @@ export default function AdminMembershipsPage() {
         header: 'Vence',
         accessorKey: 'expires_at',
       },
+      ...(canDelete
+        ? [
+            {
+              id: 'actions',
+              header: () => <span className="sr-only">Acciones</span>,
+              cell: ({ row }: { row: { original: AdminMember } }) => (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setToDelete(row.original);
+                  }}
+                  aria-label="Eliminar membresía"
+                  className="text-red-400 hover:text-red-300"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              ),
+            } as ColumnDef<AdminMember>,
+          ]
+        : []),
     ],
-    [selected, members],
+    [selected, members, canDelete],
   );
 
   return (
@@ -163,7 +217,88 @@ export default function AdminMembershipsPage() {
           data={members?.items ?? []}
         />
       </section>
+
+      <DeleteMembershipDialog
+        member={toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={(reason) =>
+          toDelete && del.mutate({ id: toDelete.id, reason })
+        }
+        loading={del.isPending}
+      />
     </div>
+  );
+}
+
+// Modal de eliminación: motivo obligatorio (10-500 chars).
+function DeleteMembershipDialog({
+  member,
+  onClose,
+  onConfirm,
+  loading,
+}: {
+  member: AdminMember | null;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  loading: boolean;
+}) {
+  const [reason, setReason] = React.useState('');
+  React.useEffect(() => {
+    if (member) setReason('');
+  }, [member]);
+
+  const valid = reason.trim().length >= 10 && reason.trim().length <= 500;
+
+  return (
+    <Dialog open={!!member} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Eliminar membresía</DialogTitle>
+          <DialogDescription>
+            Esta acción es permanente y se registra en auditoría. El motivo
+            quedará visible para administradores.
+          </DialogDescription>
+        </DialogHeader>
+
+        {member && (
+          <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-sm">
+            <div className="font-semibold text-white">{member.name}</div>
+            <div className="text-white/50">
+              {member.plan_name ?? 'Sin plan'} · {member.phone}
+            </div>
+          </div>
+        )}
+
+        <label className="block text-xs uppercase tracking-wider text-white/50">
+          Motivo de eliminación
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={4}
+            placeholder="Ej. Socio pidió baja definitiva por mudanza; se confirmó por WhatsApp."
+            className="mt-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-brand-orange/60 focus:outline-none"
+            maxLength={500}
+          />
+          <span className="mt-1 block text-[11px] text-white/40">
+            {reason.trim().length}/500 · mínimo 10 caracteres
+          </span>
+        </label>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => valid && onConfirm(reason.trim())}
+            loading={loading}
+            disabled={!valid || loading}
+          >
+            Eliminar membresía
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

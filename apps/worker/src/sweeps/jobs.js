@@ -9,6 +9,9 @@
 //
 // Actions supported:
 //   - whatsapp.send_template → renders MessageTemplate + POSTs to bot
+//   - whatsapp.send_raw      → sends pre-rendered context.message to
+//                              context.phone (used for deferred
+//                              one-off sends like the welcome drip).
 //   - push.notify            → stub (logs, returns ok)
 //   - email.send             → stub (logs, returns ok)
 // ─────────────────────────────────────────────────────────────────
@@ -82,6 +85,28 @@ async function executeJob(job) {
     const context = { ...(job.context || {}), workspace_id: automation.workspace_id };
     const action = automation.action;
     const params = automation.params || {};
+
+    if (action === 'whatsapp.send_raw') {
+        // Deferred one-off send: the producer already built the exact
+        // message and put it in context.message (plus context.phone).
+        // No MessageTemplate lookup happens — this path is used when
+        // we need to delay a dynamically-rendered string (e.g. the
+        // 2-minute welcome drip).
+        const message = context.message;
+        const phone = context.phone || (await resolveDestinationPhone(params, context));
+        const result = await sendWhatsApp({
+            workspaceId: automation.workspace_id,
+            phone,
+            message,
+        });
+        return {
+            ok: result.ok,
+            channel: 'whatsapp',
+            raw: true,
+            phone,
+            send_result: result,
+        };
+    }
 
     if (action === 'whatsapp.send_template') {
         const templateId = params.template_id;

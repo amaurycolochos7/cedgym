@@ -19,37 +19,42 @@ import {
   BarChart3,
   Settings,
   Sparkles,
-  MessagesSquare,
+  ShieldCheck,
+  AlarmClock,
   X,
   ChevronLeft,
   type LucideIcon,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth';
 
 export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
   group?: string;
+  /** Roles allowed to see this entry. If omitted, everyone in the variant sees it. */
+  roles?: ReadonlyArray<'SUPERADMIN' | 'ADMIN' | 'RECEPTIONIST' | 'TRAINER'>;
 }
 
 const ADMIN_NAV: NavItem[] = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, group: 'Resumen' },
   { label: 'Miembros', href: '/admin/miembros', icon: Users, group: 'Operación' },
   { label: 'Mi equipo', href: '/admin/staff', icon: UserCog, group: 'Operación' },
-  { label: 'Membresías', href: '/admin/memberships', icon: CreditCard, group: 'Operación' },
+  { label: 'Membresías', href: '/admin/memberships', icon: CreditCard, group: 'Membresías' },
+  { label: 'Vencidas / Campañas', href: '/admin/memberships/expired', icon: AlarmClock, group: 'Membresías' },
   { label: 'Cursos', href: '/admin/courses', icon: GraduationCap, group: 'Operación' },
   { label: 'Clases', href: '/admin/classes', icon: CalendarClock, group: 'Operación' },
   { label: 'Pagos', href: '/admin/payments', icon: Receipt, group: 'Finanzas' },
   { label: 'Marketplace', href: '/admin/products', icon: ShoppingBag, group: 'Comercio' },
   { label: 'Inventario', href: '/admin/inventory', icon: Boxes, group: 'Comercio' },
   { label: 'Automaciones', href: '/admin/automations', icon: Wand2, group: 'Crecimiento' },
-  { label: 'Plantillas', href: '/admin/templates', icon: MessagesSquare, group: 'Crecimiento' },
   { label: 'WhatsApp', href: '/admin/whatsapp', icon: MessageSquare, group: 'Crecimiento' },
   { label: 'Promocodes', href: '/admin/promocodes', icon: Tag, group: 'Crecimiento' },
   { label: 'Referidos', href: '/admin/referrals', icon: Sparkles, group: 'Crecimiento' },
-  { label: 'Reportes', href: '/admin/reports', icon: BarChart3, group: 'Finanzas' },
+  { label: 'Reportes', href: '/admin/reports', icon: BarChart3, group: 'Reportes' },
+  { label: 'Auditoría', href: '/admin/audit', icon: ShieldCheck, group: 'Reportes', roles: ['SUPERADMIN'] },
   { label: 'Ajustes', href: '/admin/settings', icon: Settings, group: 'Sistema' },
 ];
 
@@ -68,7 +73,19 @@ interface SidebarProps {
 
 export function Sidebar({ variant = 'admin', open, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const items = variant === 'admin' ? ADMIN_NAV : STAFF_NAV;
+  const { user } = useAuth();
+  const baseItems = variant === 'admin' ? ADMIN_NAV : STAFF_NAV;
+
+  // Filter role-gated entries (e.g. Auditoría for SUPERADMIN only).
+  const items = React.useMemo(
+    () =>
+      baseItems.filter((it) => {
+        if (!it.roles || it.roles.length === 0) return true;
+        const role = user?.role;
+        return role ? (it.roles as ReadonlyArray<string>).includes(role) : false;
+      }),
+    [baseItems, user?.role],
+  );
 
   // Group by group label
   const groups = React.useMemo(() => {

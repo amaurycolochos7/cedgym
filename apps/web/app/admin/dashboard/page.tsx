@@ -132,7 +132,7 @@ export default function AdminDashboardPage() {
             data={revenue.data ?? []}
             xKey="bucket"
             yKey="amount_mxn"
-            formatter={(v) => MXN.format(v)}
+            formatter={(v) => MXN.format(typeof v === 'number' && !Number.isNaN(v) ? v : 0)}
           />
         </div>
 
@@ -149,7 +149,7 @@ export default function AdminDashboardPage() {
             data={retention.data ?? []}
             xKey="month"
             yKey="renewals_pct"
-            formatter={(v) => `${v.toFixed(0)}%`}
+            formatter={(v) => `${typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(0) : '0'}%`}
           />
         </div>
       </div>

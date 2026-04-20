@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 // Upsell sweep — users registered ≥ UPSELL_DELAY_HOURS ago with no
-// membership ever → send a friendly "elegí tu plan" nudge on WhatsApp.
+// membership ever → send a friendly "elige tu plan" nudge on WhatsApp.
 //
 // Guarded by Redis idempotency (per-user, 30-day window) so we never
 // spam: at most one upsell ping per user within 30 days.
@@ -36,13 +36,13 @@ function renderUpsell({ name, appUrl }) {
         `Hola ${firstName} 👋`,
         ``,
         `Vimos que tu cuenta en *CED·GYM* todavía no tiene plan activo.`,
-        `Arrancá hoy y marcá la diferencia 💪`,
+        `Arranca hoy y marca la diferencia 💪`,
         ``,
         `👉 ${portal}/planes`,
         ``,
-        `📣 *Bonus*: usá el código *PRIMERA10* y obtené 10% de descuento en tu primer mes.`,
+        `📣 *Bonus*: usa el código *PRIMERA10* y obtén 10% de descuento en tu primer mes.`,
         ``,
-        `Cualquier duda, respondé este chat.`,
+        `Cualquier duda, responde este chat.`,
     ].join('\n');
 }
 

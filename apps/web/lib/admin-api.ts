@@ -318,6 +318,32 @@ export interface StaffUser {
   enabled: boolean;
 }
 
+export interface ExpiredMember {
+  user_id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  plan: 'STARTER' | 'PRO' | 'ELITE' | string;
+  billing_cycle?: string;
+  expires_at: string;
+  days_since_expiry: number;
+  status: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  action: string;
+  actor_id: string | null;
+  actor_name: string;
+  actor_role: string | null;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
 /* =========================================================================
  * Admin endpoints
  * =========================================================================*/
@@ -431,7 +457,9 @@ export const adminApi = {
       .then((r) => ({ count: Number(r.data?.count ?? 0) }))
       .catch(() => ({ count: 0 })),
 
-  // Members
+  // Members — backend path is /admin/miembros (Spanish). We translate
+  // UI-level {q,page,page_size} → API {search,limit,offset} and flatten
+  // the nested `membership.*` into the AdminMember shape the UI expects.
   listMembers: (params: {
     q?: string;
     status?: string;
@@ -439,24 +467,62 @@ export const adminApi = {
     sport?: string;
     page?: number;
     page_size?: number;
-  }) =>
-    api
-      .get<Paginated<AdminMember>>('/admin/members', { params })
-      .then((r) => r.data),
+  }) => {
+    const limit = params.page_size ?? 30;
+    const page = params.page ?? 1;
+    const offset = Math.max(0, (page - 1) * limit);
+    const apiParams: Record<string, any> = {
+      limit,
+      offset,
+      ...(params.q && { search: params.q }),
+      ...(params.status && { status: params.status }),
+      ...(params.plan && { plan: params.plan }),
+      ...(params.sport && { sport: params.sport }),
+    };
+    return api
+      .get<{ items: any[]; total: number; limit: number; offset: number }>(
+        '/admin/miembros',
+        { params: apiParams },
+      )
+      .then((r) => ({
+        items: (r.data?.items ?? []).map(
+          (u: any): AdminMember => ({
+            id: u.id,
+            name: u.full_name || u.name || '—',
+            phone: u.phone ?? '',
+            email: u.email ?? undefined,
+            status: (u.membership?.status ?? u.status ?? 'expired').toLowerCase() as
+              | 'active'
+              | 'frozen'
+              | 'expired'
+              | 'cancelled',
+            plan_code: u.membership?.plan,
+            plan_name: u.membership?.plan,
+            expires_at: u.membership?.expires_at,
+            last_checkin_at: u.last_checkin_at,
+            xp: u.xp,
+            created_at: u.created_at,
+          }),
+        ),
+        total: r.data?.total ?? 0,
+        page,
+        page_size: limit,
+      }));
+  },
   getMember: (id: string) =>
-    api.get<AdminMember & Record<string, unknown>>(`/admin/members/${id}`).then((r) => r.data),
+    api.get<AdminMember & Record<string, unknown>>(`/admin/miembros/${id}`).then((r) => r.data),
   createMember: (input: {
     name: string;
     phone: string;
     email?: string;
     plan_code?: string;
-  }) => api.post<AdminMember>('/admin/members', input).then((r) => r.data),
+  }) => api.post<AdminMember>('/admin/miembros', input).then((r) => r.data),
   suspendMember: (id: string) =>
-    api.post(`/admin/members/${id}/suspend`).then((r) => r.data),
+    api.post(`/admin/miembros/${id}/suspend`).then((r) => r.data),
   reactivateMember: (id: string) =>
-    api.post(`/admin/members/${id}/reactivate`).then((r) => r.data),
+    api.post(`/admin/miembros/${id}/reactivate`).then((r) => r.data),
   resetMemberPassword: (id: string) =>
-    api.post(`/admin/members/${id}/reset-password`).then((r) => r.data),
+    api.post(`/admin/miembros/${id}/reset-password`).then((r) => r.data),
   memberQrPng: (id: string) =>
     api
       .get<{ url: string }>(`/admin/members/${id}/qr`)
@@ -486,6 +552,43 @@ export const adminApi = {
   broadcastMembershipReminder: (memberIds: string[]) =>
     api
       .post('/admin/memberships/broadcast', { member_ids: memberIds })
+      .then((r) => r.data),
+  deleteMembership: (id: string, reason: string) =>
+    api
+      .delete(`/admin/memberships/${id}`, { data: { reason } })
+      .then((r) => r.data),
+  listExpiredMemberships: () =>
+    api
+      .get<{
+        items: ExpiredMember[];
+        total: number;
+        template: string;
+      }>('/admin/memberships/expired')
+      .then((r) => r.data),
+  whatsappBulkCampaign: (input: {
+    user_ids: string[];
+    message_template: string;
+  }) =>
+    api
+      .post<{
+        ok: boolean;
+        campaign_id: string;
+        enqueued: number;
+        first_run_at: string;
+        last_run_at: string;
+      }>('/admin/campaigns/whatsapp-bulk', input)
+      .then((r) => r.data),
+  listAuditLog: (params?: {
+    limit?: number;
+    action?: string;
+    actor?: string;
+    target?: string;
+  }) =>
+    api
+      .get<{ items: AuditEntry[]; total: number; limit: number }>(
+        '/admin/audit',
+        { params },
+      )
       .then((r) => r.data),
 
   // Courses

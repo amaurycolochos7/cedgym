@@ -54,3 +54,9 @@ miniodata/
 # Deploy secrets (NEVER commit)
 deploy/.secrets.local
 deploy/.env.production
+
+# Local dev SSH helper (has sensitive auth flow)
+deploy/_ssh_runner.py
+
+# tsbuildinfo (generated)
+apps/web/tsconfig.tsbuildinfo

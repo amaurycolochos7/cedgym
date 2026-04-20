@@ -41,9 +41,9 @@ export default function AdminSettingsPage() {
       </div>
 
       <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 space-y-3">
-        <h3 className="font-semibold">Automaciones y plantillas</h3>
+        <h3 className="font-semibold">Automaciones</h3>
         <p className="text-sm text-zinc-400">
-          Gestiona en <a href="/admin/automations" className="text-orange-400">Automaciones</a> y <a href="/admin/templates" className="text-orange-400">Templates</a>.
+          Gestiona en <a href="/admin/automations" className="text-orange-400">Automaciones</a>.
         </p>
       </div>
     </div>
