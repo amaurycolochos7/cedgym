@@ -542,13 +542,22 @@ export const adminApi = {
 
   // Memberships
   listMembershipPlans: () =>
-    api.get<AdminMembershipPlan[]>('/admin/memberships/plans').then((r) => r.data),
+    api.get<any>('/memberships/plans').then((r) => {
+      const d: any = r.data;
+      return Array.isArray(d) ? d : (d?.plans ?? d?.items ?? []);
+    }),
   updateMembershipPlan: (id: string, patch: Partial<AdminMembershipPlan>) =>
     api.patch(`/admin/memberships/plans/${id}`, patch).then((r) => r.data),
   listActiveMemberships: (params: { q?: string; plan?: string; page?: number }) =>
-    api
-      .get<Paginated<AdminMember>>('/admin/memberships', { params })
-      .then((r) => r.data),
+    api.get<any>('/admin/memberships', { params }).then((r) => {
+      const d: any = r.data;
+      return {
+        items: (Array.isArray(d) ? d : d?.memberships ?? d?.items ?? []) as AdminMember[],
+        total: d?.total ?? 0,
+        page: d?.page ?? params.page ?? 1,
+        page_size: d?.limit ?? 20,
+      };
+    }),
   broadcastMembershipReminder: (memberIds: string[]) =>
     api
       .post('/admin/memberships/broadcast', { member_ids: memberIds })
@@ -679,13 +688,20 @@ export const adminApi = {
     user_id?: string;
     page?: number;
   }) =>
-    api
-      .get<Paginated<AdminPayment>>('/admin/payments', { params })
-      .then((r) => r.data),
+    api.get<any>('/admin/payments', { params }).then((r) => {
+      const d: any = r.data;
+      return {
+        items: (Array.isArray(d) ? d : d?.payments ?? d?.items ?? []) as AdminPayment[],
+        total: d?.total ?? 0,
+        page: d?.page ?? params.page ?? 1,
+        page_size: d?.limit ?? 50,
+      };
+    }),
   paymentsSeries: (range: 'day' | 'week' | 'month') =>
     api
       .get<RevenuePoint[]>('/admin/payments/series', { params: { range } })
-      .then((r) => r.data),
+      .then((r) => r.data)
+      .catch(() => [] as RevenuePoint[]),
   exportPaymentsCsv: (params: Record<string, unknown>) =>
     api
       .get<{ url: string }>('/admin/payments/export.csv', { params })
@@ -718,7 +734,13 @@ export const adminApi = {
       .patch<{ product: AdminProduct }>(`/admin/products/${id}`, patch)
       .then((r) => r.data?.product ?? ((r.data as any) as AdminProduct)),
   topSellingProducts: () =>
-    api.get<AdminProduct[]>('/admin/products/top').then((r) => r.data),
+    api
+      .get<any>('/admin/products/top')
+      .then((r) => {
+        const d: any = r.data;
+        return (Array.isArray(d) ? d : d?.products ?? d?.items ?? []) as AdminProduct[];
+      })
+      .catch(() => [] as AdminProduct[]),
   payoutsPending: () =>
     api
       .get<
@@ -785,9 +807,16 @@ export const adminApi = {
       }>(`/admin/inventory/${sku}/audit`)
       .then((r) => r.data),
 
-  // Automations
+  // Automations — backend returns { automations, total, known_triggers, actions, ... }
+  // so unwrap to the array the UI expects.
   listAutomations: () =>
-    api.get<Automation[]>('/admin/automations').then((r) => r.data),
+    api
+      .get<{ automations?: Automation[] } | Automation[]>('/admin/automations')
+      .then((r) => {
+        const d: any = r.data;
+        if (Array.isArray(d)) return d as Automation[];
+        return (d?.automations ?? d?.items ?? []) as Automation[];
+      }),
   getAutomation: (id: string) =>
     api.get<Automation>(`/admin/automations/${id}`).then((r) => r.data),
   createAutomation: (
@@ -810,7 +839,10 @@ export const adminApi = {
 
   // Templates
   listTemplates: () =>
-    api.get<MessageTemplate[]>('/admin/templates').then((r) => r.data),
+    api.get<any>('/admin/templates').then((r) => {
+      const d: any = r.data;
+      return (Array.isArray(d) ? d : d?.templates ?? d?.items ?? []) as MessageTemplate[];
+    }),
   createTemplate: (input: Omit<MessageTemplate, 'id' | 'updated_at'>) =>
     api.post<MessageTemplate>('/admin/templates', input).then((r) => r.data),
   updateTemplate: (id: string, patch: Partial<MessageTemplate>) =>
@@ -851,7 +883,10 @@ export const adminApi = {
 
   // Promocodes
   listPromocodes: () =>
-    api.get<PromoCode[]>('/admin/promocodes').then((r) => r.data),
+    api.get<any>('/admin/promocodes').then((r) => {
+      const d: any = r.data;
+      return (Array.isArray(d) ? d : d?.promocodes ?? d?.items ?? []) as PromoCode[];
+    }),
   createPromocode: (input: Omit<PromoCode, 'id' | 'used_count'>) =>
     api.post<PromoCode>('/admin/promocodes', input).then((r) => r.data),
   updatePromocode: (id: string, patch: Partial<PromoCode>) =>
@@ -886,15 +921,22 @@ export const adminApi = {
       .then((r) => r.data),
 
   // Settings
-  getSettings: () => api.get<GymSettings>('/admin/settings').then((r) => r.data),
+  getSettings: () =>
+    api.get<any>('/admin/workspace').then((r) => {
+      const d: any = r.data;
+      return (d?.workspace ?? d ?? {}) as GymSettings;
+    }),
   updateSettings: (patch: Partial<GymSettings>) =>
-    api.patch('/admin/settings', patch).then((r) => r.data),
+    api.patch('/admin/workspace', patch).then((r) => r.data),
   listStaff: () =>
-    api.get<StaffUser[]>('/admin/settings/staff').then((r) => r.data),
+    api.get<any>('/admin/staff').then((r) => {
+      const d: any = r.data;
+      return (Array.isArray(d) ? d : d?.staff ?? d?.items ?? []) as StaffUser[];
+    }),
   createStaff: (input: Omit<StaffUser, 'id' | 'enabled'>) =>
-    api.post<StaffUser>('/admin/settings/staff', input).then((r) => r.data),
+    api.post<StaffUser>('/admin/staff', input).then((r) => r.data),
   updateStaff: (id: string, patch: Partial<StaffUser>) =>
-    api.patch(`/admin/settings/staff/${id}`, patch).then((r) => r.data),
+    api.patch(`/admin/staff/${id}`, patch).then((r) => r.data),
 };
 
 /* =========================================================================
