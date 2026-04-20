@@ -57,7 +57,7 @@ export async function runUpsellSweep(redis) {
             created_at: { lte: cutoff },
             phone: { not: null },
             phone_verified_at: { not: null },
-            memberships: { none: {} },
+            membership: null,
         },
         select: {
             id: true,
