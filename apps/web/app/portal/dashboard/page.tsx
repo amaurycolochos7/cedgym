@@ -54,14 +54,14 @@ export default function PortalDashboardPage() {
       {/* Mi QR de acceso — top, prominent */}
       <Link
         href="/portal/qr"
-        className="group block overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/15 via-orange-500/10 to-zinc-900 p-5 sm:p-6 transition hover:border-orange-400/60 hover:from-orange-500/25"
+        className="group block overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/15 via-blue-500/10 to-zinc-900 p-5 sm:p-6 transition hover:border-blue-400/60 hover:from-blue-500/25"
       >
         <div className="flex items-center gap-4">
-          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-300 shadow-inner shadow-orange-500/10 transition group-hover:bg-orange-500/30">
+          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-sky-300 shadow-inner shadow-blue-500/10 transition group-hover:bg-blue-500/30">
             <QrCode className="h-7 w-7" />
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-widest text-orange-300/80">
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-sky-300/80">
               Entrada al gym
             </div>
             <div className="text-lg sm:text-xl font-bold text-white truncate">
@@ -71,14 +71,14 @@ export default function PortalDashboardPage() {
               Muéstralo al staff en la entrada.
             </div>
           </div>
-          <ChevronRight className="h-5 w-5 shrink-0 text-orange-300 transition group-hover:translate-x-1" />
+          <ChevronRight className="h-5 w-5 shrink-0 text-sky-300 transition group-hover:translate-x-1" />
         </div>
       </Link>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
-          icon={<Flame className="w-5 h-5 text-orange-400" />}
+          icon={<Flame className="w-5 h-5 text-blue-400" />}
           label="Racha"
           value={`${streak} días`}
           hint={streak >= 7 ? '¡Sigue así!' : 'Vamos a construir racha'}
@@ -116,7 +116,7 @@ export default function PortalDashboardPage() {
         </div>
         <div className="h-3 rounded-full bg-zinc-800 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-orange-500 to-yellow-400 transition-all"
+            className="h-full bg-gradient-to-r from-blue-500 to-yellow-400 transition-all"
             style={{ width: `${Math.min(100, xpProgress)}%` }}
           />
         </div>
@@ -133,13 +133,13 @@ export default function PortalDashboardPage() {
                 <span className="text-sm text-zinc-400">{membership.status}</span>
               </div>
               <div className="text-sm text-zinc-400">
-                Vence en <span className="text-orange-400 font-semibold">
+                Vence en <span className="text-blue-400 font-semibold">
                   {membership.days_remaining ?? '—'} días
                 </span>
               </div>
               <Link
                 href="/portal/membership"
-                className="inline-flex items-center gap-1 text-sm text-orange-400 hover:text-orange-300"
+                className="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-sky-300"
               >
                 Gestionar <ChevronRight className="w-4 h-4" />
               </Link>
@@ -147,7 +147,7 @@ export default function PortalDashboardPage() {
           ) : (
             <div className="text-zinc-500">
               No tienes una membresía activa.
-              <Link href="/#planes" className="text-orange-400 ml-1">Ver planes →</Link>
+              <Link href="/#planes" className="text-blue-400 ml-1">Ver planes →</Link>
             </div>
           )}
         </div>
@@ -171,7 +171,7 @@ export default function PortalDashboardPage() {
             {progress.recent_badges.map((b: any) => (
               <div
                 key={b.code}
-                className="bg-zinc-800/70 border border-orange-500/30 rounded-lg p-3 min-w-[140px]"
+                className="bg-zinc-800/70 border border-blue-500/30 rounded-lg p-3 min-w-[140px]"
               >
                 <div className="text-2xl mb-1">🏅</div>
                 <div className="text-sm font-medium">{b.name}</div>
@@ -202,9 +202,9 @@ function QuickTile({ href, icon, label }: any) {
   return (
     <Link
       href={href}
-      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-800 hover:border-orange-500/40 transition"
+      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-800 hover:border-blue-500/40 transition"
     >
-      <span className="text-orange-400">{icon}</span>
+      <span className="text-blue-400">{icon}</span>
       <span className="text-sm">{label}</span>
     </Link>
   );

@@ -31,8 +31,8 @@ export function ChartLine<T extends Record<string, unknown>>({
         <LineChart data={data} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="brandOrange" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#ff6b1a" />
-              <stop offset="100%" stopColor="#ff8a3d" />
+              <stop offset="0%" stopColor="#1e5aff" />
+              <stop offset="100%" stopColor="#4d8cff" />
             </linearGradient>
           </defs>
           <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -53,7 +53,7 @@ export function ChartLine<T extends Record<string, unknown>>({
           <Tooltip
             contentStyle={{
               background: 'rgba(15,15,15,0.95)',
-              border: '1px solid rgba(255,107,26,0.2)',
+              border: '1px solid rgba(30,90,255,0.2)',
               borderRadius: 8,
               color: '#fff',
               fontSize: 12,
@@ -67,7 +67,7 @@ export function ChartLine<T extends Record<string, unknown>>({
             dataKey={yKey}
             stroke="url(#brandOrange)"
             strokeWidth={2.5}
-            dot={{ r: 3, fill: '#ff6b1a' }}
+            dot={{ r: 3, fill: '#1e5aff' }}
             activeDot={{ r: 5 }}
           />
         </LineChart>

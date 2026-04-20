@@ -69,7 +69,7 @@ export default function AdminPromocodesPage() {
               </td></tr>
             ) : items.map((p: any) => (
               <tr key={p.id} className="border-t border-zinc-800">
-                <td className="px-4 py-3 font-mono text-orange-400">{p.code}</td>
+                <td className="px-4 py-3 font-mono text-blue-400">{p.code}</td>
                 <td className="px-4 py-3">{p.type}</td>
                 <td className="px-4 py-3">
                   {p.type === 'PERCENTAGE' ? `${p.value}%` : `$${p.value}`}

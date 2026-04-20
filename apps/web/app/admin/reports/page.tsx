@@ -34,9 +34,9 @@ export default function AdminReportsPage() {
           <button
             key={r.key}
             onClick={() => download(r.path, r.label)}
-            className="text-left bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-orange-500/40 rounded-xl p-5 transition"
+            className="text-left bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-blue-500/40 rounded-xl p-5 transition"
           >
-            <FileText className="w-5 h-5 text-orange-400 mb-2" />
+            <FileText className="w-5 h-5 text-blue-400 mb-2" />
             <div className="font-medium">{r.label}</div>
             <div className="text-xs text-zinc-500 mt-2 flex items-center gap-1">
               <Download className="w-3 h-3" /> Exportar CSV

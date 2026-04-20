@@ -174,7 +174,7 @@ export default function StaffWalkInPage() {
                 onClick={() => setForm({ ...form, plan: p.code })}
                 className={`border rounded-xl p-3 text-left transition ${
                   form.plan === p.code
-                    ? 'border-brand-orange bg-orange-500/10'
+                    ? 'border-brand-orange bg-blue-500/10'
                     : 'border-zinc-700 bg-zinc-800/60 hover:border-zinc-600'
                 }`}
               >
@@ -201,12 +201,12 @@ export default function StaffWalkInPage() {
                   onClick={() => setForm({ ...form, cycle: c.code })}
                   className={`border rounded-xl p-3 text-center transition ${
                     form.cycle === c.code
-                      ? 'border-brand-orange bg-orange-500/10'
+                      ? 'border-brand-orange bg-blue-500/10'
                       : 'border-zinc-700 bg-zinc-800/60 hover:border-zinc-600'
                   }`}
                 >
                   <div className="text-sm font-medium">{c.label}</div>
-                  <div className="text-orange-400 font-bold mt-1">{mxn(p)}</div>
+                  <div className="text-blue-400 font-bold mt-1">{mxn(p)}</div>
                 </button>
               );
             })}
@@ -231,7 +231,7 @@ export default function StaffWalkInPage() {
         <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
           <div>
             <div className="text-xs text-zinc-500">Total a cobrar</div>
-            <div className="text-3xl font-bold text-orange-400">{mxn(price)}</div>
+            <div className="text-3xl font-bold text-blue-400">{mxn(price)}</div>
           </div>
           <Button
             disabled={!canSubmit}
@@ -294,7 +294,7 @@ export default function StaffWalkInPage() {
               <a
                 href={result.init_point}
                 target="_blank"
-                className="block text-center bg-orange-600 hover:bg-orange-500 text-white py-2 rounded-lg text-sm mb-3"
+                className="block text-center bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-sm mb-3"
               >
                 Abrir QR Mercado Pago
               </a>

@@ -35,7 +35,7 @@ export default function PortalRutinasPage() {
           <p className="text-zinc-400 mb-4">Aún no has adquirido rutinas.</p>
           <Link
             href="/tienda"
-            className="inline-flex px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-medium"
+            className="inline-flex px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium"
           >
             Ver marketplace
           </Link>
@@ -46,7 +46,7 @@ export default function PortalRutinasPage() {
             <Link
               key={p.id}
               href={`/portal/rutinas/${p.id}`}
-              className="group bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-orange-500/40 rounded-2xl overflow-hidden transition"
+              className="group bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-blue-500/40 rounded-2xl overflow-hidden transition"
             >
               {p.product?.cover_url && (
                 <div
@@ -55,11 +55,11 @@ export default function PortalRutinasPage() {
                 />
               )}
               <div className="p-4">
-                <div className="flex items-center gap-2 text-xs text-orange-400 mb-2">
+                <div className="flex items-center gap-2 text-xs text-blue-400 mb-2">
                   {TYPE_ICONS[p.product?.type] ?? <Dumbbell className="w-4 h-4" />}
                   <span>{p.product?.type?.replace('_', ' ')}</span>
                 </div>
-                <h3 className="font-semibold group-hover:text-orange-400 transition">
+                <h3 className="font-semibold group-hover:text-blue-400 transition">
                   {p.product?.title}
                 </h3>
                 <p className="text-xs text-zinc-500 mt-1">

@@ -139,7 +139,7 @@ export function FounderSection() {
           <div className="relative flex flex-col items-center text-center lg:items-start lg:text-left">
             <div className="relative mb-5">
               <div className="absolute inset-0 animate-pulse rounded-3xl bg-brand-orange/30 blur-[60px]" />
-              <div className="relative overflow-hidden rounded-2xl border-4 border-brand-dark shadow-[0_0_40px_rgba(255,107,26,0.25)] sm:rounded-3xl sm:border-[6px]">
+              <div className="relative overflow-hidden rounded-2xl border-4 border-brand-dark shadow-[0_0_40px_rgba(30,90,255,0.25)] sm:rounded-3xl sm:border-[6px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/founder.jpg"

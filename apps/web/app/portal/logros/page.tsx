@@ -28,8 +28,8 @@ export default function PortalLogrosPage() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-orange-600/30 to-orange-800/10 border border-orange-500/30 rounded-2xl p-6">
-          <div className="text-xs uppercase text-orange-400">Nivel</div>
+        <div className="bg-gradient-to-br from-blue-600/30 to-blue-800/10 border border-blue-500/30 rounded-2xl p-6">
+          <div className="text-xs uppercase text-blue-400">Nivel</div>
           <div className="text-5xl font-bold mt-2">{progress?.level ?? 1}</div>
           <div className="text-sm text-zinc-400 mt-2">
             {progress?.xp ?? 0} XP totales
@@ -62,7 +62,7 @@ export default function PortalLogrosPage() {
               key={b.code}
               className={
                 b.earned
-                  ? 'bg-gradient-to-br from-orange-600/20 to-yellow-600/10 border border-orange-500/40 rounded-xl p-4 text-center'
+                  ? 'bg-gradient-to-br from-blue-600/20 to-yellow-600/10 border border-blue-500/40 rounded-xl p-4 text-center'
                   : 'bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 text-center opacity-50'
               }
             >
@@ -90,7 +90,7 @@ export default function PortalLogrosPage() {
               key={row.user_id}
               className={
                 row.is_me
-                  ? 'flex items-center justify-between px-5 py-3 border-b border-zinc-800 last:border-0 bg-orange-500/10'
+                  ? 'flex items-center justify-between px-5 py-3 border-b border-zinc-800 last:border-0 bg-blue-500/10'
                   : 'flex items-center justify-between px-5 py-3 border-b border-zinc-800 last:border-0'
               }
             >
@@ -98,7 +98,7 @@ export default function PortalLogrosPage() {
                 <span
                   className={
                     i < 3
-                      ? 'w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center font-bold text-sm'
+                      ? 'w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-blue-500 flex items-center justify-center font-bold text-sm'
                       : 'w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-sm'
                   }
                 >

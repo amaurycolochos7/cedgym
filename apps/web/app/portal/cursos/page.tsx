@@ -26,7 +26,7 @@ export default function PortalCursosPage() {
           <p className="text-zinc-400 mb-4">Sin cursos activos.</p>
           <Link
             href="/#cursos"
-            className="inline-flex px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-medium"
+            className="inline-flex px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium"
           >
             Ver cursos
           </Link>

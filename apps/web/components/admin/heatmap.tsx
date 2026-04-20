@@ -46,7 +46,7 @@ export function Heatmap({ cells, className }: HeatmapProps) {
                   const bg =
                     v === 0
                       ? 'rgba(255,255,255,0.04)'
-                      : `rgba(255,107,26,${0.15 + intensity * 0.75})`;
+                      : `rgba(30,90,255,${0.15 + intensity * 0.75})`;
                   return (
                     <div
                       key={h}

@@ -141,7 +141,7 @@ export default function PortalQRPage() {
 
       {/* QR card — fills 80% of viewport on mobile, capped at 340px. */}
       <div
-        className="rounded-3xl bg-white p-5 sm:p-6 shadow-2xl shadow-orange-500/20"
+        className="rounded-3xl bg-white p-5 sm:p-6 shadow-2xl shadow-blue-500/20"
         style={{ width: 'min(80vw, 340px)' }}
       >
         {token ? (

@@ -46,7 +46,7 @@ export default function AdminReferralsPage() {
               <tr key={r.id} className="border-t border-zinc-800">
                 <td className="px-4 py-3">{r.referrer?.name}</td>
                 <td className="px-4 py-3">{r.referred?.name}</td>
-                <td className="px-4 py-3 font-mono text-orange-400">{r.code_used}</td>
+                <td className="px-4 py-3 font-mono text-blue-400">{r.code_used}</td>
                 <td className="px-4 py-3">{r.status}</td>
                 <td className="px-4 py-3 text-zinc-400">{r.first_payment_at?.slice(0, 10) ?? '—'}</td>
                 <td className="px-4 py-3">${r.reward_referrer_mxn?.toLocaleString('es-MX')}</td>

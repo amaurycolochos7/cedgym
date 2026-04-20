@@ -328,7 +328,7 @@ export default function StaffPOSPage() {
                   >
                     <div className="text-sm font-medium truncate">{p.name}</div>
                     <div className="text-xs text-zinc-500">Stock: {p.stock}</div>
-                    <div className="text-orange-400 font-bold mt-1">
+                    <div className="text-blue-400 font-bold mt-1">
                       {mxn(p.price_mxn)}
                     </div>
                   </button>
@@ -349,7 +349,7 @@ export default function StaffPOSPage() {
                     {m.plan}
                   </div>
                   <div className="font-semibold">{m.name}</div>
-                  <div className="text-orange-400 font-bold text-lg mt-2">
+                  <div className="text-blue-400 font-bold text-lg mt-2">
                     {mxn(m.price_mxn)}
                   </div>
                 </button>
@@ -377,7 +377,7 @@ export default function StaffPOSPage() {
                       {c.seats_left} cupos · inicia{' '}
                       {new Date(c.starts_at).toLocaleDateString('es-MX')}
                     </div>
-                    <div className="text-orange-400 font-bold text-lg mt-2">
+                    <div className="text-blue-400 font-bold text-lg mt-2">
                       {mxn(c.price_mxn)}
                     </div>
                   </button>
@@ -590,7 +590,7 @@ export default function StaffPOSPage() {
                     key={i}
                     href={url}
                     target="_blank"
-                    className="block text-center bg-orange-600 hover:bg-orange-500 text-white py-2 rounded-lg text-sm"
+                    className="block text-center bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-sm"
                   >
                     Abrir Mercado Pago #{i + 1}
                   </a>

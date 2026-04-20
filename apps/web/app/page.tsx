@@ -113,7 +113,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/register"
-                className="group relative overflow-hidden rounded-full bg-brand-orange px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(255,107,26,0.3)] transition-all hover:shadow-[0_0_30px_rgba(255,107,26,0.5)]"
+                className="group relative overflow-hidden rounded-full bg-brand-orange px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(30,90,255,0.3)] transition-all hover:shadow-[0_0_30px_rgba(30,90,255,0.5)]"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   <span>Crear cuenta</span>
@@ -186,7 +186,7 @@ export default function HomePage() {
           <div className="mt-8 space-y-4 pb-12">
             <Link
               href="/register"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-orange py-4 text-center text-sm font-bold uppercase tracking-widest text-black shadow-[0_4px_20px_rgba(255,107,26,0.3)]"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-orange py-4 text-center text-sm font-bold uppercase tracking-widest text-black shadow-[0_4px_20px_rgba(30,90,255,0.3)]"
             >
               <UserPlus className="h-5 w-5" /> Crear cuenta
             </Link>
@@ -223,7 +223,7 @@ export default function HomePage() {
             <div className="flex flex-col justify-center gap-4 px-4 sm:flex-row sm:gap-5 md:justify-start md:px-0">
               <Link
                 href="/register"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-orange px-8 py-4 text-center text-sm font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(255,107,26,0.3)] transition hover:-translate-y-1 hover:bg-brand-orange-2 sm:w-auto"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-orange px-8 py-4 text-center text-sm font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(30,90,255,0.3)] transition hover:-translate-y-1 hover:bg-brand-orange-2 sm:w-auto"
               >
                 <Flame className="h-5 w-5" /> Inscríbete hoy
               </Link>
@@ -474,7 +474,7 @@ export default function HomePage() {
                 duration: '8 semanas',
                 price: 2490,
                 unit: 'MXN',
-                bg: 'radial-gradient(circle at 30% 40%, rgba(255,107,26,.5), transparent 55%), linear-gradient(135deg, #2a1004, #0a0503)',
+                bg: 'radial-gradient(circle at 30% 40%, rgba(30,90,255,.5), transparent 55%), linear-gradient(135deg, #0a1e4a, #050f28)',
               },
               {
                 id: 'course-pl12',
@@ -484,7 +484,7 @@ export default function HomePage() {
                 duration: '12 semanas',
                 price: 3190,
                 unit: 'MXN',
-                bg: 'radial-gradient(circle at 70% 30%, rgba(255,138,61,.45), transparent 55%), linear-gradient(135deg, #1a0f04, #0a0502)',
+                bg: 'radial-gradient(circle at 70% 30%, rgba(59,122,255,.45), transparent 55%), linear-gradient(135deg, #0a1838, #050f22)',
               },
               {
                 id: 'course-nutri',
@@ -494,7 +494,7 @@ export default function HomePage() {
                 duration: '6 lecciones',
                 price: 1290,
                 unit: 'MXN',
-                bg: 'radial-gradient(circle at 40% 60%, rgba(255,107,26,.4), transparent 55%), linear-gradient(135deg, #200c04, #0a0402)',
+                bg: 'radial-gradient(circle at 40% 60%, rgba(30,90,255,.4), transparent 55%), linear-gradient(135deg, #081840, #050f22)',
               },
               {
                 id: 'course-kids',
@@ -504,7 +504,7 @@ export default function HomePage() {
                 duration: 'Mensual',
                 price: 890,
                 unit: '/mes',
-                bg: 'radial-gradient(circle at 60% 40%, rgba(255,176,116,.5), transparent 55%), linear-gradient(135deg, #2a1a04, #0a0604)',
+                bg: 'radial-gradient(circle at 60% 40%, rgba(96,165,250,.5), transparent 55%), linear-gradient(135deg, #0f2450, #061230)',
               },
             ].map((c) => (
               <div
@@ -730,7 +730,7 @@ export default function HomePage() {
                 </ul>
                 <Link
                   href="/register?redirect=/checkout/pro&product=pro&type=membership"
-                  className="block w-full rounded-xl bg-brand-orange py-3 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(255,107,26,0.3)] transition hover:bg-brand-orange-2"
+                  className="block w-full rounded-xl bg-brand-orange py-3 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(30,90,255,0.3)] transition hover:bg-brand-orange-2"
                 >
                   Elegir Pro
                 </Link>

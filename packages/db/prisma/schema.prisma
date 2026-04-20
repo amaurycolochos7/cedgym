@@ -146,6 +146,63 @@ enum BookingStatus {
   ATTENDED
 }
 
+enum MuscleGroup {
+  CHEST
+  BACK
+  LEGS
+  SHOULDERS
+  ARMS
+  CORE
+  FULL_BODY
+  CARDIO
+}
+
+enum ExerciseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum FitnessGoal {
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  MAINTENANCE
+  STRENGTH
+  ENDURANCE
+  GENERAL_FITNESS
+}
+
+enum RoutineLocation {
+  GYM
+  HOME
+  BOTH
+}
+
+enum RoutineSource {
+  AI_GENERATED
+  ADMIN_CREATED
+  TEMPLATE_ASSIGNED
+}
+
+enum MealPlanSource {
+  AI_GENERATED
+  ADMIN_CREATED
+}
+
+enum MealType {
+  BREAKFAST
+  SNACK_AM
+  LUNCH
+  SNACK_PM
+  DINNER
+}
+
+enum AIGenerationKind {
+  ROUTINE
+  MEAL_PLAN
+  REGENERATION
+}
+
 // ────────────────────────────────────────────────────────────────
 // Core multi-tenant
 // ────────────────────────────────────────────────────────────────
@@ -187,6 +244,7 @@ model User {
   email_verified_at DateTime?
   profile_completed Boolean    @default(false)
   last_login_at     DateTime?
+  fitness_profile   Json?
   created_at        DateTime   @default(now())
   updated_at        DateTime   @updatedAt
 
@@ -201,6 +259,9 @@ model User {
   refresh_tokens     RefreshToken[]
   referrals_made     Referral[]         @relation("Referrer")
   referral_received  Referral?          @relation("Referred")
+  routines           Routine[]
+  mealPlans          MealPlan[]
+  ai_generations     AIGeneration[]
 
   @@index([workspace_id])
   @@index([phone])
@@ -733,4 +794,171 @@ model AuditLog {
   @@index([workspace_id, created_at])
   @@index([actor_id])
   @@map("audit_logs")
+}
+
+// ────────────────────────────────────────────────────────────────
+// AI-powered routines & meal plans
+// ────────────────────────────────────────────────────────────────
+model Exercise {
+  id                String        @id @default(cuid())
+  workspace_id      String
+  name              String
+  slug              String
+  muscle_group      MuscleGroup
+  equipment         String[]
+  level             ExerciseLevel
+  video_url         String?
+  thumbnail_url     String?
+  description       String?       @db.Text
+  default_sets      Int           @default(3)
+  default_reps      String
+  default_rest_sec  Int           @default(60)
+  variant_easier_id String?
+  variant_harder_id String?
+  is_active         Boolean       @default(true)
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+
+  variant_easier   Exercise?          @relation("ExerciseEasier", fields: [variant_easier_id], references: [id])
+  easier_of        Exercise[]         @relation("ExerciseEasier")
+  variant_harder   Exercise?          @relation("ExerciseHarder", fields: [variant_harder_id], references: [id])
+  harder_of        Exercise[]         @relation("ExerciseHarder")
+  routine_entries  RoutineExercise[]
+
+  @@index([workspace_id])
+  @@index([workspace_id, slug])
+  @@map("exercises")
+}
+
+model Routine {
+  id                String          @id @default(cuid())
+  workspace_id      String
+  user_id           String
+  name              String
+  goal              FitnessGoal
+  location          RoutineLocation
+  days_per_week     Int
+  source            RoutineSource
+  ai_generation_id  String?
+  is_active         Boolean         @default(true)
+  started_at        DateTime        @default(now())
+  ended_at          DateTime?
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+
+  user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ai_generation AIGeneration? @relation(fields: [ai_generation_id], references: [id])
+  days          RoutineDay[]
+
+  @@index([workspace_id])
+  @@index([user_id])
+  @@map("routines")
+}
+
+model RoutineDay {
+  id          String  @id @default(cuid())
+  routine_id  String
+  day_of_week Int
+  title       String
+  notes       String? @db.Text
+  order_index Int
+
+  routine   Routine           @relation(fields: [routine_id], references: [id], onDelete: Cascade)
+  exercises RoutineExercise[]
+
+  @@index([routine_id])
+  @@map("routine_days")
+}
+
+model RoutineExercise {
+  id                     String  @id @default(cuid())
+  routine_day_id         String
+  exercise_id            String?
+  exercise_name_snapshot String
+  video_url              String?
+  sets                   Int
+  reps                   String
+  rest_sec               Int
+  order_index            Int
+  notes                  String? @db.Text
+
+  routine_day RoutineDay @relation(fields: [routine_day_id], references: [id], onDelete: Cascade)
+  exercise    Exercise?  @relation(fields: [exercise_id], references: [id])
+
+  @@index([routine_day_id])
+  @@map("routine_exercises")
+}
+
+model MealPlan {
+  id               String         @id @default(cuid())
+  workspace_id     String
+  user_id          String
+  name             String
+  goal             FitnessGoal
+  calories_target  Int
+  protein_g        Int
+  carbs_g          Int
+  fats_g           Int
+  restrictions     String[]
+  source           MealPlanSource
+  ai_generation_id String?
+  is_active        Boolean        @default(true)
+  started_at       DateTime       @default(now())
+  ended_at         DateTime?
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+
+  user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ai_generation AIGeneration? @relation(fields: [ai_generation_id], references: [id])
+  meals         Meal[]
+
+  @@index([workspace_id])
+  @@index([user_id])
+  @@map("meal_plans")
+}
+
+model Meal {
+  id            String   @id @default(cuid())
+  meal_plan_id  String
+  day_of_week   Int
+  meal_type     MealType
+  name          String
+  description   String   @db.Text
+  ingredients   String[]
+  calories      Int
+  protein_g     Int
+  carbs_g       Int
+  fats_g        Int
+  prep_time_min Int?
+  order_index   Int
+
+  meal_plan MealPlan @relation(fields: [meal_plan_id], references: [id], onDelete: Cascade)
+
+  @@index([meal_plan_id])
+  @@map("meals")
+}
+
+model AIGeneration {
+  id              String           @id @default(cuid())
+  workspace_id    String
+  user_id         String?
+  kind            AIGenerationKind
+  model           String
+  input_tokens    Int              @default(0)
+  output_tokens   Int              @default(0)
+  cost_usd        Decimal          @default(0) @db.Decimal(10, 6)
+  prompt_snapshot String           @db.Text
+  response_raw    String           @db.Text
+  success         Boolean          @default(true)
+  error_message   String?          @db.Text
+  duration_ms     Int?
+  created_at      DateTime         @default(now())
+
+  user       User?      @relation(fields: [user_id], references: [id])
+  routines   Routine[]
+  meal_plans MealPlan[]
+
+  @@index([workspace_id, created_at])
+  @@index([user_id])
+  @@map("ai_generations")
 }

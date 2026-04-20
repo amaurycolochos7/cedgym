@@ -292,7 +292,7 @@ export default function PortalPerfilPage() {
       </section>
 
       {/* Referidos */}
-      <section className="bg-gradient-to-br from-orange-500/20 to-orange-700/10 border border-orange-500/30 rounded-2xl p-5 sm:p-6 space-y-4">
+      <section className="bg-gradient-to-br from-blue-500/20 to-blue-700/10 border border-blue-500/30 rounded-2xl p-5 sm:p-6 space-y-4">
         <h2 className="text-lg font-semibold">Mi código de referidos</h2>
         <p className="text-sm text-zinc-300">
           Comparte y gana $200 MXN de crédito por cada referido que se registre
@@ -301,7 +301,7 @@ export default function PortalPerfilPage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-xs uppercase text-zinc-500">Tu código</div>
-            <div className="text-2xl font-mono text-orange-400 mt-1 break-all">
+            <div className="text-2xl font-mono text-blue-400 mt-1 break-all">
               {code ?? '—'}
             </div>
           </div>

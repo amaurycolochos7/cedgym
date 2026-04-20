@@ -50,7 +50,7 @@ export default function PortalClasesPage() {
             onClick={() => setTab(t)}
             className={
               tab === t
-                ? 'px-4 py-2 border-b-2 border-orange-500 text-orange-400 font-medium'
+                ? 'px-4 py-2 border-b-2 border-blue-500 text-blue-400 font-medium'
                 : 'px-4 py-2 text-zinc-400 hover:text-zinc-100'
             }
           >
@@ -77,7 +77,7 @@ export default function PortalClasesPage() {
                     <p className="text-xs text-zinc-500">{c.sport}</p>
                   </div>
                   {c.min_plan && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-orange-500/20 text-orange-300">
+                    <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-sky-300">
                       Solo {c.min_plan}+
                     </span>
                   )}
@@ -131,7 +131,7 @@ export default function PortalClasesPage() {
                     {new Date(b.class?.starts_at).toLocaleString('es-MX')}
                   </p>
                   <p className="text-xs text-zinc-500 mt-1">
-                    Status: <span className="text-orange-400">{b.status}</span>
+                    Status: <span className="text-blue-400">{b.status}</span>
                   </p>
                 </div>
                 <Button

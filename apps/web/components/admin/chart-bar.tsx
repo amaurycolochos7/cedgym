@@ -45,10 +45,10 @@ export function ChartBar<T extends Record<string, unknown>>({
             tickFormatter={formatter}
           />
           <Tooltip
-            cursor={{ fill: 'rgba(255,107,26,0.08)' }}
+            cursor={{ fill: 'rgba(30,90,255,0.08)' }}
             contentStyle={{
               background: 'rgba(15,15,15,0.95)',
-              border: '1px solid rgba(255,107,26,0.2)',
+              border: '1px solid rgba(30,90,255,0.2)',
               borderRadius: 8,
               color: '#fff',
               fontSize: 12,
@@ -57,7 +57,7 @@ export function ChartBar<T extends Record<string, unknown>>({
               formatter ? formatter(v) : String(v)
             }
           />
-          <Bar dataKey={yKey} fill="#ff6b1a" radius={[6, 6, 0, 0]} />
+          <Bar dataKey={yKey} fill="#1e5aff" radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

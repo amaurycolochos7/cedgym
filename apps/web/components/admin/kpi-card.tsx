@@ -84,7 +84,7 @@ export function KpiCard({
         href={href}
         className={cn(
           base,
-          'group block transition-all hover:border-brand-orange/50 hover:from-white/[0.07] hover:shadow-[0_0_30px_rgba(255,107,26,0.08)] focus:outline-none focus:ring-2 focus:ring-brand-orange/40',
+          'group block transition-all hover:border-brand-orange/50 hover:from-white/[0.07] hover:shadow-[0_0_30px_rgba(30,90,255,0.08)] focus:outline-none focus:ring-2 focus:ring-brand-orange/40',
           className,
         )}
       >

@@ -50,11 +50,11 @@ const config: Config = {
           foreground: 'hsl(var(--card-foreground))',
         },
         brand: {
-          orange: '#ff6b1a',
-          'orange-2': '#ff8a3d',
-          'orange-3': '#e54b00',
-          dark: '#0a0a0a',
-          gray: '#1a1a1a',
+          orange: '#1e5aff',
+          'orange-2': '#3b7aff',
+          'orange-3': '#60a5fa',
+          dark: '#0a1428',
+          gray: '#141c2e',
           light: '#f4f4f5',
         },
       },
@@ -65,11 +65,11 @@ const config: Config = {
       },
       backgroundImage: {
         'brand-gradient':
-          'linear-gradient(135deg, #ff6b1a 0%, #ff8a3d 50%, #e54b00 100%)',
+          'linear-gradient(135deg, #1e5aff 0%, #3b7aff 50%, #60a5fa 100%)',
       },
       boxShadow: {
-        brand: '0 0 30px rgba(255, 107, 26, 0.35)',
-        'brand-lg': '0 10px 40px rgba(255, 107, 26, 0.45)',
+        brand: '0 0 30px rgba(30, 90, 255, 0.35)',
+        'brand-lg': '0 10px 40px rgba(30, 90, 255, 0.45)',
       },
       keyframes: {
         'fade-in': {

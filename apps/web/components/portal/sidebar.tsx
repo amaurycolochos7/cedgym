@@ -55,7 +55,7 @@ export function PortalSidebar() {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition',
                 active
-                  ? 'bg-gradient-to-r from-orange-600/30 to-orange-500/20 text-orange-100 border border-orange-500/30'
+                  ? 'bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-100 border border-blue-500/30'
                   : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100'
               )}
             >

@@ -55,17 +55,17 @@ export default function PortalMembershipPage() {
         </div>
       ) : (
         <>
-          <div className="bg-gradient-to-br from-orange-600/20 to-orange-800/10 border border-orange-500/30 rounded-3xl p-6">
+          <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/10 border border-blue-500/30 rounded-3xl p-6">
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
-                <div className="text-xs uppercase tracking-wider text-orange-400">Plan</div>
+                <div className="text-xs uppercase tracking-wider text-blue-400">Plan</div>
                 <div className="text-3xl font-bold">{membership.plan}</div>
                 <div className="text-sm text-zinc-400 mt-1">
                   {membership.sport ?? 'General'} · {membership.billing_cycle}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xs uppercase tracking-wider text-orange-400">Vence en</div>
+                <div className="text-xs uppercase tracking-wider text-blue-400">Vence en</div>
                 <div className="text-3xl font-bold">{days} días</div>
                 <div className="text-xs text-zinc-500 mt-1">
                   {membership.expires_at?.slice(0, 10)}
@@ -74,14 +74,14 @@ export default function PortalMembershipPage() {
             </div>
             <div className="mt-5 h-2 rounded-full bg-zinc-800 overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-orange-500 to-yellow-400"
+                className="h-full bg-gradient-to-r from-blue-500 to-yellow-400"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
 
           {earlyDiscount && (
-            <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/40 rounded-xl p-4 flex items-center gap-4">
+            <div className="bg-gradient-to-r from-amber-500/20 to-blue-500/20 border border-amber-400/40 rounded-xl p-4 flex items-center gap-4">
               <div className="text-3xl">🎁</div>
               <div className="flex-1">
                 <div className="font-semibold">¡Renueva ahora con 20% de descuento!</div>
@@ -166,9 +166,9 @@ function ActionCard({ icon, title, description, onClick, disabled }: any) {
     <button
       onClick={onClick}
       disabled={disabled}
-      className="text-left bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-orange-500/40 rounded-xl p-5 transition disabled:opacity-50"
+      className="text-left bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-blue-500/40 rounded-xl p-5 transition disabled:opacity-50"
     >
-      <div className="text-orange-400 mb-2">{icon}</div>
+      <div className="text-blue-400 mb-2">{icon}</div>
       <div className="font-medium">{title}</div>
       <div className="text-xs text-zinc-500 mt-1">{description}</div>
     </button>
@@ -206,7 +206,7 @@ function FreezeModal({ onClose, onDone }: any) {
         </div>
         <div>
           <label className="text-sm text-zinc-400">
-            Días de congelamiento: <span className="text-orange-400 font-semibold">{days}</span>
+            Días de congelamiento: <span className="text-blue-400 font-semibold">{days}</span>
           </label>
           <input
             type="range"
@@ -214,7 +214,7 @@ function FreezeModal({ onClose, onDone }: any) {
             max={30}
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="w-full mt-2 accent-orange-500"
+            className="w-full mt-2 accent-blue-500"
           />
           <div className="flex justify-between text-xs text-zinc-500 mt-1">
             <span>7</span>

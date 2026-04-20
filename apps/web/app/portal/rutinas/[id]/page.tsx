@@ -64,7 +64,7 @@ export default function RutinaViewerPage() {
                 onClick={() => setActiveWeek(i)}
                 className={
                   activeWeek === i
-                    ? 'px-4 py-2 rounded-lg bg-orange-600 text-white shrink-0'
+                    ? 'px-4 py-2 rounded-lg bg-blue-600 text-white shrink-0'
                     : 'px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 shrink-0'
                 }
               >
@@ -92,7 +92,7 @@ export default function RutinaViewerPage() {
                         <div className="font-medium">{ex.name}</div>
                         <div className="text-xs text-zinc-500">{ex.notes}</div>
                       </div>
-                      <div className="text-sm text-orange-400">
+                      <div className="text-sm text-blue-400">
                         {ex.sets}×{ex.reps}
                       </div>
                     </li>

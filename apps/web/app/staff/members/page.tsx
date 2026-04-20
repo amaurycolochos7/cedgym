@@ -268,7 +268,7 @@ function RenewModal({
             <a
               href={initPoint}
               target="_blank"
-              className="block text-center bg-orange-600 hover:bg-orange-500 text-white py-2 rounded-lg"
+              className="block text-center bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg"
             >
               Abrir Mercado Pago
             </a>
@@ -391,7 +391,7 @@ function EnrollCourseModal({
             <a
               href={initPoint}
               target="_blank"
-              className="block text-center bg-orange-600 hover:bg-orange-500 text-white py-2 rounded-lg"
+              className="block text-center bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg"
             >
               Abrir Mercado Pago
             </a>
@@ -410,7 +410,7 @@ function EnrollCourseModal({
                     key={c.id}
                     className={`block border rounded-lg p-3 cursor-pointer transition ${
                       courseId === c.id
-                        ? 'border-brand-orange bg-orange-500/10'
+                        ? 'border-brand-orange bg-blue-500/10'
                         : 'border-zinc-700 hover:border-zinc-600 bg-zinc-800/50'
                     }`}
                   >
@@ -428,7 +428,7 @@ function EnrollCourseModal({
                           {c.seats_left} cupos · {c.sport ?? 'Curso'}
                         </div>
                       </div>
-                      <div className="text-orange-400 font-bold">
+                      <div className="text-blue-400 font-bold">
                         ${c.price_mxn.toLocaleString('es-MX')}
                       </div>
                     </div>

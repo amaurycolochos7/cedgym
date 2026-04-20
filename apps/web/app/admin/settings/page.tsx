@@ -22,7 +22,7 @@ export default function AdminSettingsPage() {
           Nombre: <span className="text-zinc-100">{data?.name ?? 'CED·GYM'}</span>
         </div>
         <div className="text-sm text-zinc-400">
-          Slug: <code className="text-orange-400">{data?.slug ?? 'ced-gym'}</code>
+          Slug: <code className="text-blue-400">{data?.slug ?? 'ced-gym'}</code>
         </div>
       </div>
 
@@ -36,14 +36,14 @@ export default function AdminSettingsPage() {
       <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 space-y-3">
         <h3 className="font-semibold">Planes y precios</h3>
         <p className="text-sm text-zinc-400">
-          Configura desde <a href="/admin/memberships" className="text-orange-400">Membresías</a>.
+          Configura desde <a href="/admin/memberships" className="text-blue-400">Membresías</a>.
         </p>
       </div>
 
       <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 space-y-3">
         <h3 className="font-semibold">Automaciones</h3>
         <p className="text-sm text-zinc-400">
-          Gestiona en <a href="/admin/automations" className="text-orange-400">Automaciones</a>.
+          Gestiona en <a href="/admin/automations" className="text-blue-400">Automaciones</a>.
         </p>
       </div>
     </div>
