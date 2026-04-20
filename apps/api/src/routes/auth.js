@@ -27,6 +27,10 @@ import {
     OTP_MAX_ATTEMPTS,
 } from '../lib/otp.js';
 import {
+    sendWhatsAppMessage,
+    renderWelcomeMessage,
+} from '../lib/whatsapp.js';
+import {
     signAccess,
     mintRefreshToken,
     hashRefreshToken,
@@ -336,6 +340,15 @@ export default async function authRoutes(fastify) {
         });
 
         reply.setCookie(REFRESH_COOKIE_NAME, refreshRaw, refreshCookieOptions(updatedUser.role));
+
+        // Fire-and-forget welcome (marketing). Never blocks the login response.
+        sendWhatsAppMessage({
+            workspaceId: updatedUser.workspace_id,
+            phone: updatedUser.phone,
+            message: renderWelcomeMessage({ name: updatedUser.full_name || updatedUser.name }),
+            logger: request.log,
+        }).catch(() => {});
+
         return reply.send({
             success: true,
             token: access,

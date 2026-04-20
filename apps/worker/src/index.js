@@ -24,6 +24,7 @@ import { runExpiringSweep, runExpiredSweep } from './sweeps/memberships.js';
 import { runInactivitySweep } from './sweeps/inactivity.js';
 import { runBirthdaySweep } from './sweeps/birthdays.js';
 import { runCleanupSweep } from './sweeps/cleanup.js';
+import { runUpsellSweep } from './sweeps/upsell.js';
 
 // Intervals (tune via env if needed).
 const JOB_SWEEP_MS      = Number(process.env.WORKER_JOB_SWEEP_MS      || 30 * 1000);
@@ -65,11 +66,12 @@ async function tickTemporal() {
     if (shuttingDown || temporalSweepBusy) return;
     temporalSweepBusy = true;
     try {
-        const [expiring, expired, inactive, birthdays] = await Promise.allSettled([
+        const [expiring, expired, inactive, birthdays, upsell] = await Promise.allSettled([
             runExpiringSweep(redis),
             runExpiredSweep(redis),
             runInactivitySweep(redis),
             runBirthdaySweep(redis),
+            runUpsellSweep(redis),
         ]);
 
         const summary = {
@@ -77,6 +79,7 @@ async function tickTemporal() {
             expired:   expired.status   === 'fulfilled' ? expired.value   : { error: expired.reason?.message   },
             inactive:  inactive.status  === 'fulfilled' ? inactive.value  : { error: inactive.reason?.message  },
             birthdays: birthdays.status === 'fulfilled' ? birthdays.value : { error: birthdays.reason?.message },
+            upsell:    upsell.status    === 'fulfilled' ? upsell.value    : { error: upsell.reason?.message    },
         };
         console.log('[worker/temporal]', JSON.stringify(summary));
     } catch (e) {
