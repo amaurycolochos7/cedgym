@@ -73,29 +73,30 @@ export function FeaturedProducts() {
   return (
     <section
       id="marketplace"
-      className="border-y border-white/5 bg-brand-dark py-16 sm:py-24"
+      className="bg-white px-4 py-16 sm:py-24"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-10 text-center">
-          <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
+      <div className="mx-auto max-w-7xl">
+        <div className="text-center">
+          <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
             Marketplace
           </span>
-          <h2 className="px-2 text-3xl font-black uppercase sm:text-4xl md:text-5xl">
-            Rutinas <span className="text-gradient">destacadas</span>
+          <h2 className="font-display mt-4 text-4xl leading-[0.95] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+            Rutinas{' '}
+            <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
+              destacadas
+            </span>
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base font-light text-gray-400 sm:text-lg">
-            Programas probados, escritos por entrenadores de la casa.
-            Compra, descarga y entrena hoy.
+          <p className="mx-auto mt-3 max-w-2xl text-base text-slate-600 sm:text-lg">
+            Programas probados, escritos por entrenadores de la casa. Compra, descarga y entrena hoy.
           </p>
-          <div className="mx-auto mt-6 h-1.5 w-20 rounded-full bg-brand-orange sm:w-24" />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {isLoading
             ? Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="glass-card h-80 animate-pulse rounded-3xl"
+                  className="h-80 animate-pulse rounded-3xl bg-slate-100"
                 />
               ))
             : items.slice(0, 6).map((p) => (
@@ -108,7 +109,7 @@ export function FeaturedProducts() {
                           ? `/checkout/${p.id}?type=product`
                           : `/register?redirect=/checkout/${p.id}&product=${p.slug}`
                       }
-                      className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-brand-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-black shadow-brand"
+                      className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700"
                     >
                       <ShoppingCart size={14} /> Comprar
                     </Link>
@@ -120,7 +121,7 @@ export function FeaturedProducts() {
         <div className="mt-10 text-center">
           <Link
             href="/tienda"
-            className="inline-flex items-center gap-2 rounded-full border border-brand-orange/40 bg-brand-orange/10 px-6 py-3 text-xs font-black uppercase tracking-widest text-brand-orange transition-colors hover:bg-brand-orange hover:text-black"
+            className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-slate-300 px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-slate-800 transition hover:bg-slate-50"
           >
             Ver tienda completa
           </Link>

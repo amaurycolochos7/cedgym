@@ -16,8 +16,8 @@ export function InteractivityClient() {
     const navbar = document.getElementById('navbar');
     const onScroll = () => {
       if (!navbar) return;
-      if (window.scrollY > 10) navbar.classList.add('scrolled', 'shadow-2xl');
-      else navbar.classList.remove('scrolled', 'shadow-2xl');
+      if (window.scrollY > 10) navbar.classList.add('scrolled', 'shadow-md');
+      else navbar.classList.remove('scrolled', 'shadow-md');
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
@@ -32,12 +32,9 @@ export function InteractivityClient() {
       if (menuOpen) {
         mobileMenu.classList.remove('translate-x-full');
         document.body.classList.add('overflow-hidden');
-        navbar.classList.add('bg-brand-dark/95');
       } else {
         mobileMenu.classList.add('translate-x-full');
         document.body.classList.remove('overflow-hidden');
-        if (window.scrollY < 10)
-          navbar.classList.remove('bg-brand-dark/95');
       }
     };
     mobileBtn?.addEventListener('click', toggleMenu);
@@ -70,11 +67,11 @@ export function InteractivityClient() {
     const handleCycle = (e: Event) => {
       const btn = e.currentTarget as HTMLElement;
       cycleBtns.forEach((b) => {
-        b.classList.remove('is-active', 'bg-brand-orange', 'text-black');
-        b.classList.add('text-white/70');
+        b.classList.remove('is-active', 'bg-white', 'text-blue-700', 'shadow-sm');
+        b.classList.add('text-slate-600');
       });
-      btn.classList.add('is-active', 'bg-brand-orange', 'text-black');
-      btn.classList.remove('text-white/70');
+      btn.classList.add('is-active', 'bg-white', 'text-blue-700', 'shadow-sm');
+      btn.classList.remove('text-slate-600');
       const mode = btn.dataset.cycle as 'month' | 'q' | 'y';
       document
         .querySelectorAll<HTMLElement>('.plan-price')
@@ -99,14 +96,14 @@ export function InteractivityClient() {
     };
     cycleBtns.forEach((b) => {
       b.addEventListener('click', handleCycle);
-      b.classList.add('text-white/70');
+      b.classList.add('text-slate-600');
     });
     const initBtn = document.querySelector<HTMLElement>(
       '.cycle-btn.is-active',
     );
     if (initBtn) {
-      initBtn.classList.add('bg-brand-orange', 'text-black');
-      initBtn.classList.remove('text-white/70');
+      initBtn.classList.add('bg-white', 'text-blue-700', 'shadow-sm');
+      initBtn.classList.remove('text-slate-600');
     }
 
     return () => {

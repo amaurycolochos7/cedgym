@@ -4,6 +4,7 @@ import {
   Baby,
   Check,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Crown,
   Flame,
@@ -16,6 +17,7 @@ import {
   Phone,
   QrCode,
   ShieldCheck,
+  Sparkles,
   Trophy,
   UserCheck,
   UserPlus,
@@ -29,88 +31,58 @@ import { PlanCarousel } from '@/components/ui/plan-carousel';
 
 export default function HomePage() {
   return (
-    <>
-      {/* Decorative background blobs */}
-      <div className="pointer-events-none fixed left-0 top-0 -z-10 hidden h-full w-full overflow-hidden md:block">
-        <div className="absolute -left-[10%] -top-[10%] h-96 w-96 animate-blob rounded-full bg-brand-orange/10 mix-blend-screen blur-[100px]" />
-        <div
-          className="absolute -right-[10%] top-[40%] h-96 w-96 animate-blob rounded-full bg-brand-orange/5 mix-blend-screen blur-[100px]"
-          style={{ animationDelay: '2s' }}
-        />
-        <div
-          className="absolute bottom-[10%] left-[30%] h-96 w-96 animate-blob rounded-full bg-brand-orange/5 mix-blend-screen blur-[100px]"
-          style={{ animationDelay: '4s' }}
-        />
-      </div>
-
-      {/* Navbar */}
+    <div className="bg-white text-slate-900">
+      {/* ═════════ NAVBAR ═════════ */}
       <nav
         id="navbar"
-        className="navbar fixed top-0 z-50 w-full border-b border-white/5 bg-brand-dark/80 backdrop-blur-xl transition-all duration-300"
+        className="navbar fixed top-0 z-50 w-full border-b border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-300"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between md:h-20">
-            {/* Brand */}
-            <Link
-              href="#inicio"
-              className="group relative z-50 flex items-center gap-3"
-            >
+          <div className="flex h-16 items-center justify-between md:h-18">
+            <Link href="#inicio" className="group relative z-50 flex items-center gap-2.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
                 alt="CED·GYM"
-                className="h-9 w-9 rounded-full ring-1 ring-white/10 sm:h-10 sm:w-10"
+                className="h-9 w-9 rounded-full ring-1 ring-slate-200 sm:h-10 sm:w-10"
               />
-              <span className="logo-font text-lg font-black leading-none tracking-tight sm:text-xl md:text-2xl">
-                <span className="text-brand-orange">CED</span>
-                <span className="text-white">·GYM</span>
+              <span className="logo-font text-lg font-black leading-none tracking-tight sm:text-xl">
+                <span className="text-blue-600">CED</span>
+                <span className="text-slate-900">·GYM</span>
               </span>
             </Link>
 
-            {/* Desktop Menu */}
-            <div className="hidden items-center gap-7 text-xs font-bold uppercase tracking-widest text-gray-300 lg:flex">
-              <a href="#inicio" className="transition-colors hover:text-brand-orange">
-                Inicio
-              </a>
-              <a href="#disciplinas" className="transition-colors hover:text-brand-orange">
-                Deportes
-              </a>
-              <a href="#fundador" className="transition-colors hover:text-brand-orange">
-                Fundador
-              </a>
-              <a href="#cursos" className="transition-colors hover:text-brand-orange">
-                Cursos
-              </a>
-              <a href="#planes" className="transition-colors hover:text-brand-orange">
-                Planes
-              </a>
-              <Link href="/tienda" className="transition-colors hover:text-brand-orange">
-                Tienda
-              </Link>
+            {/* Desktop menu */}
+            <div className="hidden items-center gap-7 text-[12px] font-semibold uppercase tracking-[0.15em] text-slate-600 lg:flex">
+              <a href="#inicio" className="transition-colors hover:text-blue-600">Inicio</a>
+              <a href="#disciplinas" className="transition-colors hover:text-blue-600">Deportes</a>
+              <a href="#fundador" className="transition-colors hover:text-blue-600">Fundador</a>
+              <a href="#ia" className="transition-colors hover:text-blue-600">IA</a>
+              <a href="#planes" className="transition-colors hover:text-blue-600">Planes</a>
+              <Link href="/tienda" className="transition-colors hover:text-blue-600">Tienda</Link>
             </div>
 
-            {/* CTAs Desktop */}
+            {/* CTAs desktop */}
             <div className="hidden items-center gap-2 lg:flex">
               <Link
                 href="/login"
-                className="rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/80 transition hover:bg-white/5 hover:text-white"
+                className="rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-700 transition hover:bg-slate-100"
               >
                 Ingresar
               </Link>
               <Link
                 href="/register"
-                className="group relative overflow-hidden rounded-full bg-brand-orange px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-black shadow-[0_0_20px_rgba(30,90,255,0.3)] transition-all hover:shadow-[0_0_30px_rgba(30,90,255,0.5)]"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-blue-600 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.15em] text-white shadow-sm shadow-blue-600/30 transition-all hover:bg-blue-700 hover:shadow-blue-700/40"
               >
-                <span className="relative z-10 flex items-center gap-2">
-                  <span>Crear cuenta</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </span>
+                <span>Crear cuenta</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile menu button */}
             <button
               id="mobile-menu-btn"
-              className="z-50 p-2 text-white transition hover:text-brand-orange focus:outline-none lg:hidden"
+              className="z-50 p-2 text-slate-700 transition hover:text-blue-600 focus:outline-none lg:hidden"
               aria-label="Toggle menu"
               suppressHydrationWarning
             >
@@ -119,65 +91,40 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile Menu Overlay */}
+        {/* Mobile menu overlay */}
         <div
           id="mobile-menu"
-          className="fixed inset-0 z-40 flex translate-x-full flex-col overflow-y-auto bg-brand-dark/95 px-6 pt-24 backdrop-blur-2xl transition-transform duration-300 lg:hidden"
+          className="fixed inset-0 z-40 flex translate-x-full flex-col overflow-y-auto bg-white px-6 pt-24 transition-transform duration-300 lg:hidden"
         >
-          <div className="mt-4 flex flex-col space-y-8 text-xl font-black uppercase tracking-wider sm:text-2xl">
-            <a
-              href="#inicio"
-              className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
-            >
-              Inicio
-            </a>
-            <a
-              href="#disciplinas"
-              className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
-            >
-              Deportes
-            </a>
-            <a
-              href="#fundador"
-              className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
-            >
-              Fundador
-            </a>
-            <a
-              href="#cursos"
-              className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
-            >
-              Cursos
-            </a>
-            <a
-              href="#planes"
-              className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
-            >
-              Membresías
-            </a>
-            <Link
-              href="/tienda"
-              className="mobile-link border-b border-white/10 pb-4 text-white transition hover:text-brand-orange"
-            >
-              Tienda
-            </Link>
-            <a
-              href="#ubicacion"
-              className="mobile-link text-white transition hover:text-brand-orange"
-            >
-              Contacto
-            </a>
+          <div className="mt-4 flex flex-col space-y-5 text-xl font-bold tracking-tight text-slate-900">
+            {[
+              ['Inicio', '#inicio'],
+              ['Deportes', '#disciplinas'],
+              ['Fundador', '#fundador'],
+              ['IA', '#ia'],
+              ['Planes', '#planes'],
+              ['Tienda', '/tienda'],
+              ['Contacto', '#ubicacion'],
+            ].map(([label, href]) => (
+              <a
+                key={href}
+                href={href!}
+                className="mobile-link border-b border-slate-200 pb-4 text-slate-900 transition hover:text-blue-600"
+              >
+                {label}
+              </a>
+            ))}
           </div>
-          <div className="mt-8 space-y-4 pb-12">
+          <div className="mt-8 space-y-3 pb-12">
             <Link
               href="/register"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-orange py-4 text-center text-sm font-bold uppercase tracking-widest text-black shadow-[0_4px_20px_rgba(30,90,255,0.3)]"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-4 text-center text-sm font-bold uppercase tracking-[0.15em] text-white shadow-sm shadow-blue-600/30"
             >
               <UserPlus className="h-5 w-5" /> Crear cuenta
             </Link>
             <Link
               href="/login"
-              className="glass flex w-full items-center justify-center gap-2 rounded-xl py-4 text-center text-sm font-bold uppercase tracking-widest text-white"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white ring-1 ring-slate-300 py-4 text-center text-sm font-semibold uppercase tracking-[0.15em] text-slate-700"
             >
               <LogIn className="h-5 w-5" /> Iniciar sesión
             </Link>
@@ -185,73 +132,143 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero — full viewport, centered, dark gym photo */}
+      {/* ═════════ HERO ═════════ */}
       <section
         id="inicio"
-        className="relative flex min-h-[100svh] items-center justify-center overflow-hidden"
+        className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-white to-white pt-24 pb-12 sm:pt-28 sm:pb-20 lg:pt-32"
       >
-        <img
-          src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070"
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover"
+        {/* Subtle dot grid bg */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage:
+              'radial-gradient(rgba(37,99,235,0.12) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
         />
-        <div className="absolute inset-0 bg-black/70" />
-        <div className="relative z-10 mx-auto w-full max-w-5xl px-4 text-center sm:px-6">
-          <span className="mb-6 block text-xs font-bold uppercase tracking-[0.3em] text-brand-orange sm:text-sm">
-            CED·GYM · CHIHUAHUA
-          </span>
-          <h1 className="font-display text-5xl uppercase leading-[0.9] tracking-tight text-white sm:text-7xl md:text-8xl lg:text-9xl">
-            Entrena con método,
-            <br />
-            no con copia y pega
-          </h1>
-          <p className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg md:text-xl">
-            Rutinas y planes alimenticios personalizados con IA, diseñados por el
-            Coach Samuel Jeffery — tricampeón mundial de powerlifting.
-          </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
-            <Link
-              href="/register"
-              className="flex w-full items-center justify-center gap-2 rounded-xl !bg-[#FF6B00] px-8 py-4 text-center text-sm font-black uppercase tracking-widest text-white shadow-[0_10px_30px_rgba(255,107,0,0.35)] transition hover:-translate-y-0.5 hover:!bg-[#FF8A00] sm:w-auto"
-            >
-              <Flame className="h-5 w-5" /> Empieza hoy
-            </Link>
-            <a
-              href="#planes"
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/30 bg-white/10 px-8 py-4 text-sm font-bold uppercase tracking-widest text-white backdrop-blur-md transition hover:bg-white/20 sm:w-auto"
-            >
-              Ver planes
-            </a>
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+            {/* Copy */}
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                CED·GYM · Chihuahua
+              </span>
+              <h1 className="font-display mt-5 text-5xl leading-[0.95] tracking-tight text-slate-900 sm:text-6xl md:text-7xl lg:text-7xl">
+                ENTRENA CON{' '}
+                <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-sky-500 bg-clip-text text-transparent">
+                  MÉTODO
+                </span>
+                ,<br />
+                NO CON COPIA Y PEGA.
+              </h1>
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
+                Rutinas y planes de comida personalizados con IA, diseñados por el
+                Coach <strong className="text-slate-900">Samuel Jeffery</strong> —
+                tricampeón mundial de powerlifting.
+              </p>
+
+              <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                <Link
+                  href="/register"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-7 py-4 text-sm font-bold uppercase tracking-[0.15em] text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-700/30"
+                >
+                  <Flame className="h-5 w-5" />
+                  Empieza hoy
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+                <a
+                  href="#planes"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-4 text-sm font-semibold uppercase tracking-[0.15em] text-slate-800 ring-1 ring-slate-300 transition hover:bg-slate-50"
+                >
+                  Ver planes
+                </a>
+              </div>
+
+              {/* Trust row */}
+              <div className="mt-10 grid grid-cols-3 gap-4 border-t border-slate-200 pt-6 sm:max-w-lg">
+                {[
+                  ['3×', 'Mundial Powerlifting'],
+                  ['20+', 'Años de experiencia'],
+                  ['30s', 'Tu rutina con IA'],
+                ].map(([value, label]) => (
+                  <div key={label}>
+                    <div className="font-display text-2xl font-bold text-slate-900 sm:text-3xl">
+                      {value}
+                    </div>
+                    <div className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+                      {label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Visual */}
+            <div className="relative">
+              {/* Photo card */}
+              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl ring-1 ring-slate-200 shadow-xl">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1400"
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 via-transparent to-transparent" />
+              </div>
+
+              {/* Floating stat card */}
+              <div className="absolute -bottom-6 -left-3 w-56 rounded-2xl bg-white p-4 ring-1 ring-slate-200 shadow-xl sm:-left-6 sm:w-64">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      IA
+                    </div>
+                    <div className="font-display text-lg font-bold text-slate-900">
+                      Rutina lista en 30s
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating QR card */}
+              <div className="absolute -top-4 -right-3 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-4 text-white shadow-xl sm:-right-6">
+                <div className="flex items-center gap-2">
+                  <QrCode className="h-5 w-5" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">
+                    QR incluido
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Nuestras Disciplinas — WHITE */}
-      <section
-        id="disciplinas"
-        className="bg-white px-4 py-16 text-zinc-900 sm:py-24"
-      >
+      {/* ═════════ DISCIPLINAS ═════════ */}
+      <section id="disciplinas" className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-12 text-center sm:mb-16">
-            <h2 className="font-display text-4xl uppercase tracking-tight sm:text-5xl md:text-6xl">
-              Nuestras Disciplinas
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base text-zinc-500 sm:text-lg">
-              Rutinas adaptadas al deporte que practicas
-            </p>
-          </div>
+          <SectionHeader
+            eyebrow="Deportes"
+            title="Nuestras disciplinas"
+            sub="Rutinas adaptadas al deporte que practicas."
+          />
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 title: 'Fuerza',
-                body: 'Hipertrofia, técnica, progresión por carga.',
+                body: 'Hipertrofia, técnica y progresión por carga.',
                 img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1000',
               },
               {
                 title: 'HYROX',
-                body: 'Condición física funcional para competir.',
+                body: 'Condición funcional de competición.',
                 img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000',
               },
               {
@@ -261,25 +278,26 @@ export default function HomePage() {
               },
               {
                 title: 'Funcional',
-                body: 'Movilidad, coordinación, cardio metabólico.',
+                body: 'Movilidad, coordinación y cardio.',
                 img: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?q=80&w=1000',
               },
             ].map((d) => (
               <div
                 key={d.title}
-                className="group relative aspect-[4/5] overflow-hidden rounded-2xl shadow-sm"
+                className="group relative aspect-[4/5] overflow-hidden rounded-2xl ring-1 ring-slate-200 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={d.img}
                   alt={d.title}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-6">
-                  <h3 className="font-display text-3xl uppercase tracking-tight text-white">
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <h3 className="font-display text-2xl uppercase tracking-tight text-white sm:text-3xl">
                     {d.title}
                   </h3>
-                  <p className="mt-2 text-sm text-white/85">{d.body}</p>
+                  <p className="mt-1.5 text-sm text-white/90">{d.body}</p>
                 </div>
               </div>
             ))}
@@ -287,128 +305,126 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Rutinas adaptadas a ti — NAVY */}
-      <section className="bg-brand-dark px-4 py-16 sm:py-24">
+      {/* ═════════ RUTINAS ADAPTADAS ═════════ */}
+      <section className="bg-slate-50 px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-12 text-center sm:mb-16">
-            <h2 className="font-display text-4xl uppercase tracking-tight text-white sm:text-5xl md:text-6xl">
-              Rutinas adaptadas a ti
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base text-white/70 sm:text-lg">
-              Cada persona entrena diferente. Tu rutina lo sabe.
-            </p>
-          </div>
+          <SectionHeader
+            eyebrow="Personalización"
+            title="Rutinas adaptadas a ti"
+            sub="Cada persona entrena diferente. Tu rutina lo sabe."
+          />
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 icon: Users,
                 title: 'Adultos',
-                body: 'De 18 a 55 años. Hipertrofia, fuerza, pérdida de grasa con plan completo.',
+                body: '18 a 55 años. Hipertrofia, fuerza y pérdida de grasa con plan completo.',
               },
               {
                 icon: UserCheck,
-                title: 'Adultos Mayores',
+                title: 'Adultos mayores',
                 body: '55+ años. Baja carga, máquinas seguras, énfasis en movilidad.',
               },
               {
                 icon: Baby,
-                title: 'Niños y Juveniles',
+                title: 'Niños y juveniles',
                 body: '6 a 17 años. Entrenamiento funcional, coordinación y peso corporal.',
               },
               {
                 icon: Trophy,
                 title: 'Deportistas',
-                body: 'Fútbol americano, soccer, básquet, tenis. Programación específica por deporte.',
+                body: 'Football, soccer, básquet, tenis. Programación específica por deporte.',
               },
             ].map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="rounded-2xl border border-white/10 bg-white/5 p-6"
+                className="rounded-2xl bg-white p-6 ring-1 ring-slate-200 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
               >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-brand-orange/40 bg-brand-orange/10">
-                  <Icon className="h-5 w-5 text-brand-orange" />
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                  <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="font-display text-2xl uppercase tracking-tight text-white">
+                <h3 className="font-display text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                   {title}
                 </h3>
-                <p className="mt-2 text-sm text-white/70">{body}</p>
+                <p className="mt-2 text-sm text-slate-600">{body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* IA en 30 segundos — WHITE */}
-      <section className="bg-white px-4 py-16 text-zinc-900 sm:py-24">
+      {/* ═════════ IA EN 30 SEGUNDOS ═════════ */}
+      <section id="ia" className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            {/* Left */}
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div>
-              <span className="mb-3 block text-xs font-bold uppercase tracking-[0.3em] text-brand-orange">
-                Tecnología · IA
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
+                <Sparkles className="h-3 w-3" /> Tecnología · IA
               </span>
-              <h2 className="font-display text-4xl uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
-                Tu rutina personalizada en 30 segundos
+              <h2 className="font-display mt-4 text-4xl leading-[0.95] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+                Tu rutina en{' '}
+                <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
+                  30 segundos
+                </span>
               </h2>
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg">
-                Nos dices tu objetivo, nivel, días disponibles y equipo. Nuestra IA,
-                entrenada con el método del Coach Samuel y 20+ años de experiencia,
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
+                Nos dices tu objetivo, nivel, días disponibles y equipo. Nuestra IA
+                —entrenada con el método del Coach Samuel y 20+ años de experiencia—
                 arma tu plan semanal completo.
               </p>
 
-              <ul className="mt-8 space-y-4">
+              <ul className="mt-7 space-y-3">
                 {[
                   'Rutina por día con sets, repes y descansos',
                   'Videos de ejecución en cada ejercicio',
-                  'Adapta por lesiones, edad y equipo disponible',
-                  'Plan alimenticio con lista de compras incluido',
+                  'Se adapta a lesiones, edad y equipo disponible',
+                  'Plan de comidas con lista de compras incluido',
                 ].map((t) => (
-                  <li key={t} className="flex items-start gap-3 text-sm text-zinc-700 sm:text-base">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-orange" />
+                  <li key={t} className="flex items-start gap-3 text-sm text-slate-700 sm:text-base">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
                     <span>{t}</span>
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-10">
+              <div className="mt-8">
                 <Link
                   href="/register"
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-orange px-8 py-4 text-sm font-black uppercase tracking-widest text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-7 py-3.5 text-sm font-bold uppercase tracking-[0.15em] text-white shadow-md shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700"
                 >
-                  Crear mi rutina ahora
-                  <ArrowRight className="h-4 w-4" />
+                  Crear mi rutina <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
 
-            {/* Right — mockup */}
+            {/* Mockup preview */}
             <div className="relative">
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-dark via-[#0a1838] to-brand-orange/60 p-8 shadow-2xl">
-                <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-brand-orange/30 blur-3xl" />
-                <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 p-6 text-white shadow-2xl sm:p-8">
+                <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+                <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-sky-300/20 blur-2xl" />
 
                 <div className="relative">
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/60">
+                  <div className="mb-5 flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
                       Vista previa del portal
                     </span>
                     <div className="flex gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-full bg-white/30" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-white/30" />
-                      <span className="h-2.5 w-2.5 rounded-full bg-brand-orange" />
+                      <span className="h-2 w-2 rounded-full bg-white/30" />
+                      <span className="h-2 w-2 rounded-full bg-white/30" />
+                      <span className="h-2 w-2 rounded-full bg-white" />
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
-                    <p className="text-xs font-bold uppercase tracking-widest text-brand-orange">
+                  <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm ring-1 ring-white/15">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-sky-200">
                       Lunes · Empuje
                     </p>
-                    <h4 className="mt-2 font-display text-2xl uppercase tracking-tight text-white">
+                    <h4 className="mt-1.5 font-display text-2xl tracking-tight">
                       Sesión de hoy
                     </h4>
 
-                    <div className="mt-5 space-y-3">
+                    <div className="mt-4 space-y-2">
                       {[
                         { name: 'Press banca', sets: '4 × 6', rest: '2:30' },
                         { name: 'Press inclinado mancuerna', sets: '3 × 10', rest: '1:30' },
@@ -417,21 +433,21 @@ export default function HomePage() {
                       ].map((ex) => (
                         <div
                           key={ex.name}
-                          className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2.5"
+                          className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2.5 ring-1 ring-white/10"
                         >
                           <div>
                             <p className="text-sm font-semibold text-white">{ex.name}</p>
-                            <p className="text-[10px] uppercase tracking-widest text-white/50">
+                            <p className="text-[10px] uppercase tracking-widest text-white/70">
                               {ex.sets} · descanso {ex.rest}
                             </p>
                           </div>
-                          <Check className="h-4 w-4 text-brand-orange" />
+                          <Check className="h-4 w-4 text-sky-200" />
                         </div>
                       ))}
                     </div>
 
-                    <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                    <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-3">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
                         Próximo
                       </span>
                       <span className="text-xs font-semibold text-white">Mar · Tirón</span>
@@ -444,23 +460,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Fundador */}
+      {/* ═════════ FUNDADOR ═════════ */}
       <FounderSection />
 
-      {/* Instalaciones — NAVY, 3-column */}
-      <section className="bg-brand-dark px-4 py-16 sm:py-24">
+      {/* ═════════ INSTALACIONES ═════════ */}
+      <section className="bg-slate-50 px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-12 text-center sm:mb-16">
-            <h2 className="font-display text-4xl uppercase tracking-tight text-white sm:text-5xl md:text-6xl">
-              Instalaciones completas
-            </h2>
-          </div>
+          <SectionHeader
+            eyebrow="Instalaciones"
+            title="Todo lo que necesitas"
+            sub="Máquinas, zona funcional y cardio completo."
+          />
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
             {[
               {
                 title: 'Zona de máquinas',
-                body: 'Pecho, pierna, espalda, hombro — cada grupo con máquina dedicada.',
+                body: 'Pecho, pierna, espalda y hombro — cada grupo con máquina dedicada.',
                 img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000',
               },
               {
@@ -470,27 +486,27 @@ export default function HomePage() {
               },
               {
                 title: 'Cardio completo',
-                body: 'Bicicletas, remadoras, elípticas, esquís, caminadoras.',
+                body: 'Bicicletas, remadoras, elípticas, esquís y caminadoras.',
                 img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1000',
               },
             ].map((f) => (
               <div
                 key={f.title}
-                className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+                className="group overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={f.img}
                     alt={f.title}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/80 to-transparent" />
                 </div>
-                <div className="p-6">
-                  <h3 className="font-display text-2xl uppercase tracking-tight text-white">
+                <div className="p-5 sm:p-6">
+                  <h3 className="font-display text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
                     {f.title}
                   </h3>
-                  <p className="mt-2 text-sm text-white/70">{f.body}</p>
+                  <p className="mt-1.5 text-sm text-slate-600">{f.body}</p>
                 </div>
               </div>
             ))}
@@ -498,375 +514,195 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Membresías */}
-      <section
-        id="planes"
-        className="overflow-hidden border-y border-white/5 bg-brand-gray py-10 sm:py-16"
-      >
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mb-6 text-center sm:mb-8">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
-              Membresías
-            </span>
-            <h2 className="mb-3 px-2 font-display text-4xl uppercase tracking-tight sm:text-5xl md:text-6xl">
-              Elige tu nivel
-            </h2>
-            <p className="mx-auto max-w-xl text-sm text-gray-400 sm:text-base">
-              Todos los planes incluyen <strong className="text-white">acceso al gym con QR</strong>.
-              Cancela cuando quieras.
-            </p>
-          </div>
+      {/* ═════════ PLANES ═════════ */}
+      <section id="planes" className="px-4 py-16 sm:py-24">
+        <div className="mx-auto max-w-7xl">
+          <SectionHeader
+            eyebrow="Membresías"
+            title="Elige tu nivel"
+            sub="Todos los planes incluyen acceso al gym con QR. Cancela cuando quieras."
+          />
 
-          <div className="mb-6 flex justify-center sm:mb-8">
-            <div className="glass inline-flex gap-1 rounded-full p-1">
+          {/* Cycle switcher */}
+          <div className="mt-8 flex justify-center">
+            <div className="inline-flex gap-1 rounded-full bg-slate-100 p-1 ring-1 ring-slate-200">
               <button
-                className="cycle-btn is-active rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition sm:px-5 sm:py-2 sm:text-xs"
+                className="cycle-btn is-active rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:px-5"
                 data-cycle="month"
               >
                 Mensual
               </button>
               <button
-                className="cycle-btn flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition sm:gap-2 sm:px-5 sm:py-2 sm:text-xs"
+                className="cycle-btn flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:px-5"
                 data-cycle="q"
               >
-                Trim.{' '}
-                <span className="rounded bg-brand-orange/20 px-1 text-[9px] text-brand-orange sm:px-2 sm:py-0.5 sm:text-[10px]">
+                Trim.
+                <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
                   −10%
                 </span>
               </button>
               <button
-                className="cycle-btn flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-widest transition sm:gap-2 sm:px-5 sm:py-2 sm:text-xs"
+                className="cycle-btn flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:px-5"
                 data-cycle="y"
               >
-                Anual{' '}
-                <span className="rounded bg-brand-orange/20 px-1 text-[9px] text-brand-orange sm:px-2 sm:py-0.5 sm:text-[10px]">
+                Anual
+                <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
                   −20%
                 </span>
               </button>
             </div>
           </div>
 
-          <PlanCarousel>
-            {/* Starter */}
-            <div className="glass-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 sm:h-12 sm:w-12">
-                  <Zap className="h-4 w-4 text-brand-orange sm:h-5 sm:w-5" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="truncate text-xl font-black uppercase tracking-wide sm:text-2xl">
-                    Starter
-                  </h3>
-                  <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:text-xs">
-                    Para empezar
-                  </p>
-                </div>
-              </div>
-              <div className="mb-4 border-b border-white/5 pb-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black sm:text-4xl">
-                    $
-                    <span
-                      className="plan-price"
-                      data-month="690"
-                      data-q="1864"
-                      data-y="6624"
-                    >
-                      690
-                    </span>
-                  </span>
-                  <span className="text-xs text-gray-400 sm:text-sm">
-                    MXN{' '}
-                    <em className="cycle-label text-[10px] not-italic text-gray-500 sm:text-xs">
-                      /mes
-                    </em>
-                  </span>
-                </div>
-              </div>
-              <ul className="mb-5 space-y-2 text-xs sm:text-sm">
-                {[
+          <div className="mt-10">
+            <PlanCarousel>
+              {/* Starter */}
+              <PlanCard
+                href="/register?redirect=/checkout/starter&product=starter&type=membership"
+                tier="Starter"
+                subtitle="Para empezar"
+                icon={<Zap className="h-5 w-5" />}
+                priceMonth="690"
+                priceQ="1864"
+                priceY="6624"
+                features={[
                   { t: 'Acceso al gym con QR', hi: true },
                   { t: 'Sala general' },
                   { t: '3 clases grupales / semana' },
                   { t: 'Plan base de entrenamiento' },
                   { t: 'Panel del atleta + progreso' },
-                ].map((f) => (
-                  <li key={f.t} className={`flex items-start gap-2 ${f.hi ? 'font-semibold text-white' : 'text-gray-300'}`}>
-                    {f.hi ? (
-                      <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
-                    ) : (
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
-                    )}
-                    <span>{f.t}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/register?redirect=/checkout/starter&product=starter&type=membership"
-                className="block w-full rounded-xl !bg-[#FF6B00] py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:!bg-[#FF8A00]"
-              >
-                Elegir Starter
-              </Link>
-            </div>
+                ]}
+                cta="Elegir Starter"
+              />
 
-            {/* Pro */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-orange-2 via-brand-orange to-brand-orange-3 p-[1px] sm:rounded-3xl">
-              <div className="absolute right-4 top-0 z-10 rounded-b-lg bg-brand-orange px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-black sm:right-6 sm:px-3 sm:py-1 sm:text-[10px]">
-                Más popular
-              </div>
-              <div className="rounded-2xl bg-brand-gray p-4 sm:rounded-3xl sm:p-6">
-                <div className="mb-4 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange sm:h-12 sm:w-12">
-                    <Flame className="h-4 w-4 text-black sm:h-5 sm:w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="truncate text-xl font-black uppercase tracking-wide sm:text-2xl">
-                      Pro
-                    </h3>
-                    <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:text-xs">
-                      Atleta regular
-                    </p>
-                  </div>
-                </div>
-                <div className="mb-4 border-b border-white/5 pb-4">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-gradient text-3xl font-black sm:text-4xl">
-                      $
-                      <span
-                        className="plan-price"
-                        data-month="1290"
-                        data-q="3483"
-                        data-y="12384"
-                      >
-                        1,290
-                      </span>
-                    </span>
-                    <span className="text-xs text-gray-400 sm:text-sm">
-                      MXN{' '}
-                      <em className="cycle-label text-[10px] not-italic text-gray-500 sm:text-xs">
-                        /mes
-                      </em>
-                    </span>
-                  </div>
-                </div>
-                <ul className="mb-5 space-y-2 text-xs sm:text-sm">
-                  {[
-                    { t: 'Acceso al gym con QR', hi: true },
-                    { t: 'Acceso ilimitado 6 días' },
-                    { t: 'Clases grupales sin límite' },
-                    { t: 'Plan personalizado por coach' },
-                    { t: '1 curso incluido / trimestre' },
-                  ].map((f) => (
-                    <li key={f.t} className={`flex items-start gap-2 ${f.hi ? 'font-semibold text-white' : 'text-gray-300'}`}>
-                      {f.hi ? (
-                        <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
-                      ) : (
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
-                      )}
-                      <span>{f.t}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register?redirect=/checkout/pro&product=pro&type=membership"
-                  className="block w-full rounded-xl !bg-[#FF6B00] py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-[0_10px_30px_rgba(255,107,0,0.35)] transition hover:!bg-[#FF8A00]"
-                >
-                  Elegir Pro
-                </Link>
-              </div>
-            </div>
+              {/* Pro (popular) */}
+              <PlanCard
+                href="/register?redirect=/checkout/pro&product=pro&type=membership"
+                tier="Pro"
+                subtitle="Atleta regular"
+                popular
+                icon={<Flame className="h-5 w-5" />}
+                priceMonth="1,290"
+                priceQ="3483"
+                priceY="12384"
+                features={[
+                  { t: 'Acceso al gym con QR', hi: true },
+                  { t: 'Acceso ilimitado 6 días' },
+                  { t: 'Clases grupales sin límite' },
+                  { t: 'Plan personalizado por coach' },
+                  { t: '1 curso incluido / trimestre' },
+                ]}
+                cta="Elegir Pro"
+              />
 
-            {/* Élite */}
-            <div className="glass-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 sm:h-12 sm:w-12">
-                  <Crown className="h-4 w-4 text-brand-orange sm:h-5 sm:w-5" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="truncate text-xl font-black uppercase tracking-wide sm:text-2xl">
-                    Élite
-                  </h3>
-                  <p className="truncate text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:text-xs">
-                    Preparación deportiva
-                  </p>
-                </div>
-              </div>
-              <div className="mb-4 border-b border-white/5 pb-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black sm:text-4xl">
-                    $
-                    <span
-                      className="plan-price"
-                      data-month="2290"
-                      data-q="6183"
-                      data-y="21984"
-                    >
-                      2,290
-                    </span>
-                  </span>
-                  <span className="text-xs text-gray-400 sm:text-sm">
-                    MXN{' '}
-                    <em className="cycle-label text-[10px] not-italic text-gray-500 sm:text-xs">
-                      /mes
-                    </em>
-                  </span>
-                </div>
-              </div>
-              <ul className="mb-5 space-y-2 text-xs sm:text-sm">
-                {[
+              {/* Élite */}
+              <PlanCard
+                href="/register?redirect=/checkout/elite&product=elite&type=membership"
+                tier="Élite"
+                subtitle="Preparación deportiva"
+                icon={<Crown className="h-5 w-5" />}
+                priceMonth="2,290"
+                priceQ="6183"
+                priceY="21984"
+                features={[
                   { t: 'Acceso al gym con QR', hi: true },
                   { t: 'Programa individualizado' },
                   { t: 'Prep física por deporte' },
                   { t: '2 sesiones 1:1 / semana' },
                   { t: 'Nutrición + análisis de video' },
-                ].map((f) => (
-                  <li key={f.t} className={`flex items-start gap-2 ${f.hi ? 'font-semibold text-white' : 'text-gray-300'}`}>
-                    {f.hi ? (
-                      <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
-                    ) : (
-                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-orange" />
-                    )}
-                    <span>{f.t}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/register?redirect=/checkout/elite&product=elite&type=membership"
-                className="block w-full rounded-xl !bg-[#FF6B00] py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:!bg-[#FF8A00]"
-              >
-                Elegir Élite
-              </Link>
-            </div>
-          </PlanCarousel>
+                ]}
+                cta="Elegir Élite"
+              />
+            </PlanCarousel>
+          </div>
 
-          <p className="mt-6 flex items-center justify-center gap-2 text-center text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:mt-8 sm:text-xs">
-            <ShieldCheck className="h-3 w-3 text-brand-orange sm:h-4 sm:w-4" />
+          <p className="mt-8 flex items-center justify-center gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+            <ShieldCheck className="h-4 w-4 text-blue-600" />
             Pagos seguros · Mercado Pago · Cancela cuando quieras
           </p>
         </div>
       </section>
 
-      {/* Marketplace Destacados */}
+      {/* ═════════ PRODUCTS ═════════ */}
       <FeaturedProducts />
 
-      {/* Ubicación */}
-      <section
-        id="ubicacion"
-        className="relative overflow-hidden px-4 py-10 sm:py-16"
-      >
+      {/* ═════════ UBICACION ═════════ */}
+      <section id="ubicacion" className="bg-slate-50 px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl">
           <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+            {/* Contact card */}
             <div className="order-2 lg:order-1">
-              <span className="mb-2 block text-center text-[10px] font-bold uppercase tracking-widest text-brand-orange sm:text-sm lg:text-left">
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
                 Contacto directo
               </span>
-              <h2 className="mb-8 text-center font-display text-4xl uppercase tracking-tight text-white sm:mb-10 sm:text-5xl md:text-6xl lg:text-left">
-                Visita nuestras instalaciones
+              <h2 className="font-display mt-4 text-4xl tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+                Visítanos
               </h2>
+              <p className="mt-3 max-w-xl text-base text-slate-600 sm:text-lg">
+                Estamos en el corazón de Chihuahua. Entra, conoce las instalaciones y
+                te mostramos la sala.
+              </p>
 
-              <div className="mx-auto mb-10 max-w-md space-y-4 rounded-3xl border border-white/5 bg-brand-dark p-6 sm:space-y-6 sm:p-8 lg:max-w-none">
-                <div className="group flex cursor-pointer items-start">
-                  <div className="mr-4 mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 transition group-hover:bg-brand-orange sm:mr-6 sm:mt-0 sm:h-12 sm:w-12">
-                    <MapPin className="h-5 w-5 text-brand-orange transition group-hover:text-black sm:h-6 sm:w-6" />
-                  </div>
-                  <div>
-                    <p className="mb-1 text-lg font-bold uppercase tracking-wide text-white sm:text-xl">
-                      Av. Tecnológico, Santo Niño
-                    </p>
-                    <p className="text-xs text-gray-400 sm:text-sm">
-                      Deportiva, Chihuahua, México.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="h-px w-full bg-white/5" />
-
-                <a
+              <div className="mt-8 space-y-4 rounded-3xl bg-white p-6 ring-1 ring-slate-200 shadow-sm sm:p-8">
+                <ContactRow
+                  icon={<MapPin className="h-5 w-5" />}
+                  label="Dirección"
+                  primary="Av. Tecnológico, Santo Niño"
+                  sub="Deportiva, Chihuahua, México"
+                />
+                <div className="h-px w-full bg-slate-100" />
+                <ContactRow
                   href="https://wa.me/526141970660"
-                  className="group flex items-center"
-                >
-                  <div className="mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500/10 transition group-hover:bg-green-500 sm:mr-6 sm:h-12 sm:w-12">
-                    <Phone className="h-5 w-5 text-green-500 transition group-hover:text-white sm:h-6 sm:w-6" />
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 sm:text-xs">
-                      WhatsApp
-                    </p>
-                    <p className="text-lg font-medium text-white transition group-hover:text-green-400 sm:text-xl">
-                      614 197 0660
-                    </p>
-                  </div>
-                </a>
-
-                <div className="h-px w-full bg-white/5" />
-
-                <a
+                  icon={<Phone className="h-5 w-5" />}
+                  iconClass="bg-emerald-100 text-emerald-700"
+                  label="WhatsApp"
+                  primary="614 197 0660"
+                />
+                <div className="h-px w-full bg-slate-100" />
+                <ContactRow
                   href="https://instagram.com/ced.gym.chih"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group flex items-center"
-                >
-                  <div className="mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-500/10 transition sm:mr-6 sm:h-12 sm:w-12">
-                    <Instagram className="h-5 w-5 text-pink-500 sm:h-6 sm:w-6" />
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 sm:text-xs">
-                      Síguenos
-                    </p>
-                    <p className="text-lg font-medium text-white transition group-hover:text-pink-400 sm:text-xl">
-                      @ced.gym.chih
-                    </p>
-                  </div>
-                </a>
-
-                <div className="h-px w-full bg-white/5" />
-
-                <div className="flex items-start">
-                  <div className="mr-4 mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 sm:mr-6 sm:mt-0 sm:h-12 sm:w-12">
-                    <Clock className="h-5 w-5 text-brand-orange sm:h-6 sm:w-6" />
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 sm:text-xs">
-                      Horario
-                    </p>
-                    <p className="text-base font-medium text-white sm:text-lg">
-                      Lun — Vie · 7:00 — 21:00
-                    </p>
-                  </div>
-                </div>
+                  icon={<Instagram className="h-5 w-5" />}
+                  iconClass="bg-pink-100 text-pink-700"
+                  label="Síguenos"
+                  primary="@ced.gym.chih"
+                />
+                <div className="h-px w-full bg-slate-100" />
+                <ContactRow
+                  icon={<Clock className="h-5 w-5" />}
+                  label="Horario"
+                  primary="Lun — Vie · 7:00 — 21:00"
+                />
               </div>
             </div>
 
-            <div className="group relative order-1 h-[350px] w-full overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl sm:h-[450px] lg:order-2 lg:h-[600px]">
+            {/* Map */}
+            <div className="relative order-1 aspect-[4/3] w-full overflow-hidden rounded-3xl ring-1 ring-slate-200 shadow-xl lg:order-2 lg:aspect-auto lg:h-[560px]">
               <iframe
                 src="https://www.google.com/maps?q=CED+Gym+Av.+Tecnologico+Santo+Nino+Chihuahua&output=embed&z=16"
                 width="100%"
                 height="100%"
-                style={{
-                  border: 0,
-                  filter: 'grayscale(100%) invert(90%) contrast(1.2)',
-                }}
+                style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                className="absolute inset-0 z-0 transition duration-700 lg:group-hover:filter-none"
+                className="absolute inset-0 z-0"
               />
-              <div className="absolute bottom-4 left-4 right-4 z-10 flex items-center justify-between rounded-2xl border border-white/10 bg-brand-dark/95 p-4 backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-6 sm:p-6">
+              <div className="absolute bottom-4 left-4 right-4 z-10 flex items-center justify-between rounded-2xl bg-white/95 p-4 ring-1 ring-slate-200 shadow-lg backdrop-blur-md">
                 <div>
-                  <p className="text-base font-black uppercase text-white sm:text-xl">
+                  <p className="font-display text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
                     CED·GYM
                   </p>
-                  <p className="text-xs font-bold text-brand-orange sm:text-sm">
-                    Fábrica de Monstruos · Chihuahua
+                  <p className="text-xs font-semibold text-blue-600 sm:text-sm">
+                    Fábrica de monstruos · Chihuahua
                   </p>
                 </div>
                 <a
                   href="https://maps.app.goo.gl/hjCPfR18PnDXEFqr7"
                   target="_blank"
                   rel="noreferrer"
-                  className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:bg-brand-orange sm:h-12 sm:w-12"
+                  className="ml-4 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition hover:bg-blue-700"
+                  aria-label="Abrir en Google Maps"
                 >
-                  <Navigation className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <Navigation className="h-5 w-5" />
                 </a>
               </div>
             </div>
@@ -874,146 +710,90 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 bg-brand-dark pb-8 pt-16">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mb-12 grid grid-cols-1 gap-10 text-center md:grid-cols-2 md:gap-12 md:text-left lg:grid-cols-4">
-            <div className="flex flex-col items-center md:items-start lg:col-span-2">
-              <Link
-                href="#inicio"
-                className="group relative mb-6 inline-flex items-center gap-3"
-              >
+      {/* ═════════ FOOTER ═════════ */}
+      <footer className="bg-slate-900 px-4 pt-16 pb-8 text-slate-300">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-12 grid grid-cols-1 gap-10 md:grid-cols-2 md:text-left lg:grid-cols-4">
+            <div className="lg:col-span-2">
+              <Link href="#inicio" className="group inline-flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo.png"
                   alt="CED·GYM"
-                  className="h-14 w-14 rounded-full"
+                  className="h-12 w-12 rounded-full ring-1 ring-white/10"
                 />
-                <span className="logo-font inline-flex flex-col leading-none text-2xl tracking-tight sm:text-3xl">
+                <span className="logo-font flex flex-col leading-none text-xl tracking-tight sm:text-2xl">
                   <span>
-                    <span className="text-brand-orange">CED</span>
+                    <span className="text-blue-400">CED</span>
                     <span className="text-white">·GYM</span>
                   </span>
-                  <span className="text-[0.4em] font-bold uppercase tracking-[0.3em] text-white/50">
+                  <span className="mt-1 text-[0.45em] font-bold uppercase tracking-[0.25em] text-slate-400">
                     Fábrica de monstruos
                   </span>
                 </span>
               </Link>
-              <p className="mx-auto mb-8 max-w-sm text-sm leading-relaxed text-gray-400 sm:text-base md:mx-0">
+              <p className="mt-6 max-w-sm text-sm leading-relaxed text-slate-400">
                 Plataforma de preparación física para atletas. Forjando monstruos con
                 disciplina, comunidad y datos reales.
               </p>
-              <div className="flex justify-center space-x-4 md:justify-start">
+              <div className="mt-6 flex gap-3">
                 <a
                   href="https://instagram.com/ced.gym.chih"
                   target="_blank"
                   rel="noreferrer"
+                  aria-label="Instagram"
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition hover:bg-[#E4405F]"
                 >
-                  <Instagram className="h-5 w-5" />
+                  <Instagram className="h-4 w-4" />
                 </a>
                 <a
                   href="https://wa.me/526141970660"
                   target="_blank"
                   rel="noreferrer"
+                  aria-label="WhatsApp"
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition hover:bg-[#25D366]"
                 >
-                  <MessageCircle className="h-5 w-5" />
+                  <MessageCircle className="h-4 w-4" />
                 </a>
                 <a
                   href="tel:+526141970660"
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition hover:bg-brand-orange hover:text-black"
+                  aria-label="Llamar"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition hover:bg-blue-600"
                 >
-                  <Phone className="h-5 w-5" />
+                  <Phone className="h-4 w-4" />
                 </a>
               </div>
             </div>
 
             <div>
-              <h4 className="mb-5 text-xs font-black uppercase tracking-widest text-white sm:mb-6 sm:text-sm">
+              <h4 className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white">
                 Plataforma
               </h4>
-              <ul className="space-y-3 text-sm sm:space-y-4 sm:text-base">
-                <li>
-                  <a
-                    href="#disciplinas"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Deportes
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#planes"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Membresías
-                  </a>
-                </li>
-                <li>
-                  <Link
-                    href="/tienda"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Tienda
-                  </Link>
-                </li>
-                <li>
-                  <a
-                    href="#app"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Panel del atleta
-                  </a>
-                </li>
+              <ul className="space-y-3 text-sm">
+                <FooterLink href="#disciplinas">Deportes</FooterLink>
+                <FooterLink href="#planes">Membresías</FooterLink>
+                <FooterLink href="/tienda">Tienda</FooterLink>
+                <FooterLink href="#ia">IA</FooterLink>
               </ul>
             </div>
 
             <div>
-              <h4 className="mb-5 text-xs font-black uppercase tracking-widest text-white sm:mb-6 sm:text-sm">
+              <h4 className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-white">
                 Cuenta
               </h4>
-              <ul className="space-y-3 text-sm sm:space-y-4 sm:text-base">
-                <li>
-                  <Link
-                    href="/login"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Iniciar sesión
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/register"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Crear cuenta
-                  </Link>
-                </li>
-                <li>
-                  <a
-                    href="#inscripcion"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Inscripción
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#ubicacion"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Contacto
-                  </a>
-                </li>
+              <ul className="space-y-3 text-sm">
+                <FooterLink href="/login">Iniciar sesión</FooterLink>
+                <FooterLink href="/register">Crear cuenta</FooterLink>
+                <FooterLink href="#ubicacion">Contacto</FooterLink>
               </ul>
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-center md:flex-row md:text-left">
-            <p className="text-xs font-medium text-gray-500 sm:text-sm">
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 md:flex-row">
+            <p className="text-xs text-slate-400">
               © {new Date().getFullYear()} CED·GYM. Todos los derechos reservados.
             </p>
-            <p className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-600 sm:text-xs">
+            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
               Pagos por{' '}
               <span className="mp-badge" style={{ padding: '4px 8px' }}>
                 <span style={{ fontSize: '.55rem' }}>mercado</span>
@@ -1025,6 +805,208 @@ export default function HomePage() {
       </footer>
 
       <InteractivityClient />
+    </div>
+  );
+}
+
+/* ═════════ Helpers ═════════ */
+
+function SectionHeader({
+  eyebrow,
+  title,
+  sub,
+}: {
+  eyebrow: string;
+  title: string;
+  sub?: string;
+}) {
+  return (
+    <div className="text-center">
+      <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
+        {eyebrow}
+      </span>
+      <h2 className="font-display mt-4 text-4xl leading-[0.95] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+        {title}
+      </h2>
+      {sub && (
+        <p className="mx-auto mt-3 max-w-2xl text-base text-slate-600 sm:text-lg">
+          {sub}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PlanCard({
+  href,
+  tier,
+  subtitle,
+  icon,
+  popular,
+  priceMonth,
+  priceQ,
+  priceY,
+  features,
+  cta,
+}: {
+  href: string;
+  tier: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  popular?: boolean;
+  priceMonth: string;
+  priceQ: string;
+  priceY: string;
+  features: { t: string; hi?: boolean }[];
+  cta: string;
+}) {
+  return (
+    <div
+      className={
+        'relative flex h-full flex-col rounded-3xl p-6 sm:p-7 ring-1 transition ' +
+        (popular
+          ? 'bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 text-white ring-blue-600 shadow-xl shadow-blue-600/25'
+          : 'bg-white text-slate-900 ring-slate-200 shadow-sm hover:-translate-y-1 hover:shadow-md')
+      }
+    >
+      {popular && (
+        <span className="absolute -top-3 right-6 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700 shadow-sm">
+          Más popular
+        </span>
+      )}
+
+      <div className="mb-5 flex items-center gap-3">
+        <span
+          className={
+            'inline-flex h-11 w-11 items-center justify-center rounded-xl ' +
+            (popular
+              ? 'bg-white/15 text-white ring-1 ring-white/20'
+              : 'bg-blue-100 text-blue-700')
+          }
+        >
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h3 className="font-display text-2xl font-bold tracking-tight">{tier}</h3>
+          <p
+            className={
+              'text-[11px] font-semibold uppercase tracking-[0.15em] ' +
+              (popular ? 'text-white/80' : 'text-slate-500')
+            }
+          >
+            {subtitle}
+          </p>
+        </div>
+      </div>
+
+      <div className={'mb-5 border-b pb-5 ' + (popular ? 'border-white/15' : 'border-slate-100')}>
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl font-black leading-none">
+            $
+            <span className="plan-price" data-month={priceMonth} data-q={priceQ} data-y={priceY}>
+              {priceMonth}
+            </span>
+          </span>
+          <span className={'text-sm ' + (popular ? 'text-white/80' : 'text-slate-500')}>
+            MXN{' '}
+            <em className="cycle-label not-italic text-xs">
+              /mes
+            </em>
+          </span>
+        </div>
+      </div>
+
+      <ul className="mb-6 space-y-2.5 text-sm">
+        {features.map((f) => (
+          <li
+            key={f.t}
+            className={
+              'flex items-start gap-2 ' +
+              (popular ? 'text-white/90' : f.hi ? 'font-semibold text-slate-900' : 'text-slate-700')
+            }
+          >
+            {f.hi ? (
+              <QrCode className={'mt-0.5 h-4 w-4 shrink-0 ' + (popular ? 'text-white' : 'text-blue-600')} />
+            ) : (
+              <Check className={'mt-0.5 h-4 w-4 shrink-0 ' + (popular ? 'text-sky-200' : 'text-blue-600')} />
+            )}
+            <span>{f.t}</span>
+          </li>
+        ))}
+      </ul>
+
+      <Link
+        href={href}
+        className={
+          'mt-auto inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-[0.15em] transition ' +
+          (popular
+            ? 'bg-white text-blue-700 hover:bg-sky-50'
+            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-600/25')
+        }
+      >
+        {cta} <ChevronRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
+function ContactRow({
+  icon,
+  iconClass = 'bg-blue-100 text-blue-700',
+  label,
+  primary,
+  sub,
+  href,
+}: {
+  icon: React.ReactNode;
+  iconClass?: string;
+  label: string;
+  primary: string;
+  sub?: string;
+  href?: string;
+}) {
+  const body = (
+    <>
+      <div
+        className={
+          'mr-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ' +
+          iconClass
+        }
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          {label}
+        </p>
+        <p className="font-semibold text-slate-900">{primary}</p>
+        {sub && <p className="text-xs text-slate-500">{sub}</p>}
+      </div>
     </>
+  );
+  return href ? (
+    <a href={href} target="_blank" rel="noreferrer" className="group flex items-center">
+      {body}
+    </a>
+  ) : (
+    <div className="flex items-center">{body}</div>
+  );
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const isInternal = href.startsWith('/');
+  const cls = 'text-slate-400 transition hover:text-white';
+  return (
+    <li>
+      {isInternal ? (
+        <Link href={href} className={cls}>
+          {children}
+        </Link>
+      ) : (
+        <a href={href} className={cls}>
+          {children}
+        </a>
+      )}
+    </li>
   );
 }

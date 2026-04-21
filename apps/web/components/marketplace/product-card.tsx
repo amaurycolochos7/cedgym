@@ -17,7 +17,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
     <Link
       href={`/tienda/${product.slug}`}
       className={cn(
-        'glass-card group block overflow-hidden rounded-3xl transition-transform',
+        'group block overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm transition hover:-translate-y-1 hover:shadow-md',
         className,
       )}
     >
@@ -61,11 +61,11 @@ export function ProductCard({ product, className }: ProductCardProps) {
       </div>
 
       <div className="p-5">
-        <h3 className="line-clamp-2 text-base font-black uppercase tracking-wide">
+        <h3 className="line-clamp-2 font-display text-lg font-bold tracking-tight text-slate-900">
           {product.name}
         </h3>
         {product.short_description && (
-          <p className="mt-2 line-clamp-2 text-sm text-white/60">
+          <p className="mt-2 line-clamp-2 text-sm text-slate-600">
             {product.short_description}
           </p>
         )}
@@ -78,17 +78,17 @@ export function ProductCard({ product, className }: ProductCardProps) {
           </div>
         )}
 
-        <div className="mt-4 flex items-end justify-between border-t border-white/5 pt-4">
+        <div className="mt-4 flex items-end justify-between border-t border-slate-100 pt-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
               Desde
             </p>
-            <p className="text-2xl font-black">
+            <p className="text-2xl font-black text-slate-900">
               ${product.price_mxn.toLocaleString('es-MX')}{' '}
-              <span className="text-xs font-normal text-white/60">MXN</span>
+              <span className="text-xs font-normal text-slate-500">MXN</span>
             </p>
           </div>
-          <span className="rounded-full bg-brand-orange px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-black">
+          <span className="rounded-full bg-blue-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white shadow-sm">
             Ver más
           </span>
         </div>
