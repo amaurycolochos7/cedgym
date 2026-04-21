@@ -4,9 +4,11 @@
 //   GET    /users/me/export            — export all personal data (JSON)
 //   DELETE /users/me                   — anonymize account (soft delete)
 //   PATCH  /users/me/fitness-profile   — save fitness wizard output for AI
+//   POST   /users/me/selfie            — upload/replace face selfie (staff ID)
 // ─────────────────────────────────────────────────────────────────
 
 import { z } from 'zod';
+import { putObject } from '../lib/storage.js';
 
 const FitnessProfileSchema = z
   .object({
@@ -48,6 +50,33 @@ const FitnessProfileSchema = z
   })
   .strict(); // Rechaza campos no declarados — evita que la IA consuma basura.
 
+// Selfie — data URL o base64 crudo. Validamos size + mime en el handler
+// porque Zod no es la herramienta adecuada para medir un buffer binario.
+const SelfieSchema = z
+  .object({
+    image_base64: z.string().min(32).max(4 * 1024 * 1024), // ~3MB de b64 ≈ 2.2MB raw
+  })
+  .strict();
+
+// Decodifica un data URL o b64 pelado. Devuelve { buffer, mime } o null.
+function decodeImagePayload(raw) {
+  if (typeof raw !== 'string') return null;
+  let mime = 'image/jpeg';
+  let b64 = raw.trim();
+  const m = b64.match(/^data:(image\/(?:jpeg|png));base64,(.+)$/i);
+  if (m) {
+    mime = m[1].toLowerCase();
+    b64 = m[2];
+  }
+  try {
+    const buffer = Buffer.from(b64, 'base64');
+    if (buffer.length < 512) return null; // demasiado pequeño para ser una foto real
+    return { buffer, mime };
+  } catch {
+    return null;
+  }
+}
+
 export default async function usersRoutes(fastify) {
   const auth = { preHandler: [fastify.authenticate] };
 
@@ -78,6 +107,69 @@ export default async function usersRoutes(fastify) {
 
     return { success: true, user: updated };
   });
+
+  // Sube/actualiza la selfie del usuario. Obligatoria antes de comprar una
+  // membresía desde el portal (el staff usa la foto para identificar en
+  // check-in). Admin/recepción crean membresías por su lado y no pasan por
+  // esta puerta, así que el bypass es natural.
+  fastify.post(
+    '/users/me/selfie',
+    {
+      preHandler: [fastify.authenticate],
+      bodyLimit: 4 * 1024 * 1024, // 4 MB JSON (b64 es ~33% más grande que el binario)
+    },
+    async (req, reply) => {
+      const userId = req.user?.id ?? req.user?.sub;
+
+      const parsed = SelfieSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: {
+            code: 'INVALID_SELFIE_BODY',
+            message: 'Envía { image_base64 } con una imagen válida.',
+            details: parsed.error.flatten(),
+          },
+        });
+      }
+
+      const decoded = decodeImagePayload(parsed.data.image_base64);
+      if (!decoded) {
+        return reply.status(400).send({
+          error: {
+            code: 'INVALID_SELFIE_FORMAT',
+            message: 'Formato inválido. Usa JPEG o PNG en base64.',
+          },
+        });
+      }
+
+      // 2 MB de imagen decodificada es más que suficiente para una selfie.
+      const MAX_BYTES = 2 * 1024 * 1024;
+      if (decoded.buffer.length > MAX_BYTES) {
+        return reply.status(400).send({
+          error: {
+            code: 'SELFIE_TOO_LARGE',
+            message: 'La imagen supera 2 MB. Reintenta con menor resolución.',
+          },
+        });
+      }
+
+      const ext = decoded.mime === 'image/png' ? 'png' : 'jpg';
+      const key = `selfies/${userId}/${Date.now()}.${ext}`;
+      const { url } = await putObject({
+        key,
+        body: decoded.buffer,
+        contentType: decoded.mime,
+      });
+
+      const updated = await fastify.prisma.user.update({
+        where: { id: userId },
+        data: { selfie_url: url },
+        select: { id: true, selfie_url: true, updated_at: true },
+      });
+
+      return { success: true, selfie_url: updated.selfie_url, user: updated };
+    }
+  );
 
   fastify.get('/users/me/export', auth, async (req, reply) => {
     const userId = req.user?.id ?? req.user?.sub;
@@ -182,6 +274,7 @@ export default async function usersRoutes(fastify) {
         birth_date: null,
         gender: null,
         avatar_url: null,
+        selfie_url: null,
         status: 'DELETED',
       },
     });

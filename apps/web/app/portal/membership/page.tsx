@@ -4,11 +4,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Snowflake, RefreshCw, Calendar } from 'lucide-react';
+import { Snowflake, RefreshCw, Calendar, Camera } from 'lucide-react';
+import { SelfieCapture } from '@/components/portal/selfie-capture';
 
 export default function PortalMembershipPage() {
   const qc = useQueryClient();
   const [freezeOpen, setFreezeOpen] = useState(false);
+  const [selfieOpen, setSelfieOpen] = useState(false);
+
+  const { data: me } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => (await api.get('/auth/me')).data,
+  });
+  const needsSelfie = !!me && !me?.user?.selfie_url;
 
   const { data: membership, isLoading } = useQuery({
     queryKey: ['memberships', 'me'],
@@ -46,12 +54,42 @@ export default function PortalMembershipPage() {
         </div>
       </div>
 
+      {needsSelfie && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl ring-1 ring-amber-200 bg-amber-50 px-4 py-3">
+          <Camera className="w-5 h-5 text-amber-700 shrink-0" />
+          <div className="flex-1 min-w-[200px]">
+            <div className="font-semibold text-amber-900">
+              Sube tu selfie para activar tu plan
+            </div>
+            <div className="text-sm text-amber-800/80">
+              La usamos para identificarte en la recepción. Es requisito antes
+              de comprar o renovar.
+            </div>
+          </div>
+          <Button
+            onClick={() => setSelfieOpen(true)}
+            className="!bg-blue-600 hover:!bg-blue-700 !text-white !normal-case !tracking-normal !font-semibold"
+          >
+            <Camera className="w-4 h-4 mr-2" /> Tomar selfie
+          </Button>
+        </div>
+      )}
+
       {!membership?.plan ? (
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-8 text-center">
           <p className="text-slate-600 mb-4">No tienes una membresía activa.</p>
-          <Button onClick={() => (window.location.href = '/#planes')}>
+          <Button
+            onClick={() => (window.location.href = '/#planes')}
+            disabled={needsSelfie}
+            title={needsSelfie ? 'Sube tu selfie primero' : undefined}
+          >
             Ver planes
           </Button>
+          {needsSelfie && (
+            <div className="text-xs text-slate-500 mt-2">
+              Sube tu selfie antes de continuar.
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -89,7 +127,11 @@ export default function PortalMembershipPage() {
                   Tu membresía vence pronto. Renueva hoy y ahorra.
                 </div>
               </div>
-              <Button onClick={() => renew.mutate()} disabled={renew.isPending}>
+              <Button
+                onClick={() => renew.mutate()}
+                disabled={renew.isPending || needsSelfie}
+                title={needsSelfie ? 'Sube tu selfie primero' : undefined}
+              >
                 {renew.isPending ? 'Procesando…' : 'Renovar ahora'}
               </Button>
             </div>
@@ -99,9 +141,13 @@ export default function PortalMembershipPage() {
             <ActionCard
               icon={<RefreshCw className="w-5 h-5" />}
               title="Renovar"
-              description="Extiende tu membresía"
+              description={
+                needsSelfie
+                  ? 'Sube tu selfie primero'
+                  : 'Extiende tu membresía'
+              }
               onClick={() => renew.mutate()}
-              disabled={renew.isPending}
+              disabled={renew.isPending || needsSelfie}
             />
             <ActionCard
               icon={<Snowflake className="w-5 h-5" />}
@@ -112,8 +158,11 @@ export default function PortalMembershipPage() {
             <ActionCard
               icon={<Calendar className="w-5 h-5" />}
               title="Cambiar plan"
-              description="Ver otros planes"
+              description={
+                needsSelfie ? 'Sube tu selfie primero' : 'Ver otros planes'
+              }
               onClick={() => (window.location.href = '/#planes')}
+              disabled={needsSelfie}
             />
           </div>
 
@@ -157,6 +206,26 @@ export default function PortalMembershipPage() {
         setFreezeOpen(false);
         qc.invalidateQueries({ queryKey: ['memberships'] });
       }} />}
+
+      {selfieOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          onClick={() => setSelfieOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white ring-1 ring-slate-200 shadow-xl rounded-2xl p-6 w-full max-w-md"
+          >
+            <SelfieCapture
+              onSuccess={() => {
+                setSelfieOpen(false);
+                qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+              }}
+              onCancel={() => setSelfieOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

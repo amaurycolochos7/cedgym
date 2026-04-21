@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Sparkles,
   ChevronDown,
+  Camera,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
@@ -21,6 +22,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Field, FormError } from '@/components/ui/form';
 import type { ApiError, Relationship } from '@/lib/schemas';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
+import { SelfieCapture } from '@/components/portal/selfie-capture';
 
 const RELATIONSHIP_OPTIONS: { value: Relationship; label: string }[] = [
   { value: 'padre', label: 'Padre' },
@@ -60,6 +62,10 @@ export default function PortalPerfilPage() {
     // Once /auth/me resolves, auto-expand for users who haven't set it up.
     if (me && !hasFitnessProfile) setFitnessOpen(true);
   }, [me, hasFitnessProfile]);
+
+  // Selfie — used by staff at check-in.
+  const selfieUrl: string | null = me?.user?.selfie_url ?? null;
+  const [selfieOpen, setSelfieOpen] = useState(false);
 
   // Contacto de emergencia (10 dígitos, sin prefijo +52)
   const [ecName, setEcName] = useState('');
@@ -261,6 +267,52 @@ export default function PortalPerfilPage() {
         </div>
       </section>
 
+      {/* Selfie — usada por el staff para identificar al miembro en recepción */}
+      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+            <Camera size={18} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-900">Selfie de identificación</h2>
+              {selfieUrl && (
+                <span className="inline-flex items-center gap-1 rounded-full ring-1 ring-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
+                  <CheckCircle2 size={10} /> Guardada
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              La usamos únicamente para que el staff te reconozca en la recepción.
+              Es obligatoria antes de comprar una membresía.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          {selfieUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={selfieUrl}
+              alt="Tu selfie"
+              className="h-24 w-24 rounded-full object-cover ring-2 ring-blue-500/30"
+            />
+          ) : (
+            <div className="h-24 w-24 rounded-full bg-slate-100 ring-2 ring-dashed ring-slate-300 flex items-center justify-center text-slate-400">
+              <Camera size={28} />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setSelfieOpen(true)}
+            className="inline-flex items-center h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition"
+          >
+            <Camera className="w-4 h-4 mr-2" />
+            {selfieUrl ? 'Cambiar selfie' : 'Subir selfie'}
+          </button>
+        </div>
+      </section>
+
       {/* Contacto de emergencia — single compact card */}
       <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
         <div className="flex items-start gap-3">
@@ -390,6 +442,27 @@ export default function PortalPerfilPage() {
           </Button>
         </div>
       </section>
+
+      {selfieOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          onClick={() => setSelfieOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white ring-1 ring-slate-200 shadow-xl rounded-2xl p-6 w-full max-w-md"
+          >
+            <SelfieCapture
+              onSuccess={() => {
+                setSelfieOpen(false);
+                qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+                refreshMe();
+              }}
+              onCancel={() => setSelfieOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

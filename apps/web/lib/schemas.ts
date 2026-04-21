@@ -247,6 +247,7 @@ export interface User {
   verified: boolean;
   profile_completed?: boolean;
   avatar_url?: string;
+  selfie_url?: string | null;
   created_at: string;
   role?: UserRole;
 }

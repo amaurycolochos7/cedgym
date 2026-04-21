@@ -173,6 +173,18 @@ export default async function membershipsRoutes(fastify) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
 
+            // Gate: el usuario debe tener una selfie en su perfil antes de
+            // pagar. El staff la usa para identificarlo en check-in. Los
+            // endpoints admin (staff-register) crean membresía por su lado
+            // y no pasan por aquí, así que el bypass es automático.
+            if (!user.selfie_url) {
+                throw err(
+                    'SELFIE_REQUIRED',
+                    'Debes subir una selfie antes de comprar tu membresía.',
+                    400
+                );
+            }
+
             // Apply promo (if any) — we still charge the discounted amount.
             let amount = basePrice;
             let discount = 0;
