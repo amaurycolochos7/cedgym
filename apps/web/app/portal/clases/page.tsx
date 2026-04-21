@@ -39,19 +39,19 @@ export default function PortalClasesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Clases grupales</h1>
-        <p className="text-zinc-400 mt-1">Reserva tu lugar o revisa tus reservas.</p>
+        <h1 className="font-display text-3xl font-bold text-slate-900">Clases grupales</h1>
+        <p className="text-slate-500 mt-1">Reserva tu lugar o revisa tus reservas.</p>
       </div>
 
-      <div className="flex gap-2 border-b border-zinc-800">
+      <div className="flex gap-2 border-b border-slate-200">
         {(['disponibles', 'mis-reservas'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={
               tab === t
-                ? 'px-4 py-2 border-b-2 border-blue-500 text-blue-400 font-medium'
-                : 'px-4 py-2 text-zinc-400 hover:text-zinc-100'
+                ? 'px-4 py-2 border-b-2 border-blue-600 text-blue-700 font-semibold'
+                : 'px-4 py-2 text-slate-500 hover:text-slate-900 border-b-2 border-transparent'
             }
           >
             {t === 'disponibles' ? 'Disponibles' : 'Mis reservas'}
@@ -62,29 +62,29 @@ export default function PortalClasesPage() {
       {tab === 'disponibles' ? (
         <div className="grid md:grid-cols-2 gap-4">
           {(classes?.items ?? []).length === 0 ? (
-            <p className="text-zinc-500 md:col-span-2 text-center py-12">
+            <p className="text-slate-500 md:col-span-2 text-center py-12">
               No hay clases próximas disponibles.
             </p>
           ) : (
             (classes?.items ?? []).map((c: any) => (
               <div
                 key={c.id}
-                className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-5"
+                className="bg-white shadow-sm hover:shadow-md ring-1 ring-slate-200 rounded-xl p-5 transition"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-lg">{c.name}</h3>
-                    <p className="text-xs text-zinc-500">{c.sport}</p>
+                    <h3 className="font-semibold text-lg text-slate-900">{c.name}</h3>
+                    <p className="text-xs text-slate-500">{c.sport}</p>
                   </div>
                   {c.min_plan && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-sky-300">
+                    <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 font-medium">
                       Solo {c.min_plan}+
                     </span>
                   )}
                 </div>
-                <div className="space-y-2 text-sm text-zinc-400">
+                <div className="space-y-2 text-sm text-slate-600">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
+                    <Calendar className="w-4 h-4 text-slate-400" />
                     {new Date(c.starts_at).toLocaleString('es-MX', {
                       weekday: 'short',
                       day: 'numeric',
@@ -94,12 +94,12 @@ export default function PortalClasesPage() {
                     })}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
+                    <Clock className="w-4 h-4 text-slate-400" />
                     {c.duration_min} min · {c.location}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    {c.spots_available} / {c.capacity} cupos
+                    <Users className="w-4 h-4 text-slate-400" />
+                    <span className="tabular-nums">{c.spots_available} / {c.capacity}</span> cupos
                   </div>
                 </div>
                 <Button
@@ -116,22 +116,22 @@ export default function PortalClasesPage() {
       ) : (
         <div className="space-y-3">
           {(myBookings?.items ?? []).length === 0 ? (
-            <p className="text-zinc-500 text-center py-12">
+            <p className="text-slate-500 text-center py-12">
               No tienes reservas activas.
             </p>
           ) : (
             (myBookings?.items ?? []).map((b: any) => (
               <div
                 key={b.id}
-                className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-5 flex items-center justify-between"
+                className="bg-white shadow-sm ring-1 ring-slate-200 rounded-xl p-5 flex items-center justify-between"
               >
                 <div>
-                  <h3 className="font-semibold">{b.class?.name}</h3>
-                  <p className="text-sm text-zinc-400">
+                  <h3 className="font-semibold text-slate-900">{b.class?.name}</h3>
+                  <p className="text-sm text-slate-600">
                     {new Date(b.class?.starts_at).toLocaleString('es-MX')}
                   </p>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    Status: <span className="text-blue-400">{b.status}</span>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Status: <span className="text-blue-700 font-medium">{b.status}</span>
                   </p>
                 </div>
                 <Button

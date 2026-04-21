@@ -30,7 +30,7 @@ export default function PortalMembershipPage() {
     },
   });
 
-  if (isLoading) return <div className="text-zinc-400">Cargando…</div>;
+  if (isLoading) return <div className="text-slate-500">Cargando…</div>;
 
   const days = membership?.days_remaining ?? 0;
   const totalDays = membership?.total_days ?? 30;
@@ -41,51 +41,51 @@ export default function PortalMembershipPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Mi membresía</h1>
-          <p className="text-zinc-400 mt-1">Gestiona tu plan y pagos.</p>
+          <h1 className="font-display text-3xl font-bold text-slate-900">Mi membresía</h1>
+          <p className="text-slate-500 mt-1">Gestiona tu plan y pagos.</p>
         </div>
       </div>
 
       {!membership?.plan ? (
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-8 text-center">
-          <p className="text-zinc-400 mb-4">No tienes una membresía activa.</p>
+        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-8 text-center">
+          <p className="text-slate-600 mb-4">No tienes una membresía activa.</p>
           <Button onClick={() => (window.location.href = '/#planes')}>
             Ver planes
           </Button>
         </div>
       ) : (
         <>
-          <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/10 border border-blue-500/30 rounded-3xl p-6">
+          <div className="bg-gradient-to-br from-blue-500 to-sky-400 text-white rounded-3xl p-6 shadow-lg shadow-blue-500/20">
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
-                <div className="text-xs uppercase tracking-wider text-blue-400">Plan</div>
-                <div className="text-3xl font-bold">{membership.plan}</div>
-                <div className="text-sm text-zinc-400 mt-1">
+                <div className="text-xs uppercase tracking-wider text-white/80 font-semibold">Plan</div>
+                <div className="font-display text-3xl font-bold">{membership.plan}</div>
+                <div className="text-sm text-white/80 mt-1">
                   {membership.sport ?? 'General'} · {membership.billing_cycle}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-xs uppercase tracking-wider text-blue-400">Vence en</div>
-                <div className="text-3xl font-bold">{days} días</div>
-                <div className="text-xs text-zinc-500 mt-1">
+                <div className="text-xs uppercase tracking-wider text-white/80 font-semibold">Vence en</div>
+                <div className="font-display text-3xl font-bold tabular-nums">{days} días</div>
+                <div className="text-xs text-white/70 mt-1">
                   {membership.expires_at?.slice(0, 10)}
                 </div>
               </div>
             </div>
-            <div className="mt-5 h-2 rounded-full bg-zinc-800 overflow-hidden">
+            <div className="mt-5 h-2 rounded-full bg-white/20 overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-yellow-400"
+                className="h-full bg-white/90"
                 style={{ width: `${progressPct}%` }}
               />
             </div>
           </div>
 
           {earlyDiscount && (
-            <div className="bg-gradient-to-r from-amber-500/20 to-blue-500/20 border border-amber-400/40 rounded-xl p-4 flex items-center gap-4">
+            <div className="bg-amber-50 ring-1 ring-amber-200 rounded-xl p-4 flex items-center gap-4">
               <div className="text-3xl">🎁</div>
               <div className="flex-1">
-                <div className="font-semibold">¡Renueva ahora con 20% de descuento!</div>
-                <div className="text-sm text-zinc-400">
+                <div className="font-semibold text-amber-900">¡Renueva ahora con 20% de descuento!</div>
+                <div className="text-sm text-amber-800/80">
                   Tu membresía vence pronto. Renueva hoy y ahorra.
                 </div>
               </div>
@@ -117,28 +117,28 @@ export default function PortalMembershipPage() {
             />
           </div>
 
-          <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold mb-4">Historial de pagos</h3>
+          <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6">
+            <h3 className="text-lg font-semibold mb-4 text-slate-900">Historial de pagos</h3>
             {history?.items?.length ? (
               <div className="space-y-2">
                 {history.items.map((p: any) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0"
+                    className="flex items-center justify-between py-2 border-b border-slate-200 last:border-0"
                   >
                     <div>
-                      <div className="font-medium">${p.amount.toLocaleString('es-MX')} MXN</div>
-                      <div className="text-xs text-zinc-500">
+                      <div className="font-medium text-slate-900 tabular-nums">${p.amount.toLocaleString('es-MX')} MXN</div>
+                      <div className="text-xs text-slate-500">
                         {p.created_at?.slice(0, 10)} · {p.description ?? 'Membresía'}
                       </div>
                     </div>
                     <span
                       className={
                         p.status === 'APPROVED'
-                          ? 'text-emerald-400 text-sm'
+                          ? 'text-emerald-600 text-sm font-medium'
                           : p.status === 'PENDING'
-                          ? 'text-amber-400 text-sm'
-                          : 'text-zinc-500 text-sm'
+                          ? 'text-amber-600 text-sm font-medium'
+                          : 'text-slate-500 text-sm font-medium'
                       }
                     >
                       {p.status}
@@ -147,7 +147,7 @@ export default function PortalMembershipPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-zinc-500 text-sm">Sin pagos aún.</p>
+              <p className="text-slate-500 text-sm">Sin pagos aún.</p>
             )}
           </div>
         </>
@@ -166,11 +166,11 @@ function ActionCard({ icon, title, description, onClick, disabled }: any) {
     <button
       onClick={onClick}
       disabled={disabled}
-      className="text-left bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-blue-500/40 rounded-xl p-5 transition disabled:opacity-50"
+      className="text-left bg-white shadow-sm hover:shadow-md ring-1 ring-slate-200 hover:ring-blue-300 rounded-xl p-5 transition disabled:opacity-50"
     >
-      <div className="text-blue-400 mb-2">{icon}</div>
-      <div className="font-medium">{title}</div>
-      <div className="text-xs text-zinc-500 mt-1">{description}</div>
+      <div className="text-blue-600 mb-2">{icon}</div>
+      <div className="font-semibold text-slate-900">{title}</div>
+      <div className="text-xs text-slate-500 mt-1">{description}</div>
     </button>
   );
 }
@@ -185,18 +185,18 @@ function FreezeModal({ onClose, onDone }: any) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md space-y-4"
+        className="bg-white ring-1 ring-slate-200 shadow-xl rounded-2xl p-6 w-full max-w-md space-y-4"
       >
-        <h3 className="text-xl font-bold">Congelar membresía</h3>
+        <h3 className="font-display text-xl font-bold text-slate-900">Congelar membresía</h3>
         <div>
-          <label className="text-sm text-zinc-400">Razón</label>
+          <label className="text-sm text-slate-700 font-medium">Razón</label>
           <select
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2"
+            className="w-full mt-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
           >
             <option>Viaje</option>
             <option>Lesión</option>
@@ -205,8 +205,8 @@ function FreezeModal({ onClose, onDone }: any) {
           </select>
         </div>
         <div>
-          <label className="text-sm text-zinc-400">
-            Días de congelamiento: <span className="text-blue-400 font-semibold">{days}</span>
+          <label className="text-sm text-slate-700 font-medium">
+            Días de congelamiento: <span className="text-blue-600 font-semibold tabular-nums">{days}</span>
           </label>
           <input
             type="range"
@@ -214,15 +214,15 @@ function FreezeModal({ onClose, onDone }: any) {
             max={30}
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="w-full mt-2 accent-blue-500"
+            className="w-full mt-2 accent-blue-600"
           />
-          <div className="flex justify-between text-xs text-zinc-500 mt-1">
+          <div className="flex justify-between text-xs text-slate-500 mt-1">
             <span>7</span>
             <span>30</span>
           </div>
         </div>
         {freeze.error && (
-          <p className="text-sm text-red-400">
+          <p className="text-sm text-red-600">
             {(freeze.error as any)?.response?.data?.error?.message ?? 'Error'}
           </p>
         )}

@@ -36,11 +36,11 @@ export function PortalSidebar() {
         <div className="flex items-center gap-2.5">
           <Logo size="sm" imageOnly href={null} />
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-bold tracking-wider text-white">CED·GYM</span>
-            <span className="text-[10px] uppercase tracking-widest text-brand-orange">Atleta</span>
+            <span className="text-sm font-bold tracking-wider text-slate-900">CED·GYM</span>
+            <span className="text-[10px] uppercase tracking-widest text-blue-600">Atleta</span>
           </div>
         </div>
-        <button className="md:hidden" onClick={() => setOpen(false)}>
+        <button className="md:hidden text-slate-500 hover:text-slate-900" onClick={() => setOpen(false)}>
           <X className="w-5 h-5" />
         </button>
       </div>
@@ -54,10 +54,10 @@ export function PortalSidebar() {
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition border-l-2',
                 active
-                  ? 'bg-gradient-to-r from-blue-600/30 to-blue-500/20 text-blue-100 border border-blue-500/30'
-                  : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100'
+                  ? 'bg-blue-50 text-blue-700 border-blue-600 font-semibold'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent'
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />
@@ -66,15 +66,15 @@ export function PortalSidebar() {
           );
         })}
       </nav>
-      <div className="px-3 py-4 border-t border-zinc-800 space-y-2">
+      <div className="px-3 py-4 border-t border-slate-200 space-y-2">
         {user && (
-          <div className="px-3 py-2 text-xs text-zinc-500 truncate">
+          <div className="px-3 py-2 text-xs text-slate-500 truncate">
             {user.name} · {user.phone}
           </div>
         )}
         <button
           onClick={() => logout?.()}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-zinc-400 hover:bg-zinc-800/60 hover:text-red-400 transition"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-red-50 hover:text-red-600 transition"
         >
           <LogOut className="w-4 h-4" />
           Cerrar sesión
@@ -86,9 +86,9 @@ export function PortalSidebar() {
   return (
     <>
       {/* Mobile topbar */}
-      <div className="fixed top-0 left-0 right-0 z-40 md:hidden flex items-center justify-between h-12 px-3 bg-zinc-950/90 backdrop-blur border-b border-zinc-800">
+      <div className="fixed top-0 left-0 right-0 z-40 md:hidden flex items-center justify-between h-12 px-3 bg-white/95 backdrop-blur border-b border-slate-200 text-slate-900">
         <button
-          className="p-2 rounded-lg hover:bg-zinc-900 -ml-2"
+          className="p-2 rounded-lg hover:bg-slate-100 -ml-2 text-slate-700"
           onClick={() => setOpen(true)}
           aria-label="Abrir menú"
         >
@@ -96,7 +96,7 @@ export function PortalSidebar() {
         </button>
         <div className="flex items-center gap-2">
           <Logo size="sm" imageOnly href={null} />
-          <span className="text-sm font-bold tracking-wider">CED·GYM</span>
+          <span className="text-sm font-bold tracking-wider text-slate-900">CED·GYM</span>
         </div>
         <div className="w-9" />
       </div>
@@ -104,7 +104,7 @@ export function PortalSidebar() {
       {/* Mobile overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/30 md:hidden"
           onClick={() => setOpen(false)}
         />
       )}
@@ -112,7 +112,7 @@ export function PortalSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed md:sticky top-0 left-0 z-50 h-screen w-72 max-w-[85vw] bg-zinc-950 border-r border-zinc-800 flex flex-col transition-transform',
+          'fixed md:sticky top-0 left-0 z-50 h-screen w-72 max-w-[85vw] bg-white border-r border-slate-200 flex flex-col transition-transform',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >

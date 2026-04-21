@@ -29,8 +29,8 @@ export default function RutinaViewerPage() {
     },
   });
 
-  if (isLoading) return <div className="text-zinc-400">Cargando rutina…</div>;
-  if (!data) return <div className="text-red-400">No se pudo cargar esta rutina.</div>;
+  if (isLoading) return <div className="text-slate-500">Cargando rutina…</div>;
+  if (!data) return <div className="text-red-600">No se pudo cargar esta rutina.</div>;
 
   const product = data.product ?? {};
   const weeks: any[] = data.content?.weeks ?? [];
@@ -38,8 +38,8 @@ export default function RutinaViewerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">{product.title}</h1>
-        <p className="text-zinc-400 mt-1">
+        <h1 className="font-display text-3xl font-bold text-slate-900">{product.title}</h1>
+        <p className="text-slate-500 mt-1">
           {product.level} · {product.duration_weeks} semanas · Autor: {product.author?.name}
         </p>
       </div>
@@ -64,8 +64,8 @@ export default function RutinaViewerPage() {
                 onClick={() => setActiveWeek(i)}
                 className={
                   activeWeek === i
-                    ? 'px-4 py-2 rounded-lg bg-blue-600 text-white shrink-0'
-                    : 'px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 shrink-0'
+                    ? 'px-4 py-2 rounded-lg bg-blue-600 text-white shrink-0 font-medium shadow-sm'
+                    : 'px-4 py-2 rounded-lg bg-white ring-1 ring-slate-200 hover:bg-slate-50 text-slate-700 shrink-0'
                 }
               >
                 Semana {i + 1}
@@ -77,22 +77,22 @@ export default function RutinaViewerPage() {
             {(weeks[activeWeek]?.days ?? []).map((d: any, di: number) => (
               <div
                 key={di}
-                className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-5"
+                className="bg-white shadow-sm ring-1 ring-slate-200 rounded-xl p-5"
               >
-                <h3 className="font-semibold mb-3">
+                <h3 className="font-semibold mb-3 text-slate-900">
                   Día {di + 1} · {d.title ?? 'Entrenamiento'}
                 </h3>
                 <ul className="space-y-2">
                   {(d.exercises ?? []).map((ex: any, ei: number) => (
                     <li
                       key={ei}
-                      className="flex items-center justify-between py-2 border-b border-zinc-800 last:border-0"
+                      className="flex items-center justify-between py-2 border-b border-slate-200 last:border-0"
                     >
                       <div>
-                        <div className="font-medium">{ex.name}</div>
-                        <div className="text-xs text-zinc-500">{ex.notes}</div>
+                        <div className="font-medium text-slate-900">{ex.name}</div>
+                        <div className="text-xs text-slate-500">{ex.notes}</div>
                       </div>
-                      <div className="text-sm text-blue-400">
+                      <div className="text-sm text-blue-700 font-mono tabular-nums px-2 py-0.5 rounded-md bg-blue-50 ring-1 ring-blue-200">
                         {ex.sets}×{ex.reps}
                       </div>
                     </li>
@@ -103,7 +103,7 @@ export default function RutinaViewerPage() {
           </div>
         </>
       ) : (
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-6 text-zinc-400">
+        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-xl p-6 text-slate-600">
           Esta rutina viene en formato PDF. Usa "Descargar PDF" arriba.
         </div>
       )}

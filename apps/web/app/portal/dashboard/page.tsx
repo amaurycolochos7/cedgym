@@ -47,56 +47,56 @@ export default function PortalDashboardPage() {
     <div className="space-y-6">
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Hola, {user?.name?.split(' ')[0] ?? 'Atleta'} 👋</h1>
-        <p className="text-zinc-400 mt-1 text-sm sm:text-base">Sigue tu progreso, tus clases y tus logros.</p>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900">Hola, {user?.name?.split(' ')[0] ?? 'Atleta'} 👋</h1>
+        <p className="text-slate-500 mt-1 text-sm sm:text-base">Sigue tu progreso, tus clases y tus logros.</p>
       </div>
 
-      {/* Mi QR de acceso — top, prominent */}
+      {/* Mi QR de acceso — top, prominent hero card */}
       <Link
         href="/portal/qr"
-        className="group block overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-500/15 via-blue-500/10 to-zinc-900 p-5 sm:p-6 transition hover:border-blue-400/60 hover:from-blue-500/25"
+        className="group block overflow-hidden rounded-3xl bg-gradient-to-br from-blue-500 to-sky-400 text-white p-5 sm:p-6 shadow-lg shadow-blue-500/20 transition hover:shadow-xl hover:shadow-blue-500/30"
       >
         <div className="flex items-center gap-4">
-          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-sky-300 shadow-inner shadow-blue-500/10 transition group-hover:bg-blue-500/30">
+          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-sm transition group-hover:bg-white/30">
             <QrCode className="h-7 w-7" />
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-widest text-sky-300/80">
+            <div className="text-[11px] font-semibold uppercase tracking-widest text-white/80">
               Entrada al gym
             </div>
-            <div className="text-lg sm:text-xl font-bold text-white truncate">
+            <div className="font-display text-lg sm:text-xl font-bold text-white truncate">
               Mi QR de acceso
             </div>
-            <div className="mt-0.5 text-xs sm:text-sm text-zinc-400 truncate">
+            <div className="mt-0.5 text-xs sm:text-sm text-white/80 truncate">
               Muéstralo al staff en la entrada.
             </div>
           </div>
-          <ChevronRight className="h-5 w-5 shrink-0 text-sky-300 transition group-hover:translate-x-1" />
+          <ChevronRight className="h-5 w-5 shrink-0 text-white transition group-hover:translate-x-1" />
         </div>
       </Link>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <KpiCard
-          icon={<Flame className="w-5 h-5 text-blue-400" />}
+          icon={<Flame className="w-5 h-5 text-blue-600" />}
           label="Racha"
           value={`${streak} días`}
           hint={streak >= 7 ? '¡Sigue así!' : 'Vamos a construir racha'}
         />
         <KpiCard
-          icon={<Zap className="w-5 h-5 text-yellow-400" />}
+          icon={<Zap className="w-5 h-5 text-amber-500" />}
           label="XP"
           value={xp.toLocaleString()}
           hint={`Nivel ${level}`}
         />
         <KpiCard
-          icon={<Trophy className="w-5 h-5 text-emerald-400" />}
+          icon={<Trophy className="w-5 h-5 text-emerald-600" />}
           label="Check-ins totales"
           value={totalCheckins.toLocaleString()}
           hint="De toda la historia"
         />
         <KpiCard
-          icon={<Activity className="w-5 h-5 text-sky-400" />}
+          icon={<Activity className="w-5 h-5 text-sky-500" />}
           label="Este mes"
           value={`${thisMonthCount}`}
           hint="Visitas"
@@ -104,19 +104,19 @@ export default function PortalDashboardPage() {
       </div>
 
       {/* Level progress */}
-      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
+      <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-4 sm:p-6">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-xs uppercase tracking-wide text-zinc-500">Nivel {level}</div>
-            <div className="text-lg font-semibold">Progreso al nivel {level + 1}</div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Nivel {level}</div>
+            <div className="text-lg font-semibold text-slate-900">Progreso al nivel {level + 1}</div>
           </div>
-          <div className="text-sm text-zinc-400">
+          <div className="text-sm text-slate-500 tabular-nums">
             {xp.toLocaleString()} / {(xp + xpForNext).toLocaleString()} XP
           </div>
         </div>
-        <div className="h-3 rounded-full bg-zinc-800 overflow-hidden">
+        <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-yellow-400 transition-all"
+            className="h-full bg-gradient-to-r from-blue-500 to-sky-400 transition-all"
             style={{ width: `${Math.min(100, xpProgress)}%` }}
           />
         </div>
@@ -124,36 +124,36 @@ export default function PortalDashboardPage() {
 
       {/* Two-column: membership + quick actions */}
       <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
-          <h3 className="text-lg font-semibold mb-4">Tu membresía</h3>
+        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-4 sm:p-6">
+          <h3 className="text-lg font-semibold mb-4 text-slate-900">Tu membresía</h3>
           {membership?.plan ? (
             <div className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold">{membership.plan}</span>
-                <span className="text-sm text-zinc-400">{membership.status}</span>
+                <span className="text-2xl font-bold text-slate-900">{membership.plan}</span>
+                <span className="text-sm text-slate-500">{membership.status}</span>
               </div>
-              <div className="text-sm text-zinc-400">
-                Vence en <span className="text-blue-400 font-semibold">
+              <div className="text-sm text-slate-600">
+                Vence en <span className="text-blue-600 font-semibold">
                   {membership.days_remaining ?? '—'} días
                 </span>
               </div>
               <Link
                 href="/portal/membership"
-                className="inline-flex items-center gap-1 text-sm text-blue-400 hover:text-sky-300"
+                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 Gestionar <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
           ) : (
-            <div className="text-zinc-500">
+            <div className="text-slate-500">
               No tienes una membresía activa.
-              <Link href="/#planes" className="text-blue-400 ml-1">Ver planes →</Link>
+              <Link href="/#planes" className="text-blue-600 hover:text-blue-700 font-medium ml-1">Ver planes →</Link>
             </div>
           )}
         </div>
 
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
-          <h3 className="text-lg font-semibold mb-4">Accesos rápidos</h3>
+        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-4 sm:p-6">
+          <h3 className="text-lg font-semibold mb-4 text-slate-900">Accesos rápidos</h3>
           <div className="grid grid-cols-2 gap-3">
             <QuickTile href="/portal/qr" icon={<QrCode className="w-5 h-5" />} label="Mi QR" />
             <QuickTile href="/portal/clases" icon={<Calendar className="w-5 h-5" />} label="Reservar" />
@@ -165,17 +165,17 @@ export default function PortalDashboardPage() {
 
       {/* Recent badges */}
       {progress?.recent_badges?.length > 0 && (
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4 sm:p-6">
-          <h3 className="text-lg font-semibold mb-4">Logros recientes</h3>
+        <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-4 sm:p-6">
+          <h3 className="text-lg font-semibold mb-4 text-slate-900">Logros recientes</h3>
           <div className="flex flex-wrap gap-3">
             {progress.recent_badges.map((b: any) => (
               <div
                 key={b.code}
-                className="bg-zinc-800/70 border border-blue-500/30 rounded-lg p-3 min-w-[140px]"
+                className="bg-blue-50 ring-1 ring-blue-200 rounded-lg p-3 min-w-[140px]"
               >
                 <div className="text-2xl mb-1">🏅</div>
-                <div className="text-sm font-medium">{b.name}</div>
-                <div className="text-xs text-zinc-500">+{b.xp_reward} XP</div>
+                <div className="text-sm font-medium text-slate-900">{b.name}</div>
+                <div className="text-xs text-blue-700">+{b.xp_reward} XP</div>
               </div>
             ))}
           </div>
@@ -187,13 +187,13 @@ export default function PortalDashboardPage() {
 
 function KpiCard({ icon, label, value, hint }: any) {
   return (
-    <div className="bg-zinc-900/70 border border-zinc-800 rounded-xl p-3 sm:p-4 min-w-0">
+    <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-xl p-3 sm:p-4 min-w-0">
       <div className="flex items-center justify-between mb-2 gap-2">
-        <span className="text-[10px] sm:text-xs uppercase tracking-wide text-zinc-500 truncate">{label}</span>
+        <span className="text-[10px] sm:text-xs uppercase tracking-wide text-slate-500 truncate">{label}</span>
         <span className="shrink-0">{icon}</span>
       </div>
-      <div className="text-lg sm:text-2xl font-bold truncate">{value}</div>
-      <div className="text-[11px] sm:text-xs text-zinc-500 mt-1 truncate">{hint}</div>
+      <div className="text-lg sm:text-2xl font-bold text-slate-900 truncate tabular-nums">{value}</div>
+      <div className="text-[11px] sm:text-xs text-slate-500 mt-1 truncate">{hint}</div>
     </div>
   );
 }
@@ -202,10 +202,10 @@ function QuickTile({ href, icon, label }: any) {
   return (
     <Link
       href={href}
-      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-800 hover:border-blue-500/40 transition"
+      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-slate-50 hover:bg-blue-50 ring-1 ring-slate-200 hover:ring-blue-200 transition"
     >
-      <span className="text-blue-400">{icon}</span>
-      <span className="text-sm">{label}</span>
+      <span className="text-blue-600">{icon}</span>
+      <span className="text-sm text-slate-700 font-medium">{label}</span>
     </Link>
   );
 }

@@ -16,14 +16,14 @@ export function ProfileCompletionBanner() {
   if (dismissed || !user || user.profile_completed) return null;
 
   return (
-    <div className="bg-blue-500/10 border-b border-blue-500/30 px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-3 text-sm">
-      <AlertCircle className="w-4 h-4 text-blue-400 shrink-0" />
-      <span className="flex-1 text-blue-100 leading-snug">
+    <div className="bg-blue-50 border-b border-blue-200 px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-3 text-sm">
+      <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
+      <span className="flex-1 text-blue-900 leading-snug">
         Completa tu perfil para acceder a más beneficios.
       </span>
       <Link
         href="/portal/perfil"
-        className="shrink-0 text-sky-300 hover:text-sky-200 font-medium whitespace-nowrap"
+        className="shrink-0 text-blue-700 hover:text-blue-800 font-semibold whitespace-nowrap"
       >
         Completar →
       </Link>
@@ -32,7 +32,7 @@ export function ProfileCompletionBanner() {
           localStorage.setItem('cedgym_profile_banner_dismissed', '1');
           setDismissed(true);
         }}
-        className="shrink-0 text-sky-300/60 hover:text-sky-200"
+        className="shrink-0 text-blue-500 hover:text-blue-700"
         aria-label="Cerrar"
       >
         <X className="w-4 h-4" />

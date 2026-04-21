@@ -177,8 +177,8 @@ export default function PortalPerfilPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Mi perfil</h1>
-        <p className="text-zinc-400 mt-1 text-sm">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900">Mi perfil</h1>
+        <p className="text-slate-500 mt-1 text-sm">
           Datos personales, contacto de emergencia y privacidad.
         </p>
       </div>
@@ -195,21 +195,21 @@ export default function PortalPerfilPage() {
         <button
           type="button"
           onClick={() => setFitnessOpen(true)}
-          className="group w-full flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-left transition-colors hover:border-brand-orange/40 hover:bg-zinc-900"
+          className="group w-full flex items-center gap-3 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm p-5 text-left transition-colors hover:ring-blue-300 hover:bg-slate-50"
         >
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
             <Sparkles size={18} />
           </span>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold">Perfil fitness</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Perfil fitness</h2>
               {hasFitnessProfile && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-300">
+                <span className="inline-flex items-center gap-1 rounded-full ring-1 ring-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
                   <CheckCircle2 size={10} /> Guardado
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-slate-500">
               {hasFitnessProfile
                 ? 'Edita tus datos para regenerar rutinas y planes de comida.'
                 : 'Completa 5 pasos rápidos para desbloquear rutinas con IA.'}
@@ -217,14 +217,14 @@ export default function PortalPerfilPage() {
           </div>
           <ChevronDown
             size={18}
-            className="shrink-0 text-white/50 transition-transform group-hover:text-white"
+            className="shrink-0 text-slate-400 transition-transform group-hover:text-slate-700"
           />
         </button>
       )}
 
       {/* Datos personales */}
-      <section className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Datos personales</h2>
+      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Datos personales</h2>
 
         <FormError>{profileApiError}</FormError>
 
@@ -238,17 +238,17 @@ export default function PortalPerfilPage() {
             />
           </Field>
           <Field label="Correo">
-            <div className="flex h-11 items-center rounded-xl border border-white/5 bg-white/[0.03] px-4 text-sm text-white/70">
+            <div className="flex h-11 items-center rounded-xl ring-1 ring-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
               {me?.user?.email ?? '—'}
             </div>
           </Field>
           <Field label="WhatsApp">
-            <div className="flex h-11 items-center rounded-xl border border-white/5 bg-white/[0.03] px-4 text-sm text-white/70">
+            <div className="flex h-11 items-center rounded-xl ring-1 ring-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
               {me?.user?.phone ?? '—'}
             </div>
           </Field>
           <Field label="Rol">
-            <div className="flex h-11 items-center rounded-xl border border-white/5 bg-white/[0.03] px-4 text-sm text-white/70">
+            <div className="flex h-11 items-center rounded-xl ring-1 ring-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
               {me?.user?.role ?? user?.role ?? 'ATHLETE'}
             </div>
           </Field>
@@ -262,21 +262,21 @@ export default function PortalPerfilPage() {
       </section>
 
       {/* Contacto de emergencia — single compact card */}
-      <section className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-4">
+      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
         <div className="flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
             <ShieldAlert size={18} />
           </span>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold">Contacto de emergencia</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Contacto de emergencia</h2>
               {hasEc && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-300">
+                <span className="inline-flex items-center gap-1 rounded-full ring-1 ring-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
                   <CheckCircle2 size={10} /> Guardado
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-zinc-400">
+            <p className="mt-1 text-xs text-slate-500">
               Opcional, pero muy útil en caso de una emergencia en el gym. Lo
               usamos únicamente si necesitamos contactarte en tu nombre.
             </p>
@@ -300,7 +300,7 @@ export default function PortalPerfilPage() {
               id="ec_rel"
               value={ecRel}
               onChange={(e) => setEcRel(e.target.value as Relationship)}
-              className="h-11 w-full rounded-xl border border-white/10 bg-input/60 px-3 text-sm text-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               {RELATIONSHIP_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -330,7 +330,7 @@ export default function PortalPerfilPage() {
               rows={3}
               maxLength={500}
               placeholder="Ej. alergia a la penicilina"
-              className="w-full rounded-xl border border-white/10 bg-input/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </Field>
         </div>
@@ -343,22 +343,22 @@ export default function PortalPerfilPage() {
       </section>
 
       {/* Referidos */}
-      <section className="bg-gradient-to-br from-blue-500/20 to-blue-700/10 border border-blue-500/30 rounded-2xl p-5 sm:p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Mi código de referidos</h2>
-        <p className="text-sm text-zinc-300">
+      <section className="bg-gradient-to-br from-blue-50 to-sky-50 ring-1 ring-blue-200 rounded-2xl p-5 sm:p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Mi código de referidos</h2>
+        <p className="text-sm text-slate-700">
           Comparte y gana $200 MXN de crédito por cada referido que se registre
           y pague.
         </p>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-white ring-1 ring-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-xs uppercase text-zinc-500">Tu código</div>
-            <div className="text-2xl font-mono text-blue-400 mt-1 break-all">
+            <div className="text-xs uppercase text-slate-500 font-semibold">Tu código</div>
+            <div className="text-2xl font-mono text-blue-600 mt-1 break-all font-bold tabular-nums">
               {code ?? '—'}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xs uppercase text-zinc-500">Crédito</div>
-            <div className="text-2xl font-bold mt-1">
+            <div className="text-xs uppercase text-slate-500 font-semibold">Crédito</div>
+            <div className="text-2xl font-bold mt-1 text-slate-900 tabular-nums">
               ${(referrals?.credit_mxn ?? 0).toLocaleString('es-MX')}
             </div>
           </div>
@@ -374,8 +374,8 @@ export default function PortalPerfilPage() {
       </section>
 
       {/* Privacidad */}
-      <section className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-3">
-        <h2 className="text-lg font-semibold">Privacidad</h2>
+      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold text-slate-900">Privacidad</h2>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="ghost"
@@ -385,7 +385,7 @@ export default function PortalPerfilPage() {
           >
             <Download className="w-4 h-4 mr-2" /> Exportar mis datos
           </Button>
-          <Button variant="ghost" className="text-red-400 hover:text-red-300">
+          <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50">
             <Trash2 className="w-4 h-4 mr-2" /> Eliminar cuenta
           </Button>
         </div>

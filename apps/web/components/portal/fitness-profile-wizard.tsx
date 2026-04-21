@@ -379,28 +379,28 @@ export function FitnessProfileWizard({ initial }: Props) {
   const progressPct = (step / TOTAL_STEPS) * 100;
 
   return (
-    <section className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-6">
+    <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-6">
       {/* ── Header & progress ─────────────────────────────── */}
       <header className="space-y-3">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
             <Sparkles size={18} />
           </span>
           <div className="flex-1 min-w-0">
-            <h2 className="font-display text-lg font-semibold">Perfil fitness</h2>
-            <p className="mt-0.5 text-xs text-zinc-400">
+            <h2 className="font-display text-lg font-semibold text-slate-900">Perfil fitness</h2>
+            <p className="mt-0.5 text-xs text-slate-500">
               5 pasos rápidos. Nuestro motor lo usa para generar rutinas y
               planes de comida personalizados para ti.
             </p>
           </div>
-          <span className="text-xs font-mono text-white/60">
+          <span className="text-xs font-mono text-slate-500 tabular-nums">
             {step}/{TOTAL_STEPS}
           </span>
         </div>
 
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-brand-orange transition-all duration-300"
+            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-sky-400 transition-all duration-300"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -424,26 +424,32 @@ export function FitnessProfileWizard({ initial }: Props) {
       </div>
 
       {/* ── Nav ───────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
-        <Button
-          variant="ghost"
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200">
+        <button
+          type="button"
           onClick={goBack}
           disabled={step === 1 || save.isPending}
+          className="inline-flex items-center h-10 px-4 rounded-xl bg-white ring-1 ring-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
           Atrás
-        </Button>
+        </button>
         {step < TOTAL_STEPS ? (
-          <Button onClick={goNext} disabled={!stepValid}>
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={!stepValid}
+            className="inline-flex items-center h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed text-sm font-semibold transition shadow-sm"
+          >
             Continuar
             <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
+          </button>
         ) : (
           <Button
             onClick={goNext}
             loading={save.isPending}
             disabled={!stepValid}
-            className="!bg-[#FF6B00] hover:!bg-[#FF8A00] !text-white"
+            className="!bg-blue-600 hover:!bg-blue-700 !text-white"
           >
             Guardar perfil
           </Button>
@@ -475,8 +481,8 @@ function StepHeading({
 }) {
   return (
     <div className="space-y-1">
-      <h3 className="font-display text-xl font-semibold">{title}</h3>
-      {subtitle && <p className="text-sm text-zinc-400">{subtitle}</p>}
+      <h3 className="font-display text-xl font-semibold text-slate-900">{title}</h3>
+      {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
     </div>
   );
 }
@@ -518,10 +524,10 @@ function StepAboutYou({ draft, update }: StepProps) {
                   type="button"
                   onClick={() => update('gender', g.value)}
                   className={cn(
-                    'h-11 flex-1 min-w-[90px] rounded-xl border px-3 text-sm transition-colors',
+                    'h-11 flex-1 min-w-[90px] rounded-xl ring-1 px-3 text-sm font-medium transition-colors',
                     active
-                      ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
-                      : 'border-white/10 bg-input/60 text-white/70 hover:bg-white/5',
+                      ? 'ring-blue-500 bg-blue-50 text-blue-900 shadow-sm'
+                      : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                   )}
                 >
                   {g.label}
@@ -588,25 +594,25 @@ function StepTrainingType({ draft, update }: StepProps) {
               type="button"
               onClick={() => update('user_type', value)}
               className={cn(
-                'flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors',
+                'flex items-start gap-3 rounded-2xl ring-1 p-4 text-left transition-colors',
                 active
-                  ? 'border-brand-orange/60 bg-brand-orange/10'
-                  : 'border-white/10 bg-white/[0.02] hover:bg-white/5',
+                  ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                  : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
               )}
             >
               <span
                 className={cn(
                   'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
                   active
-                    ? 'bg-brand-orange/20 text-brand-orange'
-                    : 'bg-white/5 text-white/70',
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-white ring-1 ring-slate-200 text-slate-500',
                 )}
               >
                 <Icon size={18} />
               </span>
               <div className="min-w-0">
-                <div className="font-semibold">{title}</div>
-                <div className="text-xs text-zinc-400">{sub}</div>
+                <div className={cn('font-semibold', active ? 'text-blue-900' : 'text-slate-900')}>{title}</div>
+                <div className={cn('text-xs', active ? 'text-blue-700' : 'text-slate-500')}>{sub}</div>
               </div>
             </button>
           );
@@ -621,7 +627,7 @@ function StepTrainingType({ draft, update }: StepProps) {
             onChange={(e) =>
               update('discipline', e.target.value as FitnessProfileDraft['discipline'])
             }
-            className="h-11 w-full rounded-xl border border-white/10 bg-input/60 px-3 text-sm text-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+            className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             <option value="">Elige tu deporte…</option>
             {DISCIPLINES.map((d) => (
@@ -645,7 +651,7 @@ function StepGoalLevel({ draft, update }: StepProps) {
       />
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
           Objetivo
         </div>
         <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
@@ -657,14 +663,14 @@ function StepGoalLevel({ draft, update }: StepProps) {
                 type="button"
                 onClick={() => update('objective', o.value)}
                 className={cn(
-                  'flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors',
+                  'flex flex-col items-start gap-1 rounded-xl ring-1 p-3 text-left transition-colors',
                   active
-                    ? 'border-brand-orange/60 bg-brand-orange/10'
-                    : 'border-white/10 bg-white/[0.02] hover:bg-white/5',
+                    ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                    : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
                 )}
               >
                 <span className="text-xl">{o.emoji}</span>
-                <span className="text-sm font-semibold">{o.title}</span>
+                <span className={cn('text-sm font-semibold', active ? 'text-blue-900' : 'text-slate-900')}>{o.title}</span>
               </button>
             );
           })}
@@ -672,7 +678,7 @@ function StepGoalLevel({ draft, update }: StepProps) {
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
           Nivel
         </div>
         <div className="flex flex-wrap gap-2">
@@ -684,10 +690,10 @@ function StepGoalLevel({ draft, update }: StepProps) {
                 type="button"
                 onClick={() => update('level', l.value)}
                 className={cn(
-                  'h-10 rounded-full border px-4 text-sm font-semibold transition-colors',
+                  'h-10 rounded-full ring-1 px-4 text-sm font-semibold transition-colors',
                   active
-                    ? 'border-brand-orange/60 bg-brand-orange text-black'
-                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                    ? 'ring-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                    : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                 )}
               >
                 {l.label}
@@ -704,7 +710,7 @@ function StepGoalLevel({ draft, update }: StepProps) {
           onChange={(e) =>
             update('activity_level', e.target.value as ActivityLevel)
           }
-          className="h-11 w-full rounded-xl border border-white/10 bg-input/60 px-3 text-sm text-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+          className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">Elige…</option>
           {ACTIVITY_LEVELS.map((a) => (
@@ -768,10 +774,10 @@ function SliderRow({
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="text-xs font-semibold uppercase tracking-widest text-white/70">
+        <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
           {label}
         </span>
-        <span className="font-display text-2xl font-semibold text-brand-orange">
+        <span className="font-display text-2xl font-semibold text-blue-600 tabular-nums">
           {renderValue(value)}
         </span>
       </div>
@@ -782,9 +788,9 @@ function SliderRow({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#1e5aff]"
+        className="w-full accent-blue-600"
       />
-      <div className="flex justify-between text-[11px] text-white/40">
+      <div className="flex justify-between text-[11px] text-slate-400">
         <span>{renderValue(min)}</span>
         <span>{renderValue(max)}</span>
       </div>
@@ -812,7 +818,7 @@ function StepRestrictions({
       />
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
           Lesiones / molestias
         </div>
         <div className="flex flex-wrap gap-2">
@@ -824,10 +830,10 @@ function StepRestrictions({
                 type="button"
                 onClick={() => toggleInList('injuries', i.value)}
                 className={cn(
-                  'h-9 rounded-full border px-3 text-xs font-semibold transition-colors',
+                  'h-9 rounded-full ring-1 px-3 text-xs font-semibold transition-colors',
                   active
-                    ? 'border-brand-orange/60 bg-brand-orange/15 text-white'
-                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                    ? 'ring-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                    : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                 )}
               >
                 {i.label}
@@ -838,7 +844,7 @@ function StepRestrictions({
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
           Dieta
         </div>
         <div className="flex flex-wrap gap-2">
@@ -850,10 +856,10 @@ function StepRestrictions({
                 type="button"
                 onClick={() => toggleInList('dietary', tag)}
                 className={cn(
-                  'h-9 rounded-full border px-3 text-xs font-semibold transition-colors',
+                  'h-9 rounded-full ring-1 px-3 text-xs font-semibold transition-colors',
                   active
-                    ? 'border-brand-orange/60 bg-brand-orange/15 text-white'
-                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                    ? 'ring-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                    : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                 )}
               >
                 {tag}
@@ -864,7 +870,7 @@ function StepRestrictions({
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
           Alergias
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -874,17 +880,17 @@ function StepRestrictions({
               <label
                 key={a}
                 className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors',
+                  'flex cursor-pointer items-center gap-2 rounded-xl ring-1 px-3 py-2 text-sm font-medium transition-colors',
                   active
-                    ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
-                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                    ? 'ring-blue-600 bg-blue-600 text-white'
+                    : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                 )}
               >
                 <input
                   type="checkbox"
                   checked={active}
                   onChange={() => toggleInList('allergies', a)}
-                  className="h-4 w-4 accent-[#1e5aff]"
+                  className="h-4 w-4 accent-blue-600"
                 />
                 {a}
               </label>
@@ -905,12 +911,12 @@ function StepRestrictions({
           rows={3}
           maxLength={500}
           placeholder="Cualquier cosa relevante: cirugías recientes, preferencias, etc."
-          className="w-full rounded-xl border border-white/10 bg-input/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         />
       </Field>
 
-      <div className="flex items-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-3 text-xs text-zinc-400">
-        <Dumbbell size={14} className="text-brand-orange" />
+      <div className="flex items-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50 p-3 text-xs text-blue-900">
+        <Dumbbell size={14} className="text-blue-600" />
         Al guardar, generaremos tu primera rutina con IA basada en este perfil.
       </div>
     </div>

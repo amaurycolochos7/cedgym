@@ -123,7 +123,7 @@ export default function PlanAlimenticioPage() {
   const plan = data?.plan ?? null;
 
   if (isLoading) {
-    return <div className="text-zinc-400">Cargando…</div>;
+    return <div className="text-slate-500">Cargando…</div>;
   }
 
   return (
@@ -189,17 +189,17 @@ function NoPlanView({
   return (
     <div className="space-y-6">
       {!profileCompleted && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-amber-100 font-medium">Completa tu perfil primero</p>
-            <p className="text-amber-200/70 mt-0.5">
+            <p className="text-amber-900 font-semibold">Completa tu perfil primero</p>
+            <p className="text-amber-800/80 mt-0.5">
               Necesitamos tu edad, peso y altura para calcular calorías óptimas.
             </p>
           </div>
           <Link
             href="/portal/perfil"
-            className="shrink-0 text-amber-300 hover:text-amber-200 font-medium self-center"
+            className="shrink-0 text-amber-700 hover:text-amber-800 font-semibold self-center"
           >
             Completar →
           </Link>
@@ -207,28 +207,28 @@ function NoPlanView({
       )}
 
       {/* Hero */}
-      <div className="bg-gradient-to-br from-zinc-900/90 to-zinc-900/60 border border-zinc-800 rounded-2xl p-6 sm:p-8">
-        <div className="flex items-start gap-3 mb-2">
-          <div className="p-2 rounded-lg bg-brand-orange/15 text-brand-orange">
+      <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
             <Sparkles className="w-5 h-5" />
           </div>
-          <span className="text-xs uppercase tracking-widest text-brand-orange font-semibold mt-1.5">
+          <span className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
             Powered by IA
           </span>
         </div>
-        <h1 className="font-display text-4xl sm:text-5xl tracking-wide text-white">
+        <h1 className="font-display text-4xl sm:text-5xl tracking-wide text-slate-900">
           TU PLAN ALIMENTICIO CON IA
         </h1>
-        <p className="text-zinc-400 mt-2 max-w-2xl">
+        <p className="text-slate-600 mt-2 max-w-2xl">
           6 comidas al día, ingredientes mexicanos, adaptado a tu objetivo.
         </p>
       </div>
 
       {/* Form */}
-      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 space-y-6">
+      <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6 space-y-6">
         {/* Calories */}
         <div>
-          <label className="block text-sm font-medium text-zinc-200 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Calorías objetivo
           </label>
           <input
@@ -237,19 +237,19 @@ function NoPlanView({
             value={calories}
             onChange={(e) => setCalories(e.target.value)}
             placeholder="Ej: 2400"
-            className="w-full sm:w-60 bg-zinc-950 border border-zinc-800 focus:border-brand-orange/60 rounded-lg px-3 py-2 text-zinc-100 outline-none transition"
+            className="w-full sm:w-60 bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none transition"
           />
-          <p className="text-xs text-zinc-500 mt-1.5">
+          <p className="text-xs text-slate-500 mt-1.5">
             Déjalo vacío y lo calculamos desde tu perfil
           </p>
         </div>
 
         {/* Meals per day */}
         <div>
-          <label className="block text-sm font-medium text-zinc-200 mb-2">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
             Comidas al día
           </label>
-          <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+          <div className="inline-flex rounded-lg bg-slate-100 p-1">
             {[3, 4, 5].map((n) => (
               <button
                 key={n}
@@ -257,8 +257,8 @@ function NoPlanView({
                 onClick={() => setMealsPerDay(n as 3 | 4 | 5)}
                 className={`px-5 py-1.5 rounded-md text-sm font-medium transition ${
                   mealsPerDay === n
-                    ? 'bg-brand-orange text-white'
-                    : 'text-zinc-400 hover:text-zinc-100'
+                    ? 'bg-white shadow-sm ring-1 ring-slate-200 text-slate-900'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 {n}
@@ -269,17 +269,17 @@ function NoPlanView({
 
         {/* Budget */}
         <div>
-          <label className="block text-sm font-medium text-zinc-200 mb-2">
+          <label className="block text-sm font-medium text-slate-700 mb-2">
             Presupuesto
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {BUDGETS.map((b) => (
               <label
                 key={b.value}
-                className={`cursor-pointer rounded-lg border px-4 py-3 text-sm transition ${
+                className={`cursor-pointer rounded-lg ring-1 px-4 py-3 text-sm transition ${
                   budget === b.value
-                    ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
-                    : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700'
+                    ? 'ring-blue-500 bg-blue-50 text-blue-900 shadow-sm'
+                    : 'ring-slate-200 bg-slate-50 text-slate-700 hover:bg-white hover:ring-slate-300'
                 }`}
               >
                 <input
@@ -290,8 +290,8 @@ function NoPlanView({
                   onChange={() => setBudget(b.value as 'low' | 'medium' | 'high')}
                   className="sr-only"
                 />
-                <div className="font-medium">{b.label}</div>
-                <div className="text-xs text-zinc-500 uppercase mt-0.5">{b.value}</div>
+                <div className="font-semibold">{b.label}</div>
+                <div className={`text-xs uppercase mt-0.5 ${budget === b.value ? 'text-blue-700' : 'text-slate-500'}`}>{b.value}</div>
               </label>
             ))}
           </div>
@@ -315,7 +315,7 @@ function NoPlanView({
 
         {/* Disliked */}
         <div>
-          <label className="block text-sm font-medium text-zinc-200 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Alimentos que no te gustan
           </label>
           <textarea
@@ -323,13 +323,13 @@ function NoPlanView({
             value={disliked}
             onChange={(e) => setDisliked(e.target.value)}
             placeholder="brócoli, hígado, atún…"
-            className="w-full bg-zinc-950 border border-zinc-800 focus:border-brand-orange/60 rounded-lg px-3 py-2 text-zinc-100 outline-none transition"
+            className="w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg px-3 py-2 text-slate-900 placeholder:text-slate-400 outline-none transition"
           />
-          <p className="text-xs text-zinc-500 mt-1.5">Separa con comas.</p>
+          <p className="text-xs text-slate-500 mt-1.5">Separa con comas.</p>
         </div>
 
         {generate.isError && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 text-sm text-red-200">
+          <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
             {(generate.error as { message?: string })?.message ?? 'No se pudo generar el plan.'}
           </div>
         )}
@@ -339,7 +339,7 @@ function NoPlanView({
             type="button"
             onClick={() => generate.mutate()}
             disabled={generate.isPending}
-            className="inline-flex items-center gap-2 bg-brand-orange hover:bg-brand-orange/90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-brand-orange/20 transition"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl shadow-sm transition"
           >
             <Sparkles className="w-4 h-4" />
             {generate.isPending ? 'Generando…' : 'Generar mi plan con IA'}
@@ -363,7 +363,7 @@ function CheckGrid({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-zinc-200 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
         {options.map((o) => {
           const on = value.includes(o.value);
@@ -372,14 +372,14 @@ function CheckGrid({
               key={o.value}
               type="button"
               onClick={() => onToggle(o.value)}
-              className={`rounded-lg border px-3 py-2 text-sm text-left transition ${
+              className={`rounded-lg ring-1 px-3 py-2 text-sm text-left transition ${
                 on
-                  ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
-                  : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700'
+                  ? 'ring-blue-600 bg-blue-600 text-white hover:bg-blue-700'
+                  : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <span className="inline-block w-3.5 h-3.5 rounded-sm border border-zinc-600 mr-2 align-middle">
-                {on && <span className="block w-full h-full bg-brand-orange rounded-sm" />}
+              <span className={`inline-block w-3.5 h-3.5 rounded-sm mr-2 align-middle ring-1 ${on ? 'ring-white' : 'ring-slate-400'}`}>
+                {on && <span className="block w-full h-full bg-white rounded-sm" />}
               </span>
               {o.label}
             </button>
@@ -465,25 +465,25 @@ function PlanView({
   return (
     <div className="space-y-6">
       {/* Header / stats */}
-      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6">
+      <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-brand-orange font-semibold mb-2">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-blue-700 font-semibold mb-2">
               <Apple className="w-3.5 h-3.5" />
               Plan activo
             </div>
-            <h1 className="font-display text-3xl sm:text-4xl tracking-wide text-white">
+            <h1 className="font-display text-3xl sm:text-4xl tracking-wide text-slate-900">
               {plan.name}
             </h1>
             {plan.goal && (
-              <p className="text-zinc-400 mt-1 text-sm">{plan.goal}</p>
+              <p className="text-slate-500 mt-1 text-sm">{plan.goal}</p>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => regenerate.mutate()}
               disabled={regenerate.isPending}
-              className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 text-zinc-100 px-4 py-2 rounded-lg text-sm font-medium transition"
+              className="inline-flex items-center gap-2 bg-white ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-60 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition"
             >
               <RefreshCw className={`w-4 h-4 ${regenerate.isPending ? 'animate-spin' : ''}`} />
               {regenerate.isPending ? 'Regenerando…' : 'Regenerar'}
@@ -491,7 +491,7 @@ function PlanView({
             <button
               onClick={downloadShoppingList}
               disabled={downloading}
-              className="inline-flex items-center gap-2 bg-brand-orange hover:bg-brand-orange/90 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+              className="inline-flex items-center gap-2 bg-white ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-60 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition"
             >
               <Download className="w-4 h-4" />
               {downloading ? 'Generando…' : 'Lista de compras'}
@@ -508,15 +508,15 @@ function PlanView({
       </div>
 
       {/* Day tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 border-b border-slate-200">
         {availableDays.map((d) => (
           <button
             key={d}
             onClick={() => setActiveDay(d)}
-            className={`shrink-0 px-4 py-2 rounded-lg text-sm font-semibold tracking-wide uppercase transition ${
+            className={`shrink-0 px-4 py-2.5 text-sm font-semibold tracking-wide uppercase transition border-b-2 ${
               activeDay === d
-                ? 'bg-brand-orange text-white'
-                : 'bg-zinc-900/70 border border-zinc-800 text-zinc-400 hover:text-zinc-100'
+                ? 'text-blue-700 border-blue-600'
+                : 'text-slate-500 hover:text-slate-700 border-transparent'
             }`}
           >
             {DAYS_ES[d] ?? `D${d}`}
@@ -527,7 +527,7 @@ function PlanView({
       {/* Meals */}
       <div className="space-y-4">
         {meals.length === 0 ? (
-          <div className="text-zinc-500 text-sm">No hay comidas para este día.</div>
+          <div className="text-slate-500 text-sm">No hay comidas para este día.</div>
         ) : (
           meals.map((m, i) => <MealCard key={`${m.meal_type}-${i}`} meal={m} />)
         )}
@@ -548,16 +548,16 @@ function StatBig({
   unit: string;
 }) {
   return (
-    <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-3">
-      <div className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-zinc-500">
-        {icon}
+    <div className="bg-white ring-1 ring-slate-200 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-slate-500 font-medium">
+        <span className="text-blue-600">{icon}</span>
         {label}
       </div>
       <div className="mt-1 flex items-baseline gap-1">
-        <span className="font-display text-3xl text-white tracking-wide">
+        <span className="text-3xl font-bold text-slate-900 tabular-nums">
           {value ?? '—'}
         </span>
-        <span className="text-xs text-zinc-500">{unit}</span>
+        <span className="text-xs text-slate-500">{unit}</span>
       </div>
     </div>
   );
@@ -569,10 +569,10 @@ function MealCard({ meal }: { meal: Meal }) {
   const badge = MEAL_TYPE_ES[meal.meal_type] ?? meal.meal_type;
 
   return (
-    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl overflow-hidden">
       <div className="md:flex">
         <div
-          className="h-40 md:h-auto md:w-56 shrink-0 bg-cover bg-center bg-zinc-800"
+          className="h-40 md:h-auto md:w-56 shrink-0 bg-cover bg-center bg-slate-200"
           style={{ backgroundImage: `url(${img})` }}
           aria-hidden
         />
@@ -580,15 +580,15 @@ function MealCard({ meal }: { meal: Meal }) {
           {/* Header: badge + accordion toggle on mobile */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <span className="inline-block text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded-md bg-brand-orange/15 text-brand-orange">
+              <span className="inline-block text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded-md bg-blue-50 text-blue-700 ring-1 ring-blue-200">
                 {badge}
               </span>
-              <h3 className="font-display text-2xl tracking-wide text-white mt-2">
+              <h3 className="font-display text-2xl tracking-wide text-slate-900 mt-2">
                 {meal.name}
               </h3>
             </div>
             <button
-              className="md:hidden p-1.5 rounded-lg bg-zinc-800/80 text-zinc-300"
+              className="md:hidden p-1.5 rounded-lg bg-slate-100 text-slate-600"
               onClick={() => setOpen((v) => !v)}
               aria-label={open ? 'Colapsar' : 'Expandir'}
             >
@@ -599,34 +599,34 @@ function MealCard({ meal }: { meal: Meal }) {
           {/* Collapsible body on mobile, always open on md+ */}
           <div className={`${open ? 'block' : 'hidden'} md:block mt-3 space-y-3`}>
             {meal.description && (
-              <p className="text-sm text-zinc-400">{meal.description}</p>
+              <p className="text-sm text-slate-600">{meal.description}</p>
             )}
 
             {meal.ingredients && meal.ingredients.length > 0 && (
-              <ul className="list-disc list-inside text-sm text-zinc-300 space-y-0.5">
+              <ul className="list-disc list-inside text-sm text-slate-700 space-y-0.5">
                 {meal.ingredients.map((ing, i) => (
                   <li key={i}>{ing}</li>
                 ))}
               </ul>
             )}
 
-            <div className="flex flex-wrap gap-4 pt-2 text-xs text-zinc-400">
+            <div className="flex flex-wrap gap-4 pt-2 text-xs text-slate-500">
               {typeof meal.calories === 'number' && (
                 <span className="inline-flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5 text-orange-400" />
-                  <strong className="text-zinc-100">{meal.calories}</strong> kcal
+                  <Flame className="w-3.5 h-3.5 text-amber-500" />
+                  <strong className="text-slate-900 tabular-nums">{meal.calories}</strong> kcal
                 </span>
               )}
               {typeof meal.protein_g === 'number' && (
                 <span className="inline-flex items-center gap-1">
-                  <Dumbbell className="w-3.5 h-3.5 text-blue-400" />
-                  <strong className="text-zinc-100">{meal.protein_g}g</strong> prot
+                  <Dumbbell className="w-3.5 h-3.5 text-blue-600" />
+                  <strong className="text-slate-900 tabular-nums">{meal.protein_g}g</strong> prot
                 </span>
               )}
               {typeof meal.prep_time_min === 'number' && (
                 <span className="inline-flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                  <strong className="text-zinc-100">{meal.prep_time_min}</strong> min
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <strong className="text-slate-900 tabular-nums">{meal.prep_time_min}</strong> min
                 </span>
               )}
             </div>

@@ -37,12 +37,12 @@ export default function PortalChatPage() {
 
   return (
     <div className="grid md:grid-cols-[280px_1fr] gap-4 h-[calc(100vh-10rem)]">
-      <aside className="bg-zinc-900/70 border border-zinc-800 rounded-xl overflow-y-auto">
-        <div className="p-4 border-b border-zinc-800">
-          <h2 className="font-semibold">Conversaciones</h2>
+      <aside className="bg-white shadow-sm ring-1 ring-slate-200 rounded-xl overflow-y-auto">
+        <div className="p-4 border-b border-slate-200">
+          <h2 className="font-semibold text-slate-900">Conversaciones</h2>
         </div>
         {items.length === 0 ? (
-          <div className="p-4 text-sm text-zinc-500">
+          <div className="p-4 text-sm text-slate-500">
             Sin conversaciones activas.
           </div>
         ) : (
@@ -52,12 +52,12 @@ export default function PortalChatPage() {
               onClick={() => setActiveId(c.id)}
               className={
                 activeId === c.id
-                  ? 'w-full text-left p-4 border-b border-zinc-800 bg-blue-500/10'
-                  : 'w-full text-left p-4 border-b border-zinc-800 hover:bg-zinc-800/60'
+                  ? 'w-full text-left p-4 border-b border-slate-200 bg-blue-50'
+                  : 'w-full text-left p-4 border-b border-slate-200 hover:bg-slate-50'
               }
             >
-              <div className="font-medium text-sm">{c.title ?? 'Conversación'}</div>
-              <div className="text-xs text-zinc-500 mt-1 truncate">
+              <div className={`font-medium text-sm ${activeId === c.id ? 'text-blue-900' : 'text-slate-900'}`}>{c.title ?? 'Conversación'}</div>
+              <div className="text-xs text-slate-500 mt-1 truncate">
                 {c.last_message?.body ?? 'Sin mensajes'}
               </div>
             </button>
@@ -65,12 +65,12 @@ export default function PortalChatPage() {
         )}
       </aside>
 
-      <section className="bg-zinc-900/70 border border-zinc-800 rounded-xl flex flex-col">
+      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-xl flex flex-col">
         {!activeId ? (
-          <div className="flex-1 flex items-center justify-center text-zinc-500">
+          <div className="flex-1 flex items-center justify-center text-slate-400">
             <div className="text-center">
               <MessageSquare className="w-10 h-10 mx-auto mb-2" />
-              Selecciona una conversación
+              <p className="text-slate-500">Selecciona una conversación</p>
             </div>
           </div>
         ) : (
@@ -84,12 +84,12 @@ export default function PortalChatPage() {
                   <div
                     className={
                       m.is_own
-                        ? 'max-w-[70%] bg-blue-600 text-white px-3 py-2 rounded-2xl rounded-br-sm'
-                        : 'max-w-[70%] bg-zinc-800 px-3 py-2 rounded-2xl rounded-bl-sm'
+                        ? 'max-w-[70%] bg-blue-600 text-white px-3 py-2 rounded-2xl rounded-br-sm shadow-sm'
+                        : 'max-w-[70%] bg-slate-100 text-slate-900 px-3 py-2 rounded-2xl rounded-bl-sm'
                     }
                   >
                     <div className="text-sm">{m.body}</div>
-                    <div className="text-[10px] opacity-60 mt-1">
+                    <div className={`text-[10px] mt-1 ${m.is_own ? 'text-white/70' : 'text-slate-500'}`}>
                       {new Date(m.created_at).toLocaleTimeString('es-MX', {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -104,18 +104,18 @@ export default function PortalChatPage() {
                 e.preventDefault();
                 if (draft.trim()) send.mutate();
               }}
-              className="p-3 border-t border-zinc-800 flex gap-2"
+              className="p-3 border-t border-slate-200 flex gap-2"
             >
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Escribe un mensaje…"
-                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm"
+                className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
               />
               <button
                 type="submit"
                 disabled={!draft.trim() || send.isPending}
-                className="p-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
+                className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white transition shadow-sm"
               >
                 <Send className="w-4 h-4" />
               </button>

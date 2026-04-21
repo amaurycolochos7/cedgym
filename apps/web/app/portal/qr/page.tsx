@@ -105,18 +105,18 @@ export default function PortalQRPage() {
   if (hasActivePlan === false) {
     return (
       <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center gap-6 py-10 text-center">
-        <span className="inline-flex h-16 w-16 items-center justify-center rounded-3xl border border-zinc-800 bg-zinc-900/60 text-zinc-500">
+        <span className="inline-flex h-16 w-16 items-center justify-center rounded-3xl ring-1 ring-slate-200 bg-white shadow-sm text-slate-400">
           <Lock size={26} />
         </span>
         <div className="max-w-md space-y-2 px-4">
-          <h1 className="text-2xl sm:text-3xl font-bold">No tienes plan activo</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900">No tienes plan activo</h1>
+          <p className="text-sm text-slate-500">
             Para generar tu QR de acceso necesitas una membresía vigente.
           </p>
         </div>
         <Link
           href="/#planes"
-          className="inline-flex items-center justify-center rounded-xl bg-brand-orange px-6 py-3 text-sm font-semibold text-black transition hover:brightness-110"
+          className="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 px-6 py-3 text-sm font-semibold text-white transition shadow-sm"
         >
           Ver planes
         </Link>
@@ -128,20 +128,20 @@ export default function PortalQRPage() {
   return (
     <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center gap-6 py-6 sm:py-10">
       <div className="text-center">
-        <div className="text-xs uppercase tracking-widest text-zinc-500">
+        <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
           {user?.name?.split(' ')[0] ?? 'Atleta'}
         </div>
-        <h1 className="mt-1 text-2xl sm:text-3xl font-bold">
+        <h1 className="mt-1 font-display text-2xl sm:text-3xl font-bold text-slate-900">
           Mi QR de acceso
         </h1>
-        <p className="mt-2 text-sm sm:text-base text-zinc-400 px-4">
+        <p className="mt-2 text-sm sm:text-base text-slate-500 px-4">
           Muéstralo al staff en la entrada.
         </p>
       </div>
 
       {/* QR card — fills 80% of viewport on mobile, capped at 340px. */}
       <div
-        className="rounded-3xl bg-white p-5 sm:p-6 shadow-2xl shadow-blue-500/20"
+        className="rounded-3xl bg-white ring-1 ring-slate-200 shadow-md p-5 sm:p-8"
         style={{ width: 'min(80vw, 340px)' }}
       >
         {token ? (
@@ -155,9 +155,9 @@ export default function PortalQRPage() {
             }}
           />
         ) : qrQuery.isLoading ? (
-          <div className="aspect-square w-full animate-pulse rounded-xl bg-zinc-100" />
+          <div className="aspect-square w-full animate-pulse rounded-xl bg-slate-100" />
         ) : (
-          <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-zinc-100 px-4 text-center text-sm text-zinc-500">
+          <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-slate-100 px-4 text-center text-sm text-slate-500">
             No fue posible cargar tu QR. Verifica tu conexión e intenta otra
             vez.
           </div>
@@ -167,10 +167,10 @@ export default function PortalQRPage() {
       {/* Status + countdown */}
       <div className="flex flex-col items-center gap-2 text-center">
         <div
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-widest ${
+          className={`inline-flex items-center gap-2 rounded-full ring-1 px-3 py-1 text-xs font-semibold uppercase tracking-widest ${
             offline
-              ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
-              : 'border-white/10 bg-white/5 text-white/70'
+              ? 'ring-amber-200 bg-amber-50 text-amber-700'
+              : 'ring-slate-200 bg-white text-slate-600'
           }`}
         >
           <RefreshCw size={12} className={qrQuery.isFetching ? 'animate-spin' : ''} />
@@ -181,7 +181,7 @@ export default function PortalQRPage() {
         <button
           type="button"
           onClick={() => qrQuery.refetch()}
-          className="text-xs text-zinc-400 underline-offset-2 hover:text-white hover:underline"
+          className="text-xs text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
         >
           Actualizar ahora
         </button>
@@ -189,9 +189,9 @@ export default function PortalQRPage() {
 
       {/* Soft helper — what to do if the QR fails */}
       <div className="w-full max-w-md px-4">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 text-xs text-zinc-400">
+        <div className="rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm p-4 text-xs text-slate-600">
           <div className="flex items-start gap-2">
-            <QrCode size={14} className="mt-0.5 shrink-0 text-brand-orange" />
+            <QrCode size={14} className="mt-0.5 shrink-0 text-blue-600" />
             <p className="leading-relaxed">
               Tu QR se actualiza automáticamente cada minuto por seguridad. Si
               el escáner no lo lee, pulsa <em>Actualizar ahora</em>.
@@ -201,7 +201,7 @@ export default function PortalQRPage() {
       </div>
 
       {qrQuery.error && !cached && (
-        <div className="max-w-md px-4 text-center text-sm text-red-400">
+        <div className="max-w-md px-4 text-center text-sm text-red-600">
           No pudimos generar tu QR ahora. Intenta de nuevo en unos segundos.
         </div>
       )}
