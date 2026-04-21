@@ -1024,17 +1024,6 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {/* WhatsApp Floating Button */}
-      <a
-        href="https://wa.me/526141970660"
-        target="_blank"
-        rel="noreferrer"
-        className="group fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_4px_20px_rgba(37,211,102,0.4)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_8px_30px_rgba(37,211,102,0.6)] sm:bottom-6 sm:right-6 sm:h-16 sm:w-16 md:bottom-10 md:right-10"
-      >
-        <MessageCircle className="h-6 w-6 transition-transform group-hover:scale-110 sm:h-8 sm:w-8" />
-        <div className="absolute inset-0 animate-ping rounded-full bg-[#25D366] opacity-40" />
-      </a>
-
       <InteractivityClient />
     </>
   );

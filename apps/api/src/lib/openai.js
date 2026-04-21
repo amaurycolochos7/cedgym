@@ -24,11 +24,26 @@ const PRICE_PER_1M_OUTPUT_USD = Number(process.env.OPENAI_PRICE_OUTPUT_PER_1M ||
 
 export const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
-// Single shared client. If OPENAI_API_KEY is missing at import time,
-// `new OpenAI()` will still succeed — the error surfaces when we
-// actually try to call the API.
-export const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+// Lazy singleton. The OpenAI SDK THROWS in the constructor if apiKey is
+// missing/empty, which would crash the whole API at boot when the env
+// var isn't set. Defer instantiation to first use: `getOpenAI()`.
+let _openai = null;
+export function getOpenAI() {
+    if (_openai) return _openai;
+    if (!process.env.OPENAI_API_KEY) {
+        throw err('AI_MISCONFIGURED', 'OPENAI_API_KEY is not set', 500);
+    }
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    return _openai;
+}
+// Back-compat proxy so `import openai from '...'` still works for callers
+// that only use it transitively — errors surface when any method is hit.
+export const openai = new Proxy({}, {
+    get(_t, prop) {
+        const real = getOpenAI();
+        const v = real[prop];
+        return typeof v === 'function' ? v.bind(real) : v;
+    },
 });
 
 export function computeCostUsd(inputTokens, outputTokens) {
@@ -72,7 +87,7 @@ export async function generateJSON({
 
     let completion;
     try {
-        completion = await openai.chat.completions.create({
+        completion = await getOpenAI().chat.completions.create({
             model: OPENAI_MODEL,
             temperature,
             response_format: { type: 'json_object' },
