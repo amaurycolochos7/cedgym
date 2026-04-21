@@ -44,30 +44,34 @@ export default function PortalDashboardPage() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7 sm:space-y-8">
       {/* Greeting */}
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900">Hola, {user?.name?.split(' ')[0] ?? 'Atleta'} 👋</h1>
-        <p className="text-slate-500 mt-1 text-sm sm:text-base">Sigue tu progreso, tus clases y tus logros.</p>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900">
+          Hola, {user?.name?.split(' ')[0] ?? 'Atleta'}
+        </h1>
+        <p className="text-slate-500 mt-1.5 text-sm sm:text-base">
+          Sigue tu progreso, tus clases y tus logros.
+        </p>
       </div>
 
       {/* Mi QR de acceso — top, prominent hero card */}
       <Link
         href="/portal/qr"
-        className="group block overflow-hidden rounded-3xl bg-gradient-to-br from-blue-500 to-sky-400 text-white p-5 sm:p-6 shadow-lg shadow-blue-500/20 transition hover:shadow-xl hover:shadow-blue-500/30"
+        className="group block overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 text-white p-5 sm:p-6 shadow-lg shadow-blue-600/25 transition hover:shadow-xl hover:shadow-blue-600/35"
       >
         <div className="flex items-center gap-4">
-          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-white backdrop-blur-sm transition group-hover:bg-white/30">
+          <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30 text-white backdrop-blur-sm transition group-hover:bg-white/25">
             <QrCode className="h-7 w-7" />
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-widest text-white/80">
+            <div className="inline-block rounded-full bg-white/15 ring-1 ring-white/25 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
               Entrada al gym
             </div>
-            <div className="font-display text-lg sm:text-xl font-bold text-white truncate">
+            <div className="font-display mt-1.5 text-xl sm:text-2xl font-bold text-white truncate">
               Mi QR de acceso
             </div>
-            <div className="mt-0.5 text-xs sm:text-sm text-white/80 truncate">
+            <div className="mt-0.5 text-xs sm:text-sm text-white/90 truncate">
               Muéstralo al staff en la entrada.
             </div>
           </div>
@@ -76,7 +80,7 @@ export default function PortalDashboardPage() {
       </Link>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard
           icon={<Flame className="w-5 h-5 text-blue-600" />}
           label="Racha"
@@ -187,13 +191,13 @@ export default function PortalDashboardPage() {
 
 function KpiCard({ icon, label, value, hint }: any) {
   return (
-    <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-xl p-3 sm:p-4 min-w-0">
-      <div className="flex items-center justify-between mb-2 gap-2">
-        <span className="text-[10px] sm:text-xs uppercase tracking-wide text-slate-500 truncate">{label}</span>
+    <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-4 sm:p-5 min-w-0">
+      <div className="flex items-center justify-between mb-2.5 gap-2">
+        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">{label}</span>
         <span className="shrink-0">{icon}</span>
       </div>
-      <div className="text-lg sm:text-2xl font-bold text-slate-900 truncate tabular-nums">{value}</div>
-      <div className="text-[11px] sm:text-xs text-slate-500 mt-1 truncate">{hint}</div>
+      <div className="text-xl sm:text-2xl font-bold text-slate-900 truncate tabular-nums leading-tight">{value}</div>
+      <div className="text-[11px] sm:text-xs text-slate-500 mt-1.5 truncate">{hint}</div>
     </div>
   );
 }
@@ -202,7 +206,7 @@ function QuickTile({ href, icon, label }: any) {
   return (
     <Link
       href={href}
-      className="flex flex-col items-center gap-2 p-4 rounded-xl bg-slate-50 hover:bg-blue-50 ring-1 ring-slate-200 hover:ring-blue-200 transition"
+      className="flex flex-col items-center justify-center gap-2.5 py-5 px-3 rounded-2xl bg-slate-50 hover:bg-blue-50 ring-1 ring-slate-200 hover:ring-blue-300 transition"
     >
       <span className="text-blue-600">{icon}</span>
       <span className="text-sm text-slate-700 font-medium">{label}</span>
