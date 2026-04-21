@@ -38,15 +38,32 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         {children}
         <Toaster
-          theme="dark"
-          position="top-center"
-          richColors
+          theme="light"
+          position="top-right"
+          offset={16}
           closeButton
+          visibleToasts={3}
           toastOptions={{
-            style: {
-              background: 'rgba(20,20,20,0.95)',
-              border: '1px solid rgba(255,107,26,0.2)',
-              color: '#fff',
+            duration: 3500,
+            classNames: {
+              toast:
+                'group !bg-white !border !border-slate-200 !shadow-lg !rounded-xl !p-4 !text-slate-900 !font-sans',
+              title: '!text-slate-900 !font-semibold !text-sm',
+              description: '!text-slate-600 !text-sm',
+              actionButton:
+                '!bg-blue-600 !text-white hover:!bg-blue-700 !rounded-lg !px-3 !py-1.5 !text-xs !font-semibold',
+              cancelButton:
+                '!bg-slate-100 !text-slate-700 hover:!bg-slate-200 !rounded-lg !px-3 !py-1.5 !text-xs !font-semibold',
+              closeButton:
+                '!bg-white !border !border-slate-200 !text-slate-500 hover:!text-slate-900 hover:!bg-slate-50',
+              success:
+                '!bg-white !border-l-4 !border-l-emerald-500',
+              error:
+                '!bg-white !border-l-4 !border-l-red-500',
+              warning:
+                '!bg-white !border-l-4 !border-l-amber-500',
+              info:
+                '!bg-white !border-l-4 !border-l-blue-500',
             },
           }}
         />
