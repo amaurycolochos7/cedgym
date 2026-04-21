@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, CreditCard, QrCode, Dumbbell, GraduationCap,
+  Home, CreditCard, QrCode, Dumbbell, GraduationCap,
   Calendar, Ruler, MessageSquare, User, LogOut, Menu, X, Trophy, Apple
 } from 'lucide-react';
 import { useState } from 'react';
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 
 const NAV = [
-  { href: '/portal/dashboard',   label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/portal/dashboard',   label: 'Inicio',        icon: Home },
   { href: '/portal/membership',  label: 'Mi membresía',  icon: CreditCard },
   { href: '/portal/qr',          label: 'Mi QR',         icon: QrCode },
   { href: '/portal/rutinas',     label: 'Mis rutinas',   icon: Dumbbell },
@@ -54,10 +54,10 @@ export function PortalSidebar() {
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition border-l-2',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition',
                 active
-                  ? 'bg-blue-50 text-blue-700 border-blue-600 font-semibold'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-transparent'
+                  ? 'bg-blue-600 text-white font-semibold'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               )}
             >
               <Icon className="w-4 h-4 shrink-0" />
