@@ -230,7 +230,7 @@ export default function PortalPerfilPage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="full_name" label="Nombre completo" error={nameError ?? undefined}>
-            <Input
+            <Input variant="light"
               id="full_name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
@@ -287,7 +287,7 @@ export default function PortalPerfilPage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="ec_name" label="Nombre">
-            <Input
+            <Input variant="light"
               id="ec_name"
               value={ecName}
               onChange={(e) => setEcName(e.target.value)}

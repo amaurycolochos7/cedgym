@@ -497,7 +497,7 @@ function StepAboutYou({ draft, update }: StepProps) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="fp_age" label="Edad">
-          <Input
+          <Input variant="light"
             id="fp_age"
             type="number"
             min={6}
@@ -538,7 +538,7 @@ function StepAboutYou({ draft, update }: StepProps) {
         </Field>
 
         <Field id="fp_height" label="Altura (cm)">
-          <Input
+          <Input variant="light"
             id="fp_height"
             type="number"
             min={100}
@@ -556,7 +556,7 @@ function StepAboutYou({ draft, update }: StepProps) {
         </Field>
 
         <Field id="fp_weight" label="Peso (kg)">
-          <Input
+          <Input variant="light"
             id="fp_weight"
             type="number"
             min={30}
