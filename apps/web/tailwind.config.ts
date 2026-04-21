@@ -17,7 +17,9 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-outfit)', 'Outfit', 'system-ui', 'sans-serif'],
+        display: ['var(--font-bebas)', 'sans-serif'],
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        brand: ['var(--font-outfit)', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',

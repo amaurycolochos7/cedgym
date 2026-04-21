@@ -1,0 +1,638 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Sparkles, Apple, Flame, Dumbbell, Wheat, Droplet, Download,
+  RefreshCw, ChevronDown, ChevronUp, AlertCircle, Clock,
+} from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
+
+/* =========================================================================
+ * Types
+ * =========================================================================*/
+
+type MealType = 'BREAKFAST' | 'SNACK_AM' | 'LUNCH' | 'SNACK_PM' | 'DINNER';
+
+interface Meal {
+  day_of_week: number; // 1..7 (Mon..Sun)
+  meal_type: MealType;
+  name: string;
+  description?: string;
+  ingredients?: string[];
+  calories?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fats_g?: number;
+  prep_time_min?: number;
+  order_index?: number;
+}
+
+interface MealPlan {
+  id: string;
+  name: string;
+  goal?: string;
+  calories_target?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fats_g?: number;
+  restrictions?: string[];
+  meals: Meal[];
+}
+
+interface ShoppingListItem {
+  name: string;
+  total: string;
+}
+
+/* =========================================================================
+ * Constants
+ * =========================================================================*/
+
+const MEAL_TYPE_ES: Record<MealType, string> = {
+  BREAKFAST: 'Desayuno',
+  SNACK_AM: 'Media mañana',
+  LUNCH: 'Comida',
+  SNACK_PM: 'Antes de entrenar',
+  DINNER: 'Cena',
+};
+
+const MEAL_IMAGES: Record<MealType, string> = {
+  BREAKFAST: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?q=80&w=800',
+  SNACK_AM: 'https://images.unsplash.com/photo-1524350876685-274059332603?q=80&w=800',
+  LUNCH: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800',
+  SNACK_PM: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?q=80&w=800',
+  DINNER: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?q=80&w=800',
+};
+
+const MEAL_ORDER: MealType[] = ['BREAKFAST', 'SNACK_AM', 'LUNCH', 'SNACK_PM', 'DINNER'];
+
+const DAYS_ES = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+const RESTRICTIONS = [
+  { value: 'vegetarian', label: 'Vegetariano' },
+  { value: 'vegan', label: 'Vegano' },
+  { value: 'lactose_free', label: 'Sin lactosa' },
+  { value: 'gluten_free', label: 'Sin gluten' },
+  { value: 'pork_free', label: 'Sin cerdo' },
+  { value: 'kosher', label: 'Kosher' },
+  { value: 'halal', label: 'Halal' },
+];
+
+const ALLERGIES = [
+  { value: 'nuts', label: 'Nueces' },
+  { value: 'shellfish', label: 'Mariscos' },
+  { value: 'eggs', label: 'Huevos' },
+  { value: 'dairy', label: 'Lácteos' },
+  { value: 'soy', label: 'Soja' },
+];
+
+const BUDGETS = [
+  { value: 'low', label: 'Económico' },
+  { value: 'medium', label: 'Balanceado' },
+  { value: 'high', label: 'Premium' },
+];
+
+/* =========================================================================
+ * Page
+ * =========================================================================*/
+
+export default function PlanAlimenticioPage() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  const { data, isLoading } = useQuery<{ plan: MealPlan | null }>({
+    queryKey: ['ai', 'meal-plans', 'me'],
+    queryFn: async () => {
+      try {
+        const r = await api.get('/ai/meal-plans/me');
+        // Support both wrapped `{ plan }` and raw plan payloads
+        const body = r.data;
+        if (body && typeof body === 'object' && 'plan' in body) return body;
+        if (body && typeof body === 'object' && 'id' in body) return { plan: body as MealPlan };
+        return { plan: null };
+      } catch (e: any) {
+        if (e?.status === 404) return { plan: null };
+        throw e;
+      }
+    },
+  });
+
+  const plan = data?.plan ?? null;
+
+  if (isLoading) {
+    return <div className="text-zinc-400">Cargando…</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {!plan ? (
+        <NoPlanView
+          profileCompleted={!!user?.profile_completed}
+          onCreated={() => qc.invalidateQueries({ queryKey: ['ai', 'meal-plans', 'me'] })}
+        />
+      ) : (
+        <PlanView
+          plan={plan}
+          onRegenerated={() => qc.invalidateQueries({ queryKey: ['ai', 'meal-plans', 'me'] })}
+        />
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+ * No plan — generate form
+ * =========================================================================*/
+
+function NoPlanView({
+  profileCompleted,
+  onCreated,
+}: {
+  profileCompleted: boolean;
+  onCreated: () => void;
+}) {
+  const [calories, setCalories] = useState<string>('');
+  const [mealsPerDay, setMealsPerDay] = useState<3 | 4 | 5>(5);
+  const [budget, setBudget] = useState<'low' | 'medium' | 'high'>('medium');
+  const [restrictions, setRestrictions] = useState<string[]>([]);
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [disliked, setDisliked] = useState<string>('');
+
+  const generate = useMutation({
+    mutationFn: async () => {
+      const body: Record<string, unknown> = {
+        meals_per_day: mealsPerDay,
+        budget,
+        country: 'MX',
+        restrictions,
+        allergies,
+      };
+      if (calories) body.calories_target = Number(calories);
+      const disliked_foods = disliked
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (disliked_foods.length) body.disliked_foods = disliked_foods;
+      const r = await api.post('/ai/meal-plans/generate', body);
+      return r.data;
+    },
+    onSuccess: () => onCreated(),
+  });
+
+  function toggle(list: string[], setList: (v: string[]) => void, v: string) {
+    setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  }
+
+  return (
+    <div className="space-y-6">
+      {!profileCompleted && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-amber-100 font-medium">Completa tu perfil primero</p>
+            <p className="text-amber-200/70 mt-0.5">
+              Necesitamos tu edad, peso y altura para calcular calorías óptimas.
+            </p>
+          </div>
+          <Link
+            href="/portal/perfil"
+            className="shrink-0 text-amber-300 hover:text-amber-200 font-medium self-center"
+          >
+            Completar →
+          </Link>
+        </div>
+      )}
+
+      {/* Hero */}
+      <div className="bg-gradient-to-br from-zinc-900/90 to-zinc-900/60 border border-zinc-800 rounded-2xl p-6 sm:p-8">
+        <div className="flex items-start gap-3 mb-2">
+          <div className="p-2 rounded-lg bg-brand-orange/15 text-brand-orange">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <span className="text-xs uppercase tracking-widest text-brand-orange font-semibold mt-1.5">
+            Powered by IA
+          </span>
+        </div>
+        <h1 className="font-display text-4xl sm:text-5xl tracking-wide text-white">
+          TU PLAN ALIMENTICIO CON IA
+        </h1>
+        <p className="text-zinc-400 mt-2 max-w-2xl">
+          6 comidas al día, ingredientes mexicanos, adaptado a tu objetivo.
+        </p>
+      </div>
+
+      {/* Form */}
+      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 space-y-6">
+        {/* Calories */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-200 mb-1.5">
+            Calorías objetivo
+          </label>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={calories}
+            onChange={(e) => setCalories(e.target.value)}
+            placeholder="Ej: 2400"
+            className="w-full sm:w-60 bg-zinc-950 border border-zinc-800 focus:border-brand-orange/60 rounded-lg px-3 py-2 text-zinc-100 outline-none transition"
+          />
+          <p className="text-xs text-zinc-500 mt-1.5">
+            Déjalo vacío y lo calculamos desde tu perfil
+          </p>
+        </div>
+
+        {/* Meals per day */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-200 mb-2">
+            Comidas al día
+          </label>
+          <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-950 p-1">
+            {[3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setMealsPerDay(n as 3 | 4 | 5)}
+                className={`px-5 py-1.5 rounded-md text-sm font-medium transition ${
+                  mealsPerDay === n
+                    ? 'bg-brand-orange text-white'
+                    : 'text-zinc-400 hover:text-zinc-100'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Budget */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-200 mb-2">
+            Presupuesto
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {BUDGETS.map((b) => (
+              <label
+                key={b.value}
+                className={`cursor-pointer rounded-lg border px-4 py-3 text-sm transition ${
+                  budget === b.value
+                    ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
+                    : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="budget"
+                  value={b.value}
+                  checked={budget === b.value}
+                  onChange={() => setBudget(b.value as 'low' | 'medium' | 'high')}
+                  className="sr-only"
+                />
+                <div className="font-medium">{b.label}</div>
+                <div className="text-xs text-zinc-500 uppercase mt-0.5">{b.value}</div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Restrictions */}
+        <CheckGrid
+          label="Restricciones"
+          options={RESTRICTIONS}
+          value={restrictions}
+          onToggle={(v) => toggle(restrictions, setRestrictions, v)}
+        />
+
+        {/* Allergies */}
+        <CheckGrid
+          label="Alergias"
+          options={ALLERGIES}
+          value={allergies}
+          onToggle={(v) => toggle(allergies, setAllergies, v)}
+        />
+
+        {/* Disliked */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-200 mb-1.5">
+            Alimentos que no te gustan
+          </label>
+          <textarea
+            rows={2}
+            value={disliked}
+            onChange={(e) => setDisliked(e.target.value)}
+            placeholder="brócoli, hígado, atún…"
+            className="w-full bg-zinc-950 border border-zinc-800 focus:border-brand-orange/60 rounded-lg px-3 py-2 text-zinc-100 outline-none transition"
+          />
+          <p className="text-xs text-zinc-500 mt-1.5">Separa con comas.</p>
+        </div>
+
+        {generate.isError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 text-sm text-red-200">
+            {(generate.error as { message?: string })?.message ?? 'No se pudo generar el plan.'}
+          </div>
+        )}
+
+        <div>
+          <button
+            type="button"
+            onClick={() => generate.mutate()}
+            disabled={generate.isPending}
+            className="inline-flex items-center gap-2 bg-brand-orange hover:bg-brand-orange/90 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl shadow-lg shadow-brand-orange/20 transition"
+          >
+            <Sparkles className="w-4 h-4" />
+            {generate.isPending ? 'Generando…' : 'Generar mi plan con IA'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CheckGrid({
+  label,
+  options,
+  value,
+  onToggle,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  value: string[];
+  onToggle: (v: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-zinc-200 mb-2">{label}</label>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+        {options.map((o) => {
+          const on = value.includes(o.value);
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onToggle(o.value)}
+              className={`rounded-lg border px-3 py-2 text-sm text-left transition ${
+                on
+                  ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
+                  : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700'
+              }`}
+            >
+              <span className="inline-block w-3.5 h-3.5 rounded-sm border border-zinc-600 mr-2 align-middle">
+                {on && <span className="block w-full h-full bg-brand-orange rounded-sm" />}
+              </span>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+ * Active plan
+ * =========================================================================*/
+
+function PlanView({
+  plan,
+  onRegenerated,
+}: {
+  plan: MealPlan;
+  onRegenerated: () => void;
+}) {
+  // Group meals by day
+  const byDay = useMemo(() => {
+    const map = new Map<number, Meal[]>();
+    for (const m of plan.meals ?? []) {
+      const arr = map.get(m.day_of_week) ?? [];
+      arr.push(m);
+      map.set(m.day_of_week, arr);
+    }
+    for (const arr of map.values()) {
+      arr.sort((a, b) => {
+        const oa = a.order_index ?? MEAL_ORDER.indexOf(a.meal_type);
+        const ob = b.order_index ?? MEAL_ORDER.indexOf(b.meal_type);
+        return oa - ob;
+      });
+    }
+    return map;
+  }, [plan.meals]);
+
+  const availableDays = useMemo(
+    () => Array.from(byDay.keys()).sort((a, b) => a - b),
+    [byDay],
+  );
+
+  const [activeDay, setActiveDay] = useState<number>(availableDays[0] ?? 1);
+
+  const regenerate = useMutation({
+    mutationFn: async () => {
+      const r = await api.post('/ai/meal-plans/generate', { country: 'MX' });
+      return r.data;
+    },
+    onSuccess: () => onRegenerated(),
+  });
+
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadShoppingList() {
+    try {
+      setDownloading(true);
+      const r = await api.get(`/ai/meal-plans/${plan.id}/shopping-list`);
+      const items: ShoppingListItem[] = r.data?.items ?? [];
+      const lines = [
+        `LISTA DE COMPRAS - ${plan.name}`,
+        '',
+        ...items.map((i) => `• ${i.total} ${i.name}`.trim()),
+      ];
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lista-compras-cedgym.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  const meals = byDay.get(activeDay) ?? [];
+
+  return (
+    <div className="space-y-6">
+      {/* Header / stats */}
+      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-brand-orange font-semibold mb-2">
+              <Apple className="w-3.5 h-3.5" />
+              Plan activo
+            </div>
+            <h1 className="font-display text-3xl sm:text-4xl tracking-wide text-white">
+              {plan.name}
+            </h1>
+            {plan.goal && (
+              <p className="text-zinc-400 mt-1 text-sm">{plan.goal}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => regenerate.mutate()}
+              disabled={regenerate.isPending}
+              className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-60 text-zinc-100 px-4 py-2 rounded-lg text-sm font-medium transition"
+            >
+              <RefreshCw className={`w-4 h-4 ${regenerate.isPending ? 'animate-spin' : ''}`} />
+              {regenerate.isPending ? 'Regenerando…' : 'Regenerar'}
+            </button>
+            <button
+              onClick={downloadShoppingList}
+              disabled={downloading}
+              className="inline-flex items-center gap-2 bg-brand-orange hover:bg-brand-orange/90 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
+            >
+              <Download className="w-4 h-4" />
+              {downloading ? 'Generando…' : 'Lista de compras'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+          <StatBig icon={<Flame className="w-4 h-4" />} label="Calorías" value={plan.calories_target} unit="kcal" />
+          <StatBig icon={<Dumbbell className="w-4 h-4" />} label="Proteína" value={plan.protein_g} unit="g" />
+          <StatBig icon={<Wheat className="w-4 h-4" />} label="Carbos" value={plan.carbs_g} unit="g" />
+          <StatBig icon={<Droplet className="w-4 h-4" />} label="Grasas" value={plan.fats_g} unit="g" />
+        </div>
+      </div>
+
+      {/* Day tabs */}
+      <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
+        {availableDays.map((d) => (
+          <button
+            key={d}
+            onClick={() => setActiveDay(d)}
+            className={`shrink-0 px-4 py-2 rounded-lg text-sm font-semibold tracking-wide uppercase transition ${
+              activeDay === d
+                ? 'bg-brand-orange text-white'
+                : 'bg-zinc-900/70 border border-zinc-800 text-zinc-400 hover:text-zinc-100'
+            }`}
+          >
+            {DAYS_ES[d] ?? `D${d}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Meals */}
+      <div className="space-y-4">
+        {meals.length === 0 ? (
+          <div className="text-zinc-500 text-sm">No hay comidas para este día.</div>
+        ) : (
+          meals.map((m, i) => <MealCard key={`${m.meal_type}-${i}`} meal={m} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatBig({
+  icon,
+  label,
+  value,
+  unit,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value?: number;
+  unit: string;
+}) {
+  return (
+    <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-zinc-500">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="font-display text-3xl text-white tracking-wide">
+          {value ?? '—'}
+        </span>
+        <span className="text-xs text-zinc-500">{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+function MealCard({ meal }: { meal: Meal }) {
+  const [open, setOpen] = useState(false); // mobile accordion
+  const img = MEAL_IMAGES[meal.meal_type];
+  const badge = MEAL_TYPE_ES[meal.meal_type] ?? meal.meal_type;
+
+  return (
+    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="md:flex">
+        <div
+          className="h-40 md:h-auto md:w-56 shrink-0 bg-cover bg-center bg-zinc-800"
+          style={{ backgroundImage: `url(${img})` }}
+          aria-hidden
+        />
+        <div className="flex-1 p-5">
+          {/* Header: badge + accordion toggle on mobile */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <span className="inline-block text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded-md bg-brand-orange/15 text-brand-orange">
+                {badge}
+              </span>
+              <h3 className="font-display text-2xl tracking-wide text-white mt-2">
+                {meal.name}
+              </h3>
+            </div>
+            <button
+              className="md:hidden p-1.5 rounded-lg bg-zinc-800/80 text-zinc-300"
+              onClick={() => setOpen((v) => !v)}
+              aria-label={open ? 'Colapsar' : 'Expandir'}
+            >
+              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {/* Collapsible body on mobile, always open on md+ */}
+          <div className={`${open ? 'block' : 'hidden'} md:block mt-3 space-y-3`}>
+            {meal.description && (
+              <p className="text-sm text-zinc-400">{meal.description}</p>
+            )}
+
+            {meal.ingredients && meal.ingredients.length > 0 && (
+              <ul className="list-disc list-inside text-sm text-zinc-300 space-y-0.5">
+                {meal.ingredients.map((ing, i) => (
+                  <li key={i}>{ing}</li>
+                ))}
+              </ul>
+            )}
+
+            <div className="flex flex-wrap gap-4 pt-2 text-xs text-zinc-400">
+              {typeof meal.calories === 'number' && (
+                <span className="inline-flex items-center gap-1">
+                  <Flame className="w-3.5 h-3.5 text-orange-400" />
+                  <strong className="text-zinc-100">{meal.calories}</strong> kcal
+                </span>
+              )}
+              {typeof meal.protein_g === 'number' && (
+                <span className="inline-flex items-center gap-1">
+                  <Dumbbell className="w-3.5 h-3.5 text-blue-400" />
+                  <strong className="text-zinc-100">{meal.protein_g}g</strong> prot
+                </span>
+              )}
+              {typeof meal.prep_time_min === 'number' && (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                  <strong className="text-zinc-100">{meal.prep_time_min}</strong> min
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

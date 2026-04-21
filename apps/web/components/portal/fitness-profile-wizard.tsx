@@ -1,0 +1,918 @@
+'use client';
+
+/* eslint-disable react/no-unescaped-entities */
+
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  Dumbbell,
+  User as UserIcon,
+  Users as UsersIcon,
+  Baby,
+  Trophy,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+} from 'lucide-react';
+import { api, normalizeError } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Field } from '@/components/ui/form';
+import { cn } from '@/lib/utils';
+import type { ApiError } from '@/lib/schemas';
+
+/* ─────────────────────────────────────────────────────────────
+ * Types mirroring apps/api/src/routes/ai-routines.js mergeProfile.
+ * Values are API-facing (SCREAMING_SNAKE where applicable) so we
+ * can PATCH the JSON blob straight through.
+ * ─────────────────────────────────────────────────────────────*/
+
+type Objective =
+  | 'WEIGHT_LOSS'
+  | 'MUSCLE_GAIN'
+  | 'MAINTENANCE'
+  | 'STRENGTH'
+  | 'ENDURANCE'
+  | 'GENERAL_FITNESS';
+
+type Level = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+type UserType = 'ADULT' | 'SENIOR' | 'KID' | 'ATHLETE';
+type Discipline =
+  | 'STRENGTH'
+  | 'HYROX'
+  | 'POWERLIFTING'
+  | 'FUNCTIONAL'
+  | 'FOOTBALL_US'
+  | 'FOOTBALL_SOCCER'
+  | 'BASKETBALL'
+  | 'TENNIS'
+  | 'BOXING'
+  | 'CROSSFIT';
+type Gender = 'MALE' | 'FEMALE' | 'OTHER';
+type ActivityLevel =
+  | 'SEDENTARY'
+  | 'LIGHT'
+  | 'MODERATE'
+  | 'HIGH'
+  | 'VERY_HIGH';
+
+interface FitnessProfileDraft {
+  // Step 1
+  age: number | '';
+  gender: Gender | '';
+  height_cm: number | '';
+  weight_kg: number | '';
+  // Step 2
+  user_type: UserType | '';
+  discipline?: Discipline | '';
+  // Step 3
+  objective: Objective | '';
+  level: Level | '';
+  activity_level: ActivityLevel | '';
+  // Step 4
+  days_per_week: number;
+  session_duration_min: number;
+  // Step 5
+  injuries: string[];
+  dietary: string[];
+  allergies: string[];
+  notes: string;
+}
+
+const DRAFT_KEY = 'cedgym-fitness-profile-draft';
+
+const EMPTY_DRAFT: FitnessProfileDraft = {
+  age: '',
+  gender: '',
+  height_cm: '',
+  weight_kg: '',
+  user_type: '',
+  discipline: '',
+  objective: '',
+  level: '',
+  activity_level: '',
+  days_per_week: 4,
+  session_duration_min: 60,
+  injuries: [],
+  dietary: [],
+  allergies: [],
+  notes: '',
+};
+
+const USER_TYPES: {
+  value: UserType;
+  title: string;
+  sub: string;
+  Icon: typeof UserIcon;
+}[] = [
+  { value: 'ADULT', title: 'Adulto', sub: '18 – 55 años', Icon: UserIcon },
+  { value: 'SENIOR', title: 'Adulto mayor', sub: '55+ años', Icon: UsersIcon },
+  { value: 'KID', title: 'Niño / Juvenil', sub: '6 – 17 años', Icon: Baby },
+  { value: 'ATHLETE', title: 'Deportista', sub: 'Entrena un deporte', Icon: Trophy },
+];
+
+const DISCIPLINES: { value: Discipline; label: string }[] = [
+  { value: 'FOOTBALL_US', label: 'Football Americano' },
+  { value: 'FOOTBALL_SOCCER', label: 'Fútbol Soccer' },
+  { value: 'BASKETBALL', label: 'Básquetbol' },
+  { value: 'TENNIS', label: 'Tenis' },
+  { value: 'BOXING', label: 'Boxeo' },
+  { value: 'CROSSFIT', label: 'CrossFit' },
+  { value: 'POWERLIFTING', label: 'Powerlifting' },
+  { value: 'HYROX', label: 'HYROX' },
+];
+
+const OBJECTIVES: {
+  value: Objective;
+  title: string;
+  emoji: string;
+}[] = [
+  { value: 'WEIGHT_LOSS', title: 'Bajar grasa', emoji: '🔥' },
+  { value: 'MUSCLE_GAIN', title: 'Ganar músculo', emoji: '💪' },
+  { value: 'MAINTENANCE', title: 'Mantenimiento', emoji: '⚖️' },
+  { value: 'STRENGTH', title: 'Fuerza', emoji: '🏋️' },
+  { value: 'ENDURANCE', title: 'Resistencia', emoji: '🏃' },
+  { value: 'GENERAL_FITNESS', title: 'Fitness general', emoji: '✨' },
+];
+
+const LEVELS: { value: Level; label: string }[] = [
+  { value: 'BEGINNER', label: 'Principiante' },
+  { value: 'INTERMEDIATE', label: 'Intermedio' },
+  { value: 'ADVANCED', label: 'Avanzado' },
+];
+
+const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
+  { value: 'SEDENTARY', label: 'Sedentario' },
+  { value: 'LIGHT', label: 'Ligero' },
+  { value: 'MODERATE', label: 'Moderado' },
+  { value: 'HIGH', label: 'Alto' },
+  { value: 'VERY_HIGH', label: 'Muy alto' },
+];
+
+const INJURIES: { value: string; label: string }[] = [
+  { value: 'knee', label: 'Rodilla' },
+  { value: 'lower_back', label: 'Lumbares' },
+  { value: 'shoulder', label: 'Hombro' },
+  { value: 'neck', label: 'Cuello' },
+  { value: 'wrist', label: 'Muñeca' },
+  { value: 'ankle', label: 'Tobillo' },
+  { value: 'hip', label: 'Cadera' },
+  { value: 'none', label: 'Ninguna' },
+];
+
+const DIETARY = [
+  'Vegetariano',
+  'Vegano',
+  'Sin lactosa',
+  'Sin gluten',
+  'Sin cerdo',
+  'Kosher',
+  'Halal',
+];
+
+const ALLERGIES = [
+  'Nueces',
+  'Mariscos',
+  'Huevos',
+  'Lácteos',
+  'Soja',
+  'Gluten',
+];
+
+const GENDERS: { value: Gender; label: string }[] = [
+  { value: 'MALE', label: 'Masculino' },
+  { value: 'FEMALE', label: 'Femenino' },
+  { value: 'OTHER', label: 'Otro' },
+];
+
+const TOTAL_STEPS = 5;
+
+/* ─────────────────────────────────────────────────────────────
+ * Wizard component
+ * ─────────────────────────────────────────────────────────────*/
+
+interface Props {
+  /**
+   * Initial value from `/auth/me` → user.fitness_profile. The backend stores
+   * this as a raw JSON blob (Prisma Json), so we accept an untyped dict and
+   * only pick the keys we recognize via spread-merge with EMPTY_DRAFT.
+   */
+  initial?: Record<string, unknown> | null;
+}
+
+export function FitnessProfileWizard({ initial }: Props) {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const [step, setStep] = useState(1);
+  const [draft, setDraft] = useState<FitnessProfileDraft>(EMPTY_DRAFT);
+
+  /* Hydrate once from localStorage (takes precedence) or initial server data. */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<FitnessProfileDraft>;
+        setDraft({ ...EMPTY_DRAFT, ...parsed });
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+    if (initial && typeof initial === 'object') {
+      // Trust-but-verify: the backend stores this as an opaque JSON blob.
+      // We merge optimistically — unknown keys are harmless, missing ones
+      // keep EMPTY_DRAFT defaults.
+      setDraft({ ...EMPTY_DRAFT, ...(initial as Partial<FitnessProfileDraft>) });
+    }
+    // We intentionally run this once. `initial` may arrive late but if the
+    // user has already started editing we don't want to clobber their work.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Persist on every change. */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      /* quota; ignore */
+    }
+  }, [draft]);
+
+  const update = <K extends keyof FitnessProfileDraft>(
+    key: K,
+    value: FitnessProfileDraft[K],
+  ) => setDraft((d) => ({ ...d, [key]: value }));
+
+  const toggleInList = (key: 'injuries' | 'dietary' | 'allergies', v: string) => {
+    setDraft((d) => {
+      const list = d[key];
+      if (key === 'injuries') {
+        // "none" is exclusive with the rest.
+        if (v === 'none') {
+          return { ...d, injuries: list.includes('none') ? [] : ['none'] };
+        }
+        const next = list.includes(v)
+          ? list.filter((x) => x !== v)
+          : [...list.filter((x) => x !== 'none'), v];
+        return { ...d, injuries: next };
+      }
+      const next = list.includes(v)
+        ? list.filter((x) => x !== v)
+        : [...list, v];
+      return { ...d, [key]: next };
+    });
+  };
+
+  /* ── Per-step validity ───────────────────────────────────── */
+  const stepValid = useMemo(() => {
+    switch (step) {
+      case 1: {
+        const age = Number(draft.age);
+        const h = Number(draft.height_cm);
+        const w = Number(draft.weight_kg);
+        return (
+          age >= 6 &&
+          age <= 99 &&
+          !!draft.gender &&
+          h >= 100 &&
+          h <= 230 &&
+          w >= 30 &&
+          w <= 250
+        );
+      }
+      case 2:
+        if (!draft.user_type) return false;
+        if (draft.user_type === 'ATHLETE' && !draft.discipline) return false;
+        return true;
+      case 3:
+        return !!(draft.objective && draft.level && draft.activity_level);
+      case 4:
+        return (
+          draft.days_per_week >= 2 &&
+          draft.days_per_week <= 6 &&
+          draft.session_duration_min >= 30 &&
+          draft.session_duration_min <= 120
+        );
+      case 5:
+        // Step 5 fields are all optional; "Guardar" always enabled.
+        return draft.notes.length <= 500;
+      default:
+        return false;
+    }
+  }, [step, draft]);
+
+  /* ── Save mutation ───────────────────────────────────────── */
+  const save = useMutation({
+    mutationFn: async () => {
+      // Shape the payload exactly as mergeProfile expects. "none" in injuries
+      // means "no injuries" — send an empty array server-side.
+      const injuries =
+        draft.injuries.length === 1 && draft.injuries[0] === 'none'
+          ? []
+          : draft.injuries;
+
+      const fitness_profile = {
+        age: Number(draft.age),
+        gender: draft.gender,
+        height_cm: Number(draft.height_cm),
+        weight_kg: Number(draft.weight_kg),
+        user_type: draft.user_type,
+        ...(draft.user_type === 'ATHLETE' && draft.discipline
+          ? { discipline: draft.discipline }
+          : {}),
+        objective: draft.objective,
+        level: draft.level,
+        activity_level: draft.activity_level,
+        days_per_week: draft.days_per_week,
+        session_duration_min: draft.session_duration_min,
+        injuries,
+        // Equipment defaults to gym-available for now; the HOME-flow can set
+        // this via a future step. `available_equipment` is required by the
+        // AI endpoint only when location=HOME, so [] is a safe default.
+        available_equipment: [] as string[],
+        dietary_restrictions: draft.dietary,
+        allergies: draft.allergies,
+        notes: draft.notes.trim() || undefined,
+      };
+
+      // Preferred endpoint (to be added backend-side). Fall back to the
+      // generic /users/me PATCH shape used by portalApi.updateProfile.
+      try {
+        const res = await api.patch('/users/me/fitness-profile', fitness_profile);
+        return res.data;
+      } catch (err) {
+        const norm = normalizeError(err) as ApiError;
+        if (norm.status === 404) {
+          const res = await api.patch('/users/me', { fitness_profile });
+          return res.data;
+        }
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      toast.success('Perfil fitness guardado. Generando tu rutina…');
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+      router.push('/portal/rutinas');
+    },
+    onError: (err) => {
+      const norm = normalizeError(err) as ApiError;
+      toast.error(norm.message || 'No pudimos guardar tu perfil.');
+    },
+  });
+
+  const goNext = () => {
+    if (!stepValid) return;
+    if (step < TOTAL_STEPS) setStep((s) => s + 1);
+    else save.mutate();
+  };
+  const goBack = () => setStep((s) => Math.max(1, s - 1));
+
+  const progressPct = (step / TOTAL_STEPS) * 100;
+
+  return (
+    <section className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-6">
+      {/* ── Header & progress ─────────────────────────────── */}
+      <header className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange">
+            <Sparkles size={18} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-display text-lg font-semibold">Perfil fitness</h2>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              5 pasos rápidos. Nuestro motor lo usa para generar rutinas y
+              planes de comida personalizados para ti.
+            </p>
+          </div>
+          <span className="text-xs font-mono text-white/60">
+            {step}/{TOTAL_STEPS}
+          </span>
+        </div>
+
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+          <div
+            className="h-full rounded-full bg-brand-orange transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </header>
+
+      {/* ── Step body ─────────────────────────────────────── */}
+      <div className="min-h-[260px]">
+        {step === 1 && <StepAboutYou draft={draft} update={update} />}
+        {step === 2 && (
+          <StepTrainingType draft={draft} update={update} />
+        )}
+        {step === 3 && <StepGoalLevel draft={draft} update={update} />}
+        {step === 4 && <StepAvailability draft={draft} update={update} />}
+        {step === 5 && (
+          <StepRestrictions
+            draft={draft}
+            update={update}
+            toggleInList={toggleInList}
+          />
+        )}
+      </div>
+
+      {/* ── Nav ───────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+        <Button
+          variant="ghost"
+          onClick={goBack}
+          disabled={step === 1 || save.isPending}
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Atrás
+        </Button>
+        {step < TOTAL_STEPS ? (
+          <Button onClick={goNext} disabled={!stepValid}>
+            Continuar
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        ) : (
+          <Button
+            onClick={goNext}
+            loading={save.isPending}
+            disabled={!stepValid}
+            className="!bg-[#FF6B00] hover:!bg-[#FF8A00] !text-white"
+          >
+            Guardar perfil
+          </Button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * Step components — kept in the same file to avoid churn.
+ * Each takes the draft + a typed update() setter.
+ * ─────────────────────────────────────────────────────────────*/
+
+interface StepProps {
+  draft: FitnessProfileDraft;
+  update: <K extends keyof FitnessProfileDraft>(
+    key: K,
+    value: FitnessProfileDraft[K],
+  ) => void;
+}
+
+function StepHeading({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <h3 className="font-display text-xl font-semibold">{title}</h3>
+      {subtitle && <p className="text-sm text-zinc-400">{subtitle}</p>}
+    </div>
+  );
+}
+
+function StepAboutYou({ draft, update }: StepProps) {
+  return (
+    <div className="space-y-5">
+      <StepHeading
+        title="Sobre ti"
+        subtitle="Necesitamos tus datos básicos para calcular tu plan (Mifflin-St Jeor)."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field id="fp_age" label="Edad">
+          <Input
+            id="fp_age"
+            type="number"
+            min={6}
+            max={99}
+            inputMode="numeric"
+            value={draft.age === '' ? '' : String(draft.age)}
+            onChange={(e) =>
+              update(
+                'age',
+                e.target.value === '' ? '' : Number(e.target.value),
+              )
+            }
+            placeholder="28"
+          />
+        </Field>
+
+        <Field label="Género">
+          <div className="flex flex-wrap gap-2">
+            {GENDERS.map((g) => {
+              const active = draft.gender === g.value;
+              return (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => update('gender', g.value)}
+                  className={cn(
+                    'h-11 flex-1 min-w-[90px] rounded-xl border px-3 text-sm transition-colors',
+                    active
+                      ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
+                      : 'border-white/10 bg-input/60 text-white/70 hover:bg-white/5',
+                  )}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
+        <Field id="fp_height" label="Altura (cm)">
+          <Input
+            id="fp_height"
+            type="number"
+            min={100}
+            max={230}
+            inputMode="numeric"
+            value={draft.height_cm === '' ? '' : String(draft.height_cm)}
+            onChange={(e) =>
+              update(
+                'height_cm',
+                e.target.value === '' ? '' : Number(e.target.value),
+              )
+            }
+            placeholder="175"
+          />
+        </Field>
+
+        <Field id="fp_weight" label="Peso (kg)">
+          <Input
+            id="fp_weight"
+            type="number"
+            min={30}
+            max={250}
+            inputMode="decimal"
+            value={draft.weight_kg === '' ? '' : String(draft.weight_kg)}
+            onChange={(e) =>
+              update(
+                'weight_kg',
+                e.target.value === '' ? '' : Number(e.target.value),
+              )
+            }
+            placeholder="72"
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+function StepTrainingType({ draft, update }: StepProps) {
+  return (
+    <div className="space-y-5">
+      <StepHeading
+        title="Tu tipo de entrenamiento"
+        subtitle="Esto define la estructura base de tu rutina."
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {USER_TYPES.map(({ value, title, sub, Icon }) => {
+          const active = draft.user_type === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => update('user_type', value)}
+              className={cn(
+                'flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors',
+                active
+                  ? 'border-brand-orange/60 bg-brand-orange/10'
+                  : 'border-white/10 bg-white/[0.02] hover:bg-white/5',
+              )}
+            >
+              <span
+                className={cn(
+                  'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                  active
+                    ? 'bg-brand-orange/20 text-brand-orange'
+                    : 'bg-white/5 text-white/70',
+                )}
+              >
+                <Icon size={18} />
+              </span>
+              <div className="min-w-0">
+                <div className="font-semibold">{title}</div>
+                <div className="text-xs text-zinc-400">{sub}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {draft.user_type === 'ATHLETE' && (
+        <Field id="fp_discipline" label="Disciplina" className="pt-2">
+          <select
+            id="fp_discipline"
+            value={draft.discipline ?? ''}
+            onChange={(e) =>
+              update('discipline', e.target.value as FitnessProfileDraft['discipline'])
+            }
+            className="h-11 w-full rounded-xl border border-white/10 bg-input/60 px-3 text-sm text-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+          >
+            <option value="">Elige tu deporte…</option>
+            {DISCIPLINES.map((d) => (
+              <option key={d.value} value={d.value}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
+    </div>
+  );
+}
+
+function StepGoalLevel({ draft, update }: StepProps) {
+  return (
+    <div className="space-y-6">
+      <StepHeading
+        title="Tu objetivo y nivel"
+        subtitle="Afina el volumen e intensidad."
+      />
+
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+          Objetivo
+        </div>
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
+          {OBJECTIVES.map((o) => {
+            const active = draft.objective === o.value;
+            return (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => update('objective', o.value)}
+                className={cn(
+                  'flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-colors',
+                  active
+                    ? 'border-brand-orange/60 bg-brand-orange/10'
+                    : 'border-white/10 bg-white/[0.02] hover:bg-white/5',
+                )}
+              >
+                <span className="text-xl">{o.emoji}</span>
+                <span className="text-sm font-semibold">{o.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+          Nivel
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {LEVELS.map((l) => {
+            const active = draft.level === l.value;
+            return (
+              <button
+                key={l.value}
+                type="button"
+                onClick={() => update('level', l.value)}
+                className={cn(
+                  'h-10 rounded-full border px-4 text-sm font-semibold transition-colors',
+                  active
+                    ? 'border-brand-orange/60 bg-brand-orange text-black'
+                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                )}
+              >
+                {l.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Field id="fp_activity" label="Nivel de actividad fuera del gym">
+        <select
+          id="fp_activity"
+          value={draft.activity_level}
+          onChange={(e) =>
+            update('activity_level', e.target.value as ActivityLevel)
+          }
+          className="h-11 w-full rounded-xl border border-white/10 bg-input/60 px-3 text-sm text-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+        >
+          <option value="">Elige…</option>
+          {ACTIVITY_LEVELS.map((a) => (
+            <option key={a.value} value={a.value}>
+              {a.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+    </div>
+  );
+}
+
+function StepAvailability({ draft, update }: StepProps) {
+  return (
+    <div className="space-y-6">
+      <StepHeading
+        title="Tu disponibilidad"
+        subtitle="Honesto vence a ambicioso — mejor consistencia que volumen."
+      />
+
+      <SliderRow
+        label="Días por semana"
+        min={2}
+        max={6}
+        value={draft.days_per_week}
+        onChange={(v) => update('days_per_week', v)}
+        renderValue={(v) => `${v} día${v === 1 ? '' : 's'}`}
+      />
+
+      <SliderRow
+        label="Duración por sesión"
+        min={30}
+        max={120}
+        step={5}
+        value={draft.session_duration_min}
+        onChange={(v) => update('session_duration_min', v)}
+        renderValue={(v) => `${v} min`}
+      />
+    </div>
+  );
+}
+
+function SliderRow({
+  label,
+  min,
+  max,
+  step = 1,
+  value,
+  onChange,
+  renderValue,
+}: {
+  label: string;
+  min: number;
+  max: number;
+  step?: number;
+  value: number;
+  onChange: (v: number) => void;
+  renderValue: (v: number) => string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-xs font-semibold uppercase tracking-widest text-white/70">
+          {label}
+        </span>
+        <span className="font-display text-2xl font-semibold text-brand-orange">
+          {renderValue(value)}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-[#1e5aff]"
+      />
+      <div className="flex justify-between text-[11px] text-white/40">
+        <span>{renderValue(min)}</span>
+        <span>{renderValue(max)}</span>
+      </div>
+    </div>
+  );
+}
+
+interface StepRestrictionsProps extends StepProps {
+  toggleInList: (
+    key: 'injuries' | 'dietary' | 'allergies',
+    v: string,
+  ) => void;
+}
+
+function StepRestrictions({
+  draft,
+  update,
+  toggleInList,
+}: StepRestrictionsProps) {
+  return (
+    <div className="space-y-6">
+      <StepHeading
+        title="Restricciones"
+        subtitle="Usamos esto para adaptar ejercicios y meal-plans. Todos los campos son opcionales."
+      />
+
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+          Lesiones / molestias
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {INJURIES.map((i) => {
+            const active = draft.injuries.includes(i.value);
+            return (
+              <button
+                key={i.value}
+                type="button"
+                onClick={() => toggleInList('injuries', i.value)}
+                className={cn(
+                  'h-9 rounded-full border px-3 text-xs font-semibold transition-colors',
+                  active
+                    ? 'border-brand-orange/60 bg-brand-orange/15 text-white'
+                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                )}
+              >
+                {i.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+          Dieta
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {DIETARY.map((tag) => {
+            const active = draft.dietary.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleInList('dietary', tag)}
+                className={cn(
+                  'h-9 rounded-full border px-3 text-xs font-semibold transition-colors',
+                  active
+                    ? 'border-brand-orange/60 bg-brand-orange/15 text-white'
+                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                )}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-widest text-white/70 mb-2">
+          Alergias
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {ALLERGIES.map((a) => {
+            const active = draft.allergies.includes(a);
+            return (
+              <label
+                key={a}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors',
+                  active
+                    ? 'border-brand-orange/60 bg-brand-orange/10 text-white'
+                    : 'border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/5',
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={() => toggleInList('allergies', a)}
+                  className="h-4 w-4 accent-[#1e5aff]"
+                />
+                {a}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      <Field
+        id="fp_notes"
+        label="Notas (opcional)"
+        hint={`${draft.notes.length}/500`}
+      >
+        <textarea
+          id="fp_notes"
+          value={draft.notes}
+          onChange={(e) => update('notes', e.target.value.slice(0, 500))}
+          rows={3}
+          maxLength={500}
+          placeholder="Cualquier cosa relevante: cirugías recientes, preferencias, etc."
+          className="w-full rounded-xl border border-white/10 bg-input/60 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+        />
+      </Field>
+
+      <div className="flex items-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-3 text-xs text-zinc-400">
+        <Dumbbell size={14} className="text-brand-orange" />
+        Al guardar, generaremos tu primera rutina con IA basada en este perfil.
+      </div>
+    </div>
+  );
+}

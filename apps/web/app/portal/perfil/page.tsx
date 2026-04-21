@@ -9,6 +9,8 @@ import {
   Download,
   ShieldAlert,
   CheckCircle2,
+  Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
@@ -18,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Field, FormError } from '@/components/ui/form';
 import type { ApiError, Relationship } from '@/lib/schemas';
+import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
 
 const RELATIONSHIP_OPTIONS: { value: Relationship; label: string }[] = [
   { value: 'padre', label: 'Padre' },
@@ -48,6 +51,15 @@ export default function PortalPerfilPage() {
   const [fullName, setFullName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [profileApiError, setProfileApiError] = useState<string | null>(null);
+
+  // Fitness wizard: collapsed by default if the user already has a saved
+  // fitness_profile, expanded otherwise (nudge to fill it in).
+  const hasFitnessProfile = !!me?.user?.fitness_profile;
+  const [fitnessOpen, setFitnessOpen] = useState(false);
+  useEffect(() => {
+    // Once /auth/me resolves, auto-expand for users who haven't set it up.
+    if (me && !hasFitnessProfile) setFitnessOpen(true);
+  }, [me, hasFitnessProfile]);
 
   // Contacto de emergencia (10 dígitos, sin prefijo +52)
   const [ecName, setEcName] = useState('');
@@ -170,6 +182,45 @@ export default function PortalPerfilPage() {
           Datos personales, contacto de emergencia y privacidad.
         </p>
       </div>
+
+      {/* Perfil fitness — wizard para IA de rutinas y meal plans */}
+      {fitnessOpen ? (
+        <FitnessProfileWizard
+          initial={
+            (me?.user?.fitness_profile as Record<string, unknown> | undefined) ??
+            null
+          }
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setFitnessOpen(true)}
+          className="group w-full flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 text-left transition-colors hover:border-brand-orange/40 hover:bg-zinc-900"
+        >
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange">
+            <Sparkles size={18} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">Perfil fitness</h2>
+              {hasFitnessProfile && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-300">
+                  <CheckCircle2 size={10} /> Guardado
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-zinc-400">
+              {hasFitnessProfile
+                ? 'Edita tus datos para regenerar rutinas y planes de comida.'
+                : 'Completa 5 pasos rápidos para desbloquear rutinas con IA.'}
+            </p>
+          </div>
+          <ChevronDown
+            size={18}
+            className="shrink-0 text-white/50 transition-transform group-hover:text-white"
+          />
+        </button>
+      )}
 
       {/* Datos personales */}
       <section className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 sm:p-6 space-y-4">

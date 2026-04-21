@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, CreditCard, QrCode, Dumbbell, GraduationCap,
-  Calendar, Ruler, MessageSquare, User, LogOut, Menu, X, Trophy
+  Calendar, Ruler, MessageSquare, User, LogOut, Menu, X, Trophy, Apple
 } from 'lucide-react';
 import { useState } from 'react';
 import { Logo } from '@/components/ui/logo';
@@ -17,6 +17,7 @@ const NAV = [
   { href: '/portal/qr',          label: 'Mi QR',         icon: QrCode },
   { href: '/portal/rutinas',     label: 'Mis rutinas',   icon: Dumbbell },
   { href: '/portal/cursos',      label: 'Mis cursos',    icon: GraduationCap },
+  { href: '/portal/plan-alimenticio', label: 'Mi plan alim.', icon: Apple },
   { href: '/portal/clases',      label: 'Reservar clase', icon: Calendar },
   { href: '/portal/logros',      label: 'Logros',        icon: Trophy },
   { href: '/portal/mediciones',  label: 'Mediciones',    icon: Ruler },

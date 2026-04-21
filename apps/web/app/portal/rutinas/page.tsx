@@ -1,75 +1,763 @@
 'use client';
 
+/* -------------------------------------------------------------------------
+ * Member routine page — AI-generated.
+ *
+ * Two modes:
+ *   1. No active routine → inline "generate your routine" form.
+ *   2. Active routine    → day tabs with expandable exercise cards.
+ *
+ * Backend:
+ *   GET  /ai/routines/me          → { routine: Routine | null }
+ *   POST /ai/routines/generate    → { routine, ai: {...} }  (201)
+ *
+ * `GET /ai/routines/me` returns 200 with `routine: null` when the user has
+ * no active routine (we verified in the API source), so we gate on that and
+ * NOT on a 404. A 403 from missing membership still flows through to the
+ * error block below.
+ * -------------------------------------------------------------------------*/
+
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
-import { Dumbbell, Utensils, BookOpen, Play } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Dumbbell,
+  ExternalLink,
+  Lightbulb,
+  Loader2,
+  Lock,
+  RefreshCw,
+  Sparkles,
+  Timer,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { api, normalizeError } from '@/lib/api';
 
-const TYPE_ICONS: Record<string, any> = {
-  ROUTINE: <Dumbbell className="w-5 h-5" />,
-  NUTRITION_PLAN: <Utensils className="w-5 h-5" />,
-  EBOOK: <BookOpen className="w-5 h-5" />,
-  VIDEO_COURSE: <Play className="w-5 h-5" />,
-};
+// ── Types ────────────────────────────────────────────────────────────────
+type Location = 'GYM' | 'HOME' | 'BOTH';
 
+interface RoutineExercise {
+  id?: string;
+  exercise_name_snapshot?: string;
+  exercise_name?: string;
+  video_url?: string | null;
+  sets: number;
+  reps: string;
+  rest_sec: number;
+  notes?: string | null;
+  exercise?: {
+    id: string;
+    name?: string;
+    description?: string | null;
+    thumbnail_url?: string | null;
+  } | null;
+}
+
+interface RoutineDay {
+  id?: string;
+  day_of_week: number;
+  title: string;
+  notes?: string | null;
+  exercises: RoutineExercise[];
+}
+
+interface Routine {
+  id: string;
+  name: string;
+  goal?: string;
+  location?: Location;
+  days_per_week: number;
+  is_active: boolean;
+  started_at?: string | null;
+  days: RoutineDay[];
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Extract a YouTube video id from a plain watch/short URL so we can embed
+ * it. Returns null for search URLs (`/results?search_query=…`) or anything
+ * else — the UI falls back to an "open in YouTube" link in that case.
+ */
+function getYouTubeEmbedUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+  if (!m) return null;
+  return `https://www.youtube.com/embed/${m[1]}`;
+}
+
+const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+function formatStartedAt(iso?: string | null): string | null {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleDateString('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════
 export default function PortalRutinasPage() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['products', 'me', 'purchases'],
-    queryFn: async () => (await api.get('/products/me/purchases')).data,
+  const qc = useQueryClient();
+
+  // Active routine — the source of truth for which case we render.
+  const routineQ = useQuery<{ routine: Routine | null }>({
+    queryKey: ['routines', 'me'],
+    queryFn: async () => (await api.get('/ai/routines/me')).data,
+    retry: false,
   });
 
-  if (isLoading) return <div className="text-zinc-400">Cargando…</div>;
+  // Pull `me` to check fitness_profile presence (blocks Generate CTA).
+  const meQ = useQuery<{ user: { fitness_profile?: unknown } }>({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => (await api.get('/auth/me')).data,
+  });
 
-  const items = data?.items ?? [];
+  if (routineQ.isLoading) {
+    return (
+      <div className="flex items-center gap-3 text-zinc-400">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Cargando tu rutina…
+      </div>
+    );
+  }
+
+  // Membership-gated → backend throws 403. Surface a clean upsell block.
+  const err = routineQ.error as { status?: number; message?: string } | null;
+  if (err && err.status === 403) {
+    return <MembershipBlock />;
+  }
+
+  const routine = routineQ.data?.routine ?? null;
+  const hasFitnessProfile = Boolean(meQ.data?.user?.fitness_profile);
+
+  if (!routine) {
+    return (
+      <GenerateRoutineCard
+        hasFitnessProfile={hasFitnessProfile}
+        onGenerated={() => qc.invalidateQueries({ queryKey: ['routines', 'me'] })}
+      />
+    );
+  }
+
+  return (
+    <ActiveRoutineView
+      routine={routine}
+      hasFitnessProfile={hasFitnessProfile}
+      onRegenerated={() => qc.invalidateQueries({ queryKey: ['routines', 'me'] })}
+    />
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Case 1: no active routine → generate form
+// ═════════════════════════════════════════════════════════════════════════
+
+interface GenerateFormState {
+  location: Location;
+  days_per_week: number;
+  session_duration_min: number;
+}
+
+const DEFAULT_FORM: GenerateFormState = {
+  location: 'GYM',
+  days_per_week: 4,
+  session_duration_min: 60,
+};
+
+function GenerateRoutineCard({
+  hasFitnessProfile,
+  onGenerated,
+}: {
+  hasFitnessProfile: boolean;
+  onGenerated: () => void;
+}) {
+  const [form, setForm] = useState<GenerateFormState>(DEFAULT_FORM);
+
+  const mut = useMutation({
+    mutationFn: async (body: GenerateFormState) =>
+      (await api.post('/ai/routines/generate', body)).data,
+    onSuccess: () => {
+      toast.success('Tu rutina está lista.');
+      onGenerated();
+    },
+    onError: (e) => {
+      const n = normalizeError(e);
+      if (n.status === 429) {
+        toast.error('Demasiadas generaciones. Espera un momento e intenta de nuevo.');
+      } else if (n.status === 403) {
+        toast.error('Necesitas una membresía activa para generar rutinas.');
+      } else {
+        toast.error(n.message || 'No pudimos generar tu rutina. Intenta de nuevo.');
+      }
+    },
+  });
+
+  const disabled = !hasFitnessProfile || mut.isPending;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Mis rutinas</h1>
-        <p className="text-zinc-400 mt-1">Acceso a todas tus rutinas y planes.</p>
+      <section className="bg-gradient-to-br from-zinc-900 to-zinc-900/70 border border-zinc-800 rounded-2xl p-6 sm:p-10">
+        <div className="flex items-center gap-3 text-orange-500 mb-4">
+          <Sparkles className="w-6 h-6" />
+          <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+            Rutina personalizada
+          </span>
+        </div>
+        <h1 className="font-display text-3xl sm:text-5xl leading-tight">
+          GENERA TU RUTINA CON IA
+        </h1>
+        <p className="text-zinc-400 mt-3 max-w-xl">
+          Adaptada a tu objetivo, nivel y equipo disponible. Lista en 30 segundos.
+        </p>
+
+        {!hasFitnessProfile && (
+          <div className="mt-6 flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-100">
+              Completa tu perfil fitness primero para que la IA pueda adaptar la
+              rutina a tu nivel y objetivo.{' '}
+              <Link
+                href="/portal/perfil"
+                className="underline decoration-amber-300 hover:text-white"
+              >
+                Ir a mi perfil →
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ── Form ─────────────────────────────────────────────────── */}
+        <div className="mt-8 space-y-6">
+          <FieldBlock label="¿Dónde entrenas?">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {(['GYM', 'HOME', 'BOTH'] as Location[]).map((loc) => (
+                <RadioCard
+                  key={loc}
+                  active={form.location === loc}
+                  onClick={() => setForm((f) => ({ ...f, location: loc }))}
+                  label={
+                    loc === 'GYM' ? 'Gym' : loc === 'HOME' ? 'Casa' : 'Ambos'
+                  }
+                  hint={
+                    loc === 'GYM'
+                      ? 'Máquinas + pesos'
+                      : loc === 'HOME'
+                      ? 'Mínimo equipo'
+                      : 'Alterna'
+                  }
+                />
+              ))}
+            </div>
+          </FieldBlock>
+
+          <FieldBlock label="Días por semana">
+            <Segmented
+              options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+              value={form.days_per_week}
+              onChange={(v) => setForm((f) => ({ ...f, days_per_week: v as number }))}
+            />
+          </FieldBlock>
+
+          <FieldBlock label="Duración por sesión">
+            <Segmented
+              options={[
+                { value: 45, label: '45 min' },
+                { value: 60, label: '60 min' },
+                { value: 90, label: '90 min' },
+              ]}
+              value={form.session_duration_min}
+              onChange={(v) =>
+                setForm((f) => ({ ...f, session_duration_min: v as number }))
+              }
+            />
+          </FieldBlock>
+
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => mut.mutate(form)}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl !bg-[#FF6B00] hover:!bg-[#ff7a1f] disabled:!bg-zinc-700 disabled:cursor-not-allowed text-white font-semibold transition shadow-lg shadow-orange-500/20"
+          >
+            {mut.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generando tu rutina… ~20 segundos
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Generar mi rutina con IA
+              </>
+            )}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Case 2: active routine view
+// ═════════════════════════════════════════════════════════════════════════
+
+function ActiveRoutineView({
+  routine,
+  hasFitnessProfile,
+  onRegenerated,
+}: {
+  routine: Routine;
+  hasFitnessProfile: boolean;
+  onRegenerated: () => void;
+}) {
+  // Sort days by day_of_week so tabs come out in weekday order.
+  const sortedDays = useMemo(
+    () => [...routine.days].sort((a, b) => a.day_of_week - b.day_of_week),
+    [routine.days],
+  );
+  const [activeDayIdx, setActiveDayIdx] = useState(0);
+  const [regenOpen, setRegenOpen] = useState(false);
+
+  const activeDay = sortedDays[activeDayIdx];
+
+  return (
+    <div className="space-y-6">
+      {/* ── Top bar ──────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl sm:text-3xl leading-tight">
+            {routine.name}
+          </h1>
+          {routine.started_at && (
+            <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-400">
+              <Timer className="w-3.5 h-3.5" />
+              Iniciada {formatStartedAt(routine.started_at)}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setRegenOpen(true)}
+          className="glass inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm border border-zinc-700 hover:border-zinc-500 transition"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Regenerar
+        </button>
       </div>
 
-      {items.length === 0 ? (
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-8 text-center">
-          <Dumbbell className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-          <p className="text-zinc-400 mb-4">Aún no has adquirido rutinas.</p>
-          <Link
-            href="/tienda"
-            className="inline-flex px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium"
-          >
-            Ver marketplace
-          </Link>
+      {/* ── Day tabs ─────────────────────────────────────────── */}
+      <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-none">
+        <div className="flex gap-2 px-4 sm:px-0 min-w-max snap-x snap-mandatory">
+          {sortedDays.map((day, idx) => {
+            const active = idx === activeDayIdx;
+            return (
+              <button
+                key={day.id ?? `${day.day_of_week}-${idx}`}
+                type="button"
+                onClick={() => setActiveDayIdx(idx)}
+                className={`snap-start shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition border ${
+                  active
+                    ? 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20'
+                    : 'bg-zinc-900/70 border-zinc-800 text-zinc-300 hover:border-zinc-600'
+                }`}
+              >
+                {DAY_LABELS[day.day_of_week] ?? `D${day.day_of_week + 1}`}
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((p: any) => (
-            <Link
-              key={p.id}
-              href={`/portal/rutinas/${p.id}`}
-              className="group bg-zinc-900/70 hover:bg-zinc-900 border border-zinc-800 hover:border-blue-500/40 rounded-2xl overflow-hidden transition"
-            >
-              {p.product?.cover_url && (
-                <div
-                  className="h-32 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${p.product.cover_url})` }}
-                />
-              )}
-              <div className="p-4">
-                <div className="flex items-center gap-2 text-xs text-blue-400 mb-2">
-                  {TYPE_ICONS[p.product?.type] ?? <Dumbbell className="w-4 h-4" />}
-                  <span>{p.product?.type?.replace('_', ' ')}</span>
-                </div>
-                <h3 className="font-semibold group-hover:text-blue-400 transition">
-                  {p.product?.title}
-                </h3>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Comprado el {p.access_granted_at?.slice(0, 10)}
-                </p>
-              </div>
-            </Link>
-          ))}
+      </div>
+
+      {/* ── Day content ─────────────────────────────────────── */}
+      {activeDay && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="font-display text-xl sm:text-2xl">{activeDay.title}</h2>
+            {activeDay.notes && (
+              <p className="italic text-zinc-500 text-sm mt-1">{activeDay.notes}</p>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {activeDay.exercises.map((ex, i) => (
+              <ExerciseCard
+                key={ex.id ?? `${activeDay.day_of_week}-${i}`}
+                routineId={routine.id}
+                exerciseKey={`${activeDay.day_of_week}-${i}`}
+                exercise={ex}
+              />
+            ))}
+          </div>
         </div>
       )}
+
+      {regenOpen && (
+        <RegenerateModal
+          currentRoutine={routine}
+          hasFitnessProfile={hasFitnessProfile}
+          onClose={() => setRegenOpen(false)}
+          onDone={() => {
+            setRegenOpen(false);
+            onRegenerated();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Exercise card ────────────────────────────────────────────────────────
+
+function ExerciseCard({
+  routineId,
+  exerciseKey,
+  exercise,
+}: {
+  routineId: string;
+  exerciseKey: string;
+  exercise: RoutineExercise;
+}) {
+  const [open, setOpen] = useState(false);
+  const lsKey = `cedgym-routine-done-${routineId}-${exerciseKey}`;
+
+  // Local-only "done" state. Intentional: per spec we don't persist to
+  // the API. Re-reads on mount from localStorage so the check survives
+  // a reload but resets next week when a new routine is generated.
+  const [done, setDone] = useState(false);
+  useMemo(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      setDone(window.localStorage.getItem(lsKey) === '1');
+    } catch {
+      /* private mode / quota — silently ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lsKey]);
+
+  const toggleDone = () => {
+    const next = !done;
+    setDone(next);
+    try {
+      if (next) window.localStorage.setItem(lsKey, '1');
+      else window.localStorage.removeItem(lsKey);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const name = exercise.exercise_name_snapshot ?? exercise.exercise_name ?? exercise.exercise?.name ?? 'Ejercicio';
+  const embedUrl = getYouTubeEmbedUrl(exercise.video_url);
+  const hasSearchUrl =
+    !embedUrl && !!exercise.video_url && /\/results\?search_query=/.test(exercise.video_url);
+
+  return (
+    <div
+      className={`bg-zinc-900/70 border rounded-2xl overflow-hidden transition ${
+        done ? 'border-emerald-500/40' : 'border-zinc-800'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Dumbbell className="w-4 h-4 text-zinc-500 shrink-0" />
+            <h3 className="font-semibold truncate">{name}</h3>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-zinc-400">
+            <span className="font-mono">
+              {exercise.sets} × {exercise.reps}
+            </span>
+            <span className="text-zinc-600">•</span>
+            <span className="inline-flex items-center gap-1">
+              <Timer className="w-3 h-3" />
+              {exercise.rest_sec}s descanso
+            </span>
+          </div>
+        </div>
+        {open ? (
+          <ChevronUp className="w-5 h-5 text-zinc-500 shrink-0" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-zinc-500 shrink-0" />
+        )}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-4 border-t border-zinc-800 pt-4">
+          {embedUrl ? (
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
+              <iframe
+                src={embedUrl}
+                title={name}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+              />
+            </div>
+          ) : exercise.video_url ? (
+            <a
+              href={exercise.video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-orange-400 hover:text-orange-300 underline underline-offset-4"
+            >
+              {hasSearchUrl ? 'Ver video en YouTube' : 'Abrir video'}
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          ) : null}
+
+          {exercise.exercise?.description && (
+            <p className="text-sm text-zinc-300 leading-relaxed">
+              {exercise.exercise.description}
+            </p>
+          )}
+
+          {exercise.notes && (
+            <div className="flex items-start gap-2 text-sm text-orange-200/90 italic">
+              <Lightbulb className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
+              <span>{exercise.notes}</span>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={toggleDone}
+            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition border ${
+              done
+                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/40'
+                : 'bg-zinc-900 text-zinc-300 border-zinc-700 hover:border-zinc-500'
+            }`}
+          >
+            {done ? 'Hecho' : 'Marcar como hecho'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Regenerate modal ─────────────────────────────────────────────────────
+
+function RegenerateModal({
+  currentRoutine,
+  hasFitnessProfile,
+  onClose,
+  onDone,
+}: {
+  currentRoutine: Routine;
+  hasFitnessProfile: boolean;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [form, setForm] = useState<GenerateFormState>({
+    location: (currentRoutine.location as Location) ?? 'GYM',
+    days_per_week: currentRoutine.days_per_week ?? 4,
+    session_duration_min: 60,
+  });
+
+  const mut = useMutation({
+    mutationFn: async (body: GenerateFormState) =>
+      (await api.post('/ai/routines/generate', body)).data,
+    onSuccess: () => {
+      toast.success('Nueva rutina generada.');
+      onDone();
+    },
+    onError: (e) => {
+      const n = normalizeError(e);
+      if (n.status === 429) {
+        toast.error('Demasiadas generaciones. Espera un momento e intenta de nuevo.');
+      } else {
+        toast.error(n.message || 'No pudimos regenerar. Intenta de nuevo.');
+      }
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4">
+      <div className="w-full sm:max-w-lg bg-zinc-950 border border-zinc-800 rounded-t-2xl sm:rounded-2xl p-6 space-y-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-2xl">REGENERAR RUTINA</h2>
+            <p className="text-sm text-zinc-400 mt-1">
+              Esto reemplaza tu rutina activa. La anterior queda en historial.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-zinc-500 hover:text-zinc-300 text-sm"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        {!hasFitnessProfile && (
+          <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-100">
+              Completa tu perfil fitness primero.{' '}
+              <Link href="/portal/perfil" className="underline">
+                Ir a mi perfil →
+              </Link>
+            </div>
+          </div>
+        )}
+
+        <FieldBlock label="¿Dónde?">
+          <div className="grid grid-cols-3 gap-2">
+            {(['GYM', 'HOME', 'BOTH'] as Location[]).map((loc) => (
+              <RadioCard
+                key={loc}
+                active={form.location === loc}
+                onClick={() => setForm((f) => ({ ...f, location: loc }))}
+                label={loc === 'GYM' ? 'Gym' : loc === 'HOME' ? 'Casa' : 'Ambos'}
+              />
+            ))}
+          </div>
+        </FieldBlock>
+
+        <FieldBlock label="Días">
+          <Segmented
+            options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+            value={form.days_per_week}
+            onChange={(v) => setForm((f) => ({ ...f, days_per_week: v as number }))}
+          />
+        </FieldBlock>
+
+        <FieldBlock label="Duración">
+          <Segmented
+            options={[
+              { value: 45, label: '45' },
+              { value: 60, label: '60' },
+              { value: 90, label: '90' },
+            ]}
+            value={form.session_duration_min}
+            onChange={(v) =>
+              setForm((f) => ({ ...f, session_duration_min: v as number }))
+            }
+          />
+        </FieldBlock>
+
+        <button
+          type="button"
+          disabled={!hasFitnessProfile || mut.isPending}
+          onClick={() => mut.mutate(form)}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl !bg-[#FF6B00] hover:!bg-[#ff7a1f] disabled:!bg-zinc-700 disabled:cursor-not-allowed text-white font-semibold transition"
+        >
+          {mut.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generando… ~20s
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              Regenerar con IA
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Small UI atoms (local to this page)
+// ═════════════════════════════════════════════════════════════════════════
+
+function FieldBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-zinc-400 mb-2">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function RadioCard({
+  active,
+  onClick,
+  label,
+  hint,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  hint?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left p-3 rounded-xl border transition ${
+        active
+          ? 'bg-orange-500/10 border-orange-500 text-white'
+          : 'bg-zinc-900/70 border-zinc-800 text-zinc-300 hover:border-zinc-600'
+      }`}
+    >
+      <div className="font-semibold text-sm">{label}</div>
+      {hint && <div className="text-[11px] text-zinc-500 mt-0.5">{hint}</div>}
+    </button>
+  );
+}
+
+function Segmented<T extends string | number>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="inline-flex p-1 rounded-xl bg-zinc-900/70 border border-zinc-800 overflow-x-auto max-w-full">
+      {options.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`px-3 sm:px-4 py-1.5 text-sm rounded-lg transition whitespace-nowrap ${
+              active
+                ? 'bg-orange-500 text-white shadow'
+                : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MembershipBlock() {
+  return (
+    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-8 text-center">
+      <Lock className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
+      <h2 className="font-display text-2xl mb-2">NECESITAS UNA MEMBRESÍA ACTIVA</h2>
+      <p className="text-zinc-400 mb-6">
+        Las rutinas con IA están incluidas en todos los planes de CED·GYM.
+      </p>
+      <Link
+        href="/portal/membership"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl !bg-[#FF6B00] hover:!bg-[#ff7a1f] text-white font-semibold transition"
+      >
+        Ver planes →
+      </Link>
     </div>
   );
 }

@@ -1,46 +1,31 @@
 import Link from 'next/link';
 import {
-  ArrowDown,
   ArrowRight,
   Baby,
-  BookOpen,
-  Calendar,
   Check,
-  ChevronDown,
-  ChevronRight,
-  CircleDot,
+  CheckCircle2,
   Clock,
-  CreditCard,
   Crown,
-  Dribbble,
-  Dumbbell,
-  FileCheck,
   Flame,
-  Gamepad2,
   Instagram,
-  LayoutDashboard,
-  Lock,
   LogIn,
   MapPin,
-  Medal,
   Menu,
   MessageCircle,
-  MessageSquare,
   Navigation,
   Phone,
   QrCode,
-  Shield,
   ShieldCheck,
-  Timer,
-  TrendingUp,
+  Trophy,
+  UserCheck,
   UserPlus,
   Users,
-  Wifi,
   Zap,
 } from 'lucide-react';
 import { FeaturedProducts } from '@/components/home/featured-products';
 import { FounderSection } from '@/components/home/founder-section';
 import { InteractivityClient } from '@/components/home/InteractivityClient';
+import { PlanCarousel } from '@/components/ui/plan-carousel';
 
 export default function HomePage() {
   return (
@@ -200,244 +185,260 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero */}
+      {/* Hero — full viewport, centered, dark gym photo */}
       <section
         id="inicio"
-        className="hero-bg relative flex min-h-[100svh] items-center justify-center py-24 lg:py-28"
+        className="relative flex min-h-[100svh] items-center justify-center overflow-hidden"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30" />
-        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 text-center sm:px-6 md:text-left lg:pl-8">
-          <div className="mx-auto max-w-3xl md:mx-0">
-            <h1 className="mb-4 break-words text-3xl font-black uppercase leading-[1.05] tracking-tight sm:mb-6 sm:text-5xl md:text-6xl lg:text-7xl">
-              Preparación física <br className="hidden sm:block" /> para{' '}
-              <span className="text-gradient">atletas reales</span>
-            </h1>
-
-            <p className="mx-auto mb-8 max-w-2xl px-4 text-base font-light leading-relaxed text-gray-300 sm:mb-10 sm:text-lg md:mx-0 md:px-0 md:text-xl">
-              Más que un gimnasio, un{' '}
-              <strong className="text-white">ecosistema para atletas</strong>.
-              Inscríbete, toma cursos, paga tu membresía y lleva tu progreso — todo
-              en un solo lugar.
-            </p>
-
-            <div className="flex flex-col justify-center gap-4 px-4 sm:flex-row sm:gap-5 md:justify-start md:px-0">
-              <Link
-                href="/register"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-orange px-8 py-4 text-center text-sm font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(30,90,255,0.3)] transition hover:-translate-y-1 hover:bg-brand-orange-2 sm:w-auto"
-              >
-                <Flame className="h-5 w-5" /> Inscríbete hoy
-              </Link>
-              <a
-                href="#planes"
-                className="glass group flex w-full items-center justify-center gap-3 rounded-xl px-8 py-4 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-white/10 sm:w-auto"
-              >
-                Ver planes
-                <ArrowDown className="h-4 w-4 transition-transform group-hover:translate-y-1" />
-              </a>
-            </div>
-
-            <div className="mx-auto mt-12 grid max-w-md grid-cols-3 gap-6 md:mx-0 md:max-w-lg">
-              <div className="text-center md:text-left">
-                <p className="text-3xl font-black text-white sm:text-4xl">+500</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 sm:text-xs">
-                  Atletas activos
-                </p>
-              </div>
-              <div className="text-center md:text-left">
-                <p className="text-3xl font-black text-white sm:text-4xl">10</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 sm:text-xs">
-                  Años formando
-                </p>
-              </div>
-              <div className="text-center md:text-left">
-                <p className="text-3xl font-black text-white sm:text-4xl">12+</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 sm:text-xs">
-                  Deportes
-                </p>
-              </div>
-            </div>
+        <img
+          src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/70" />
+        <div className="relative z-10 mx-auto w-full max-w-5xl px-4 text-center sm:px-6">
+          <span className="mb-6 block text-xs font-bold uppercase tracking-[0.3em] text-brand-orange sm:text-sm">
+            CED·GYM · CHIHUAHUA
+          </span>
+          <h1 className="font-display text-5xl uppercase leading-[0.9] tracking-tight text-white sm:text-7xl md:text-8xl lg:text-9xl">
+            Entrena con método,
+            <br />
+            no con copia y pega
+          </h1>
+          <p className="mx-auto mt-8 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg md:text-xl">
+            Rutinas y planes alimenticios personalizados con IA, diseñados por el
+            Coach Samuel Jeffery — tricampeón mundial de powerlifting.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
+            <Link
+              href="/register"
+              className="flex w-full items-center justify-center gap-2 rounded-xl !bg-[#FF6B00] px-8 py-4 text-center text-sm font-black uppercase tracking-widest text-white shadow-[0_10px_30px_rgba(255,107,0,0.35)] transition hover:-translate-y-0.5 hover:!bg-[#FF8A00] sm:w-auto"
+            >
+              <Flame className="h-5 w-5" /> Empieza hoy
+            </Link>
+            <a
+              href="#planes"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/30 bg-white/10 px-8 py-4 text-sm font-bold uppercase tracking-widest text-white backdrop-blur-md transition hover:bg-white/20 sm:w-auto"
+            >
+              Ver planes
+            </a>
           </div>
         </div>
-
       </section>
 
-      {/* Deportes */}
+      {/* Nuestras Disciplinas — WHITE */}
       <section
         id="disciplinas"
-        className="relative overflow-hidden px-4 py-10 sm:py-16"
+        className="bg-white px-4 py-16 text-zinc-900 sm:py-24"
       >
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8 text-center sm:mb-12">
-            <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
-              La plataforma
-            </span>
-            <h2 className="mb-4 px-2 text-3xl font-black uppercase sm:text-4xl md:text-5xl">
-              Preparamos al atleta <br className="sm:hidden" />
-              <span className="text-gradient">por deporte</span>
+          <div className="mb-12 text-center sm:mb-16">
+            <h2 className="font-display text-4xl uppercase tracking-tight sm:text-5xl md:text-6xl">
+              Nuestras Disciplinas
             </h2>
-            <p className="mx-auto mt-6 max-w-2xl text-base font-light text-gray-400 sm:text-lg">
-              Cada disciplina tiene demandas únicas. Entrenamos específico por deporte
-              y por posición.
+            <p className="mx-auto mt-4 max-w-xl text-base text-zinc-500 sm:text-lg">
+              Rutinas adaptadas al deporte que practicas
             </p>
-            <div className="mx-auto mt-8 h-1.5 w-20 rounded-full bg-brand-orange sm:w-24" />
           </div>
 
-          <div className="relative z-10 grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
-                icon: Shield,
-                title: 'Fútbol Americano',
-                body: 'Fuerza, potencia, velocidad y resistencia HYROX. Programa insignia de la casa.',
+                title: 'Fuerza',
+                body: 'Hipertrofia, técnica, progresión por carga.',
+                img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1000',
               },
               {
-                icon: CircleDot,
-                title: 'Fútbol Soccer',
-                body: 'Explosividad, cambio de dirección, core y prevención de lesiones por posición.',
+                title: 'HYROX',
+                body: 'Condición física funcional para competir.',
+                img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000',
               },
               {
-                icon: Dribbble,
-                title: 'Básquetbol',
-                body: 'Salto vertical, aceleración y control bajo fatiga durante 4 cuartos.',
-              },
-              {
-                icon: Gamepad2,
-                title: 'Tenis / Pádel',
-                body: 'Rotación, hombro sano, reacción y consistencia de fuerza en set largo.',
-              },
-              {
-                icon: Dumbbell,
                 title: 'Powerlifting',
-                body: 'Sentadilla, press banca, peso muerto. Programación basada en ciencia.',
+                body: 'SBD con programación científica.',
+                img: 'https://images.unsplash.com/photo-1534367610401-9f5ed68180aa?q=80&w=1000',
               },
               {
-                icon: Baby,
-                title: 'Escuela Kids',
-                body: 'Coordinación y bases deportivas para 6–13 años con maestros certificados.',
+                title: 'Funcional',
+                body: 'Movilidad, coordinación, cardio metabólico.',
+                img: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?q=80&w=1000',
               },
-            ].map(({ icon: Icon, title, body }) => (
+            ].map((d) => (
               <div
-                key={title}
-                className="glass-card group relative z-10 rounded-3xl p-6 sm:p-10"
+                key={d.title}
+                className="group relative aspect-[4/5] overflow-hidden rounded-2xl shadow-sm"
               >
-                <div className="relative mb-6 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-brand-gray transition group-hover:border-brand-orange/50 sm:mb-8 sm:h-16 sm:w-16">
-                  <div className="absolute inset-0 translate-y-full bg-brand-orange/20 transition-transform duration-300 ease-out group-hover:translate-y-0" />
-                  <Icon className="relative z-10 h-7 w-7 text-white transition-colors group-hover:text-brand-orange sm:h-8 sm:w-8" />
+                <img
+                  src={d.img}
+                  alt={d.title}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-6">
+                  <h3 className="font-display text-3xl uppercase tracking-tight text-white">
+                    {d.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-white/85">{d.body}</p>
                 </div>
-                <h3 className="mb-3 text-xl font-black uppercase tracking-wide sm:mb-4 sm:text-2xl">
-                  {title}
-                </h3>
-                <p className="mb-6 text-sm leading-relaxed text-gray-400 sm:text-base">
-                  {body}
-                </p>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center text-xs font-bold uppercase tracking-widest text-brand-orange transition hover:text-white sm:text-sm"
-                >
-                  Inscribirme <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Ecosistema */}
-      <section
-        id="ecosistema"
-        className="overflow-hidden border-y border-white/5 bg-brand-gray py-16 sm:py-20"
-      >
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex flex-col items-center gap-10 lg:flex-row lg:gap-12">
-            <div className="order-2 grid w-full grid-cols-2 gap-3 sm:gap-4 lg:order-1 lg:w-1/2">
-              {[
-                { icon: UserPlus, title: 'Cuenta', sub: 'Tu perfil de atleta' },
-                {
-                  icon: BookOpen,
-                  title: 'Cursos',
-                  sub: 'Academia online',
-                  up: true,
-                },
-                { icon: CreditCard, title: 'Mercado Pago', sub: 'Pago seguro' },
-                {
-                  icon: LayoutDashboard,
-                  title: 'Panel',
-                  sub: 'Tu progreso',
-                  up: true,
-                  highlight: true,
-                },
-              ].map(({ icon: Icon, title, sub, up, highlight }) => (
-                <div
-                  key={title}
-                  className={`relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border p-4 text-center transition hover:scale-105 sm:p-6 ${
-                    up ? 'sm:translate-y-4' : ''
-                  } ${
-                    highlight
-                      ? 'border-brand-orange/30 bg-brand-dark'
-                      : 'border-white/5 bg-brand-dark'
-                  }`}
-                >
-                  {highlight && (
-                    <div className="absolute inset-0 bg-brand-orange/10 transition group-hover:bg-brand-orange/20" />
-                  )}
-                  <div
-                    className={`relative z-10 mb-2 flex h-10 w-10 items-center justify-center rounded-full sm:mb-3 sm:h-12 sm:w-12 ${
-                      highlight
-                        ? 'bg-brand-orange text-black'
-                        : 'border border-brand-orange text-brand-orange'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <h4
-                    className={`relative z-10 mb-1 text-xs font-black uppercase sm:text-sm ${
-                      highlight ? 'text-brand-orange' : ''
-                    }`}
-                  >
-                    {title}
-                  </h4>
-                  <p className="relative z-10 text-[10px] uppercase text-gray-500 sm:text-xs">
-                    {sub}
-                  </p>
-                </div>
-              ))}
-            </div>
+      {/* Rutinas adaptadas a ti — NAVY */}
+      <section className="bg-brand-dark px-4 py-16 sm:py-24">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-12 text-center sm:mb-16">
+            <h2 className="font-display text-4xl uppercase tracking-tight text-white sm:text-5xl md:text-6xl">
+              Rutinas adaptadas a ti
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-base text-white/70 sm:text-lg">
+              Cada persona entrena diferente. Tu rutina lo sabe.
+            </p>
+          </div>
 
-            <div className="order-1 w-full text-center lg:order-2 lg:w-1/2 lg:pl-10 lg:text-left">
-              <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
-                Más que entrenar
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                icon: Users,
+                title: 'Adultos',
+                body: 'De 18 a 55 años. Hipertrofia, fuerza, pérdida de grasa con plan completo.',
+              },
+              {
+                icon: UserCheck,
+                title: 'Adultos Mayores',
+                body: '55+ años. Baja carga, máquinas seguras, énfasis en movilidad.',
+              },
+              {
+                icon: Baby,
+                title: 'Niños y Juveniles',
+                body: '6 a 17 años. Entrenamiento funcional, coordinación y peso corporal.',
+              },
+              {
+                icon: Trophy,
+                title: 'Deportistas',
+                body: 'Fútbol americano, soccer, básquet, tenis. Programación específica por deporte.',
+              },
+            ].map(({ icon: Icon, title, body }) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-white/10 bg-white/5 p-6"
+              >
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-brand-orange/40 bg-brand-orange/10">
+                  <Icon className="h-5 w-5 text-brand-orange" />
+                </div>
+                <h3 className="font-display text-2xl uppercase tracking-tight text-white">
+                  {title}
+                </h3>
+                <p className="mt-2 text-sm text-white/70">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* IA en 30 segundos — WHITE */}
+      <section className="bg-white px-4 py-16 text-zinc-900 sm:py-24">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            {/* Left */}
+            <div>
+              <span className="mb-3 block text-xs font-bold uppercase tracking-[0.3em] text-brand-orange">
+                Tecnología · IA
               </span>
-              <h2 className="mb-4 text-3xl font-black uppercase leading-tight sm:mb-6 sm:text-4xl md:text-5xl">
-                El ecosistema <br className="hidden sm:block" />
-                <span className="text-gradient">CED·GYM</span>
+              <h2 className="font-display text-4xl uppercase leading-[0.95] tracking-tight sm:text-5xl md:text-6xl">
+                Tu rutina personalizada en 30 segundos
               </h2>
-              <p className="mb-6 px-2 text-base leading-relaxed text-gray-400 sm:mb-8 md:text-lg lg:px-0">
-                Cuenta, cursos, membresías, pagos y panel — todo conectado en una sola
-                plataforma. Como las grandes, pero para el atleta real.
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-600 sm:text-lg">
+                Nos dices tu objetivo, nivel, días disponibles y equipo. Nuestra IA,
+                entrenada con el método del Coach Samuel y 20+ años de experiencia,
+                arma tu plan semanal completo.
               </p>
-              <ul className="mx-auto mb-8 max-w-md space-y-3 text-left sm:space-y-4 lg:mx-0">
+
+              <ul className="mt-8 space-y-4">
                 {[
-                  'Inscripción en minutos, acceso inmediato',
-                  'Seguimiento de PRs, asistencia y carga semanal',
-                  'Cobros seguros con Mercado Pago y factura automática',
-                  'Cursos incluidos o comprados por separado',
+                  'Rutina por día con sets, repes y descansos',
+                  'Videos de ejecución en cada ejercicio',
+                  'Adapta por lesiones, edad y equipo disponible',
+                  'Plan alimenticio con lista de compras incluido',
                 ].map((t) => (
-                  <li
-                    key={t}
-                    className="flex items-start text-sm font-medium text-gray-300 sm:items-center sm:text-base"
-                  >
-                    <div className="mr-3 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-orange/20 sm:mr-4 sm:mt-0">
-                      <Check className="h-3 w-3 text-brand-orange sm:h-4 sm:w-4" />
-                    </div>
+                  <li key={t} className="flex items-start gap-3 text-sm text-zinc-700 sm:text-base">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-orange" />
                     <span>{t}</span>
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-orange px-8 py-4 text-xs font-black uppercase tracking-widest text-black transition hover:scale-105 sm:text-sm"
-              >
-                Crear cuenta gratis <ArrowRight className="h-4 w-4" />
-              </Link>
+
+              <div className="mt-10">
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand-orange px-8 py-4 text-sm font-black uppercase tracking-widest text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                >
+                  Crear mi rutina ahora
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Right — mockup */}
+            <div className="relative">
+              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-dark via-[#0a1838] to-brand-orange/60 p-8 shadow-2xl">
+                <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-brand-orange/30 blur-3xl" />
+                <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
+
+                <div className="relative">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/60">
+                      Vista previa del portal
+                    </span>
+                    <div className="flex gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full bg-white/30" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-white/30" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-brand-orange" />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+                    <p className="text-xs font-bold uppercase tracking-widest text-brand-orange">
+                      Lunes · Empuje
+                    </p>
+                    <h4 className="mt-2 font-display text-2xl uppercase tracking-tight text-white">
+                      Sesión de hoy
+                    </h4>
+
+                    <div className="mt-5 space-y-3">
+                      {[
+                        { name: 'Press banca', sets: '4 × 6', rest: '2:30' },
+                        { name: 'Press inclinado mancuerna', sets: '3 × 10', rest: '1:30' },
+                        { name: 'Fondos en paralelas', sets: '3 × 8', rest: '2:00' },
+                        { name: 'Extensión tríceps cable', sets: '4 × 12', rest: '1:00' },
+                      ].map((ex) => (
+                        <div
+                          key={ex.name}
+                          className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2.5"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-white">{ex.name}</p>
+                            <p className="text-[10px] uppercase tracking-widest text-white/50">
+                              {ex.sets} · descanso {ex.rest}
+                            </p>
+                          </div>
+                          <Check className="h-4 w-4 text-brand-orange" />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                        Próximo
+                      </span>
+                      <span className="text-xs font-semibold text-white">Mar · Tirón</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -446,112 +447,50 @@ export default function HomePage() {
       {/* Fundador */}
       <FounderSection />
 
-      {/* Cursos / Academia */}
-      <section id="cursos" className="relative overflow-hidden px-4 py-10 sm:py-16">
+      {/* Instalaciones — NAVY, 3-column */}
+      <section className="bg-brand-dark px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8 text-center sm:mb-12">
-            <span className="mb-3 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
-              Academia
-            </span>
-            <h2 className="mb-4 px-2 text-3xl font-black uppercase sm:text-4xl md:text-5xl">
-              Cursos con <br className="sm:hidden" />
-              <span className="text-gradient">entrenadores reales</span>
+          <div className="mb-12 text-center sm:mb-16">
+            <h2 className="font-display text-4xl uppercase tracking-tight text-white sm:text-5xl md:text-6xl">
+              Instalaciones completas
             </h2>
-            <p className="mx-auto mt-6 max-w-2xl text-base font-light text-gray-400 sm:text-lg">
-              Compra cursos individuales o inclúyelos en tu membresía. Acceso inmediato
-              desde tu panel.
-            </p>
-            <div className="mx-auto mt-8 h-1.5 w-20 rounded-full bg-brand-orange sm:w-24" />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {[
               {
-                id: 'course-preseason',
-                title: 'Pretemporada Football',
-                body: 'Fuerza, potencia y condición para llegar al campo al 100%.',
-                level: 'Intermedio',
-                duration: '8 semanas',
-                price: 2490,
-                unit: 'MXN',
-                bg: 'radial-gradient(circle at 30% 40%, rgba(30,90,255,.5), transparent 55%), linear-gradient(135deg, #0a1e4a, #050f28)',
+                title: 'Zona de máquinas',
+                body: 'Pecho, pierna, espalda, hombro — cada grupo con máquina dedicada.',
+                img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000',
               },
               {
-                id: 'course-pl12',
-                title: 'Powerlifting 12W',
-                body: 'Programa SBD basado en ciencia con revisión por video semanal.',
-                level: 'Avanzado',
-                duration: '12 semanas',
-                price: 3190,
-                unit: 'MXN',
-                bg: 'radial-gradient(circle at 70% 30%, rgba(59,122,255,.45), transparent 55%), linear-gradient(135deg, #0a1838, #050f22)',
+                title: 'Área funcional',
+                body: 'Llantas, marros, TRX, escaleras de agilidad y más.',
+                img: 'https://images.unsplash.com/photo-1517344884509-a0c97ec11bcc?q=80&w=1000',
               },
               {
-                id: 'course-nutri',
-                title: 'Nutrición Deportiva',
-                body: 'Plan alimenticio por objetivo con seguimiento semanal.',
-                level: 'Online',
-                duration: '6 lecciones',
-                price: 1290,
-                unit: 'MXN',
-                bg: 'radial-gradient(circle at 40% 60%, rgba(30,90,255,.4), transparent 55%), linear-gradient(135deg, #081840, #050f22)',
+                title: 'Cardio completo',
+                body: 'Bicicletas, remadoras, elípticas, esquís, caminadoras.',
+                img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1000',
               },
-              {
-                id: 'course-kids',
-                title: 'Escuela Infantil',
-                body: 'Lun–Vie PM · grupos por edad · maestros certificados.',
-                level: 'Kids',
-                duration: 'Mensual',
-                price: 890,
-                unit: '/mes',
-                bg: 'radial-gradient(circle at 60% 40%, rgba(96,165,250,.5), transparent 55%), linear-gradient(135deg, #0f2450, #061230)',
-              },
-            ].map((c) => (
+            ].map((f) => (
               <div
-                key={c.id}
-                className="glass-card group overflow-hidden rounded-3xl"
+                key={f.title}
+                className="group overflow-hidden rounded-2xl border border-white/10 bg-white/5"
               >
-                <div
-                  className="relative h-40 overflow-hidden"
-                  style={{ background: c.bg }}
-                >
-                  <div className="absolute left-4 top-4 flex gap-2">
-                    <span className="rounded-md border border-white/10 bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-widest backdrop-blur">
-                      {c.level}
-                    </span>
-                  </div>
-                  <div className="absolute right-4 top-4">
-                    <span className="rounded-md border border-white/10 bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-widest backdrop-blur">
-                      {c.duration}
-                    </span>
-                  </div>
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img
+                    src={f.img}
+                    alt={f.title}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/80 to-transparent" />
                 </div>
                 <div className="p-6">
-                  <h3 className="mb-2 text-lg font-black uppercase tracking-wide">
-                    {c.title}
+                  <h3 className="font-display text-2xl uppercase tracking-tight text-white">
+                    {f.title}
                   </h3>
-                  <p className="mb-4 text-sm leading-relaxed text-gray-400">
-                    {c.body}
-                  </p>
-                  <div className="flex items-end justify-between border-t border-white/5 pt-4">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                        Desde
-                      </p>
-                      <p className="text-2xl font-black">
-                        ${c.price.toLocaleString('es-MX')}{' '}
-                        <span className="text-xs font-normal text-gray-400">
-                          {c.unit}
-                        </span>
-                      </p>
-                    </div>
-                    <Link
-                      href={`/register?redirect=/checkout/${c.id}&product=${c.id}`}
-                      className="rounded-lg bg-brand-orange px-4 py-2 text-xs font-black uppercase tracking-widest text-black transition hover:bg-brand-orange-2"
-                    >
-                      Inscribirme
-                    </Link>
-                  </div>
+                  <p className="mt-2 text-sm text-white/70">{f.body}</p>
                 </div>
               </div>
             ))}
@@ -569,8 +508,8 @@ export default function HomePage() {
             <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-brand-orange sm:text-sm">
               Membresías
             </span>
-            <h2 className="mb-3 px-2 text-2xl font-black uppercase sm:text-4xl md:text-5xl">
-              Elige tu <span className="text-gradient">nivel</span>
+            <h2 className="mb-3 px-2 font-display text-4xl uppercase tracking-tight sm:text-5xl md:text-6xl">
+              Elige tu nivel
             </h2>
             <p className="mx-auto max-w-xl text-sm text-gray-400 sm:text-base">
               Todos los planes incluyen <strong className="text-white">acceso al gym con QR</strong>.
@@ -607,7 +546,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3 md:gap-6">
+          <PlanCarousel>
             {/* Starter */}
             <div className="glass-card rounded-2xl p-4 sm:rounded-3xl sm:p-6">
               <div className="mb-4 flex items-center gap-3">
@@ -664,7 +603,7 @@ export default function HomePage() {
               </ul>
               <Link
                 href="/register?redirect=/checkout/starter&product=starter&type=membership"
-                className="glass block w-full rounded-xl py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10"
+                className="block w-full rounded-xl !bg-[#FF6B00] py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:!bg-[#FF8A00]"
               >
                 Elegir Starter
               </Link>
@@ -730,7 +669,7 @@ export default function HomePage() {
                 </ul>
                 <Link
                   href="/register?redirect=/checkout/pro&product=pro&type=membership"
-                  className="block w-full rounded-xl bg-brand-orange py-3 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_10px_30px_rgba(30,90,255,0.3)] transition hover:bg-brand-orange-2"
+                  className="block w-full rounded-xl !bg-[#FF6B00] py-3 text-center text-xs font-black uppercase tracking-widest text-white shadow-[0_10px_30px_rgba(255,107,0,0.35)] transition hover:!bg-[#FF8A00]"
                 >
                   Elegir Pro
                 </Link>
@@ -793,12 +732,12 @@ export default function HomePage() {
               </ul>
               <Link
                 href="/register?redirect=/checkout/elite&product=elite&type=membership"
-                className="glass block w-full rounded-xl py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:bg-white/10"
+                className="block w-full rounded-xl !bg-[#FF6B00] py-3 text-center text-xs font-black uppercase tracking-widest text-white transition hover:!bg-[#FF8A00]"
               >
                 Elegir Élite
               </Link>
             </div>
-          </div>
+          </PlanCarousel>
 
           <p className="mt-6 flex items-center justify-center gap-2 text-center text-[10px] font-bold uppercase tracking-widest text-gray-500 sm:mt-8 sm:text-xs">
             <ShieldCheck className="h-3 w-3 text-brand-orange sm:h-4 sm:w-4" />
@@ -821,9 +760,8 @@ export default function HomePage() {
               <span className="mb-2 block text-center text-[10px] font-bold uppercase tracking-widest text-brand-orange sm:text-sm lg:text-left">
                 Contacto directo
               </span>
-              <h2 className="mb-8 text-center text-3xl font-black uppercase text-white sm:mb-10 sm:text-4xl md:text-6xl lg:text-left">
-                Visita nuestras <br className="hidden sm:block" />
-                <span className="text-gradient">instalaciones</span>
+              <h2 className="mb-8 text-center font-display text-4xl uppercase tracking-tight text-white sm:mb-10 sm:text-5xl md:text-6xl lg:text-left">
+                Visita nuestras instalaciones
               </h2>
 
               <div className="mx-auto mb-10 max-w-md space-y-4 rounded-3xl border border-white/5 bg-brand-dark p-6 sm:space-y-6 sm:p-8 lg:max-w-none">
@@ -1001,14 +939,6 @@ export default function HomePage() {
                     className="text-gray-400 transition hover:text-brand-orange"
                   >
                     Deportes
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#cursos"
-                    className="text-gray-400 transition hover:text-brand-orange"
-                  >
-                    Cursos
                   </a>
                 </li>
                 <li>
