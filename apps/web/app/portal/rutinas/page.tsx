@@ -38,6 +38,22 @@ import { api, normalizeError } from '@/lib/api';
 
 // ── Types ────────────────────────────────────────────────────────────────
 type Location = 'GYM' | 'HOME' | 'BOTH';
+type Objective =
+  | 'WEIGHT_LOSS'
+  | 'MUSCLE_GAIN'
+  | 'MAINTENANCE'
+  | 'STRENGTH'
+  | 'ENDURANCE'
+  | 'GENERAL_FITNESS';
+
+const OBJECTIVE_OPTIONS: { value: Objective; label: string; emoji: string }[] = [
+  { value: 'WEIGHT_LOSS', label: 'Bajar grasa', emoji: '🔥' },
+  { value: 'MUSCLE_GAIN', label: 'Ganar músculo', emoji: '💪' },
+  { value: 'MAINTENANCE', label: 'Mantener', emoji: '⚖️' },
+  { value: 'STRENGTH', label: 'Fuerza', emoji: '🏋️' },
+  { value: 'ENDURANCE', label: 'Resistencia', emoji: '🏃' },
+  { value: 'GENERAL_FITNESS', label: 'Fitness general', emoji: '✨' },
+];
 
 interface RoutineExercise {
   id?: string;
@@ -115,8 +131,11 @@ export default function PortalRutinasPage() {
     retry: false,
   });
 
-  // Pull `me` to check fitness_profile presence (blocks Generate CTA).
-  const meQ = useQuery<{ user: { fitness_profile?: unknown } }>({
+  // Pull `me` to check fitness_profile presence (blocks Generate CTA) and
+  // pre-fill the objective selector with what the user already chose in their
+  // wizard (so WEIGHT_LOSS actually reaches the AI instead of defaulting to
+  // GENERAL_FITNESS on the backend).
+  const meQ = useQuery<{ user: { fitness_profile?: { objective?: string } | null } }>({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api.get('/auth/me')).data,
   });
@@ -137,12 +156,15 @@ export default function PortalRutinasPage() {
   }
 
   const routine = routineQ.data?.routine ?? null;
-  const hasFitnessProfile = Boolean(meQ.data?.user?.fitness_profile);
+  const fitnessProfile = meQ.data?.user?.fitness_profile ?? null;
+  const hasFitnessProfile = Boolean(fitnessProfile);
+  const profileObjective = (fitnessProfile?.objective ?? '') as Objective | '';
 
   if (!routine) {
     return (
       <GenerateRoutineCard
         hasFitnessProfile={hasFitnessProfile}
+        defaultObjective={profileObjective}
         onGenerated={() => qc.invalidateQueries({ queryKey: ['routines', 'me'] })}
       />
     );
@@ -163,24 +185,31 @@ export default function PortalRutinasPage() {
 
 interface GenerateFormState {
   location: Location;
+  objective: Objective;
   days_per_week: number;
   session_duration_min: number;
 }
 
 const DEFAULT_FORM: GenerateFormState = {
   location: 'GYM',
+  objective: 'GENERAL_FITNESS',
   days_per_week: 4,
   session_duration_min: 60,
 };
 
 function GenerateRoutineCard({
   hasFitnessProfile,
+  defaultObjective,
   onGenerated,
 }: {
   hasFitnessProfile: boolean;
+  defaultObjective?: Objective | '';
   onGenerated: () => void;
 }) {
-  const [form, setForm] = useState<GenerateFormState>(DEFAULT_FORM);
+  const [form, setForm] = useState<GenerateFormState>(() => ({
+    ...DEFAULT_FORM,
+    objective: (defaultObjective || 'GENERAL_FITNESS') as Objective,
+  }));
 
   const mut = useMutation({
     mutationFn: async (body: GenerateFormState) =>
@@ -239,6 +268,32 @@ function GenerateRoutineCard({
 
         {/* ── Form ─────────────────────────────────────────────────── */}
         <div className="mt-8 space-y-6">
+          <FieldBlock label="Objetivo">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+              {OBJECTIVE_OPTIONS.map((o) => {
+                const active = form.objective === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, objective: o.value }))}
+                    className={[
+                      'flex items-center gap-2 rounded-xl ring-1 p-3 text-left transition-colors',
+                      active
+                        ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                        : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
+                    ].join(' ')}
+                  >
+                    <span className="text-xl leading-none">{o.emoji}</span>
+                    <span className={['text-sm font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
+                      {o.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </FieldBlock>
+
           <FieldBlock label="¿Dónde entrenas?">
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {(['GYM', 'HOME', 'BOTH'] as Location[]).map((loc) => (
@@ -563,6 +618,7 @@ function RegenerateModal({
 }) {
   const [form, setForm] = useState<GenerateFormState>({
     location: (currentRoutine.location as Location) ?? 'GYM',
+    objective: (currentRoutine.goal as Objective) ?? 'GENERAL_FITNESS',
     days_per_week: currentRoutine.days_per_week ?? 4,
     session_duration_min: 60,
   });
@@ -614,6 +670,32 @@ function RegenerateModal({
             </div>
           </div>
         )}
+
+        <FieldBlock label="Objetivo">
+          <div className="grid grid-cols-2 gap-2">
+            {OBJECTIVE_OPTIONS.map((o) => {
+              const active = form.objective === o.value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, objective: o.value }))}
+                  className={[
+                    'flex items-center gap-2 rounded-xl ring-1 p-2.5 text-left transition-colors',
+                    active
+                      ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                      : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
+                  ].join(' ')}
+                >
+                  <span className="text-lg leading-none">{o.emoji}</span>
+                  <span className={['text-xs font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
+                    {o.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </FieldBlock>
 
         <FieldBlock label="¿Dónde?">
           <div className="grid grid-cols-3 gap-2">
