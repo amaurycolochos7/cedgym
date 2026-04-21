@@ -12,7 +12,7 @@ const FitnessProfileSchema = z
   .object({
     // Paso 1 — demografía
     age: z.number().int().min(6).max(99).optional(),
-    gender: z.enum(['M', 'F', 'OTHER']).optional(),
+    gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional(),
     height_cm: z.number().int().min(100).max(230).optional(),
     weight_kg: z.number().min(30).max(250).optional(),
 
