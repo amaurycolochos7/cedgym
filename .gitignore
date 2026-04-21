@@ -60,3 +60,4 @@ deploy/_ssh_runner.py
 
 # tsbuildinfo (generated)
 apps/web/tsconfig.tsbuildinfo
+smartfitpage.txt
