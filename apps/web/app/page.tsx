@@ -143,12 +143,7 @@ export default function HomePage() {
 
           <div className="relative mx-auto flex h-full min-h-[560px] sm:min-h-[640px] lg:min-h-[680px] max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 ring-1 ring-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white backdrop-blur-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-sky-300" />
-                El método del coach Samuel
-              </span>
-
-              <h1 className="font-display mt-5 text-4xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-6xl md:text-7xl">
+              <h1 className="font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-6xl md:text-7xl">
                 Diseñado por un{' '}
                 <span className="bg-gradient-to-r from-sky-300 to-white bg-clip-text text-transparent">
                   campeón mundial.
