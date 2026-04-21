@@ -235,6 +235,14 @@
     background-size: 24px 24px;
   }
 
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .marquee-track {
     animation: slide 25s linear infinite;
   }
