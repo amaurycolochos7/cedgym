@@ -169,6 +169,7 @@ const DIETARY = [
   'Sin cerdo',
   'Kosher',
   'Halal',
+  'Ninguna',
 ];
 
 const ALLERGIES = [
@@ -178,6 +179,7 @@ const ALLERGIES = [
   'Lácteos',
   'Soja',
   'Gluten',
+  'Ninguna',
 ];
 
 const GENDERS: { value: Gender; label: string }[] = [
@@ -247,21 +249,21 @@ export function FitnessProfileWizard({ initial }: Props) {
   ) => setDraft((d) => ({ ...d, [key]: value }));
 
   const toggleInList = (key: 'injuries' | 'dietary' | 'allergies', v: string) => {
+    // "none" (injuries) / "Ninguna" (dietary, allergies) is exclusive with the rest.
+    const NONE: Record<typeof key, string> = {
+      injuries: 'none',
+      dietary: 'Ninguna',
+      allergies: 'Ninguna',
+    };
+    const none = NONE[key];
     setDraft((d) => {
       const list = d[key];
-      if (key === 'injuries') {
-        // "none" is exclusive with the rest.
-        if (v === 'none') {
-          return { ...d, injuries: list.includes('none') ? [] : ['none'] };
-        }
-        const next = list.includes(v)
-          ? list.filter((x) => x !== v)
-          : [...list.filter((x) => x !== 'none'), v];
-        return { ...d, injuries: next };
+      if (v === none) {
+        return { ...d, [key]: list.includes(none) ? [] : [none] };
       }
       const next = list.includes(v)
         ? list.filter((x) => x !== v)
-        : [...list, v];
+        : [...list.filter((x) => x !== none), v];
       return { ...d, [key]: next };
     });
   };
@@ -313,6 +315,14 @@ export function FitnessProfileWizard({ initial }: Props) {
         draft.injuries.length === 1 && draft.injuries[0] === 'none'
           ? []
           : draft.injuries;
+      const dietary =
+        draft.dietary.length === 1 && draft.dietary[0] === 'Ninguna'
+          ? []
+          : draft.dietary.filter((x) => x !== 'Ninguna');
+      const allergies =
+        draft.allergies.length === 1 && draft.allergies[0] === 'Ninguna'
+          ? []
+          : draft.allergies.filter((x) => x !== 'Ninguna');
 
       const fitness_profile = {
         age: Number(draft.age),
@@ -333,8 +343,8 @@ export function FitnessProfileWizard({ initial }: Props) {
         // this via a future step. `available_equipment` is required by the
         // AI endpoint only when location=HOME, so [] is a safe default.
         available_equipment: [] as string[],
-        dietary_restrictions: draft.dietary,
-        allergies: draft.allergies,
+        dietary_restrictions: dietary,
+        allergies,
         notes: draft.notes.trim() || undefined,
       };
 
@@ -814,9 +824,12 @@ function StepRestrictions({
       />
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
           Lesiones / molestias
         </div>
+        <p className="text-[11px] text-slate-400 mb-2">
+          Evitamos ejercicios que comprometan estas zonas al generar tu rutina.
+        </p>
         <div className="flex flex-wrap gap-2">
           {INJURIES.map((i) => {
             const active = draft.injuries.includes(i.value);
@@ -840,9 +853,12 @@ function StepRestrictions({
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
-          Dieta
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+          Preferencia alimenticia
         </div>
+        <p className="text-[11px] text-slate-400 mb-2">
+          Filtramos ingredientes del plan de comidas. No genera dietas nuevas — excluye lo que no comes.
+        </p>
         <div className="flex flex-wrap gap-2">
           {DIETARY.map((tag) => {
             const active = draft.dietary.includes(tag);
@@ -866,30 +882,29 @@ function StepRestrictions({
       </div>
 
       <div>
-        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">
+        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
           Alergias
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <p className="text-[11px] text-slate-400 mb-2">
+          Excluidas automáticamente del plan. Marca "Ninguna" si no tienes.
+        </p>
+        <div className="flex flex-wrap gap-2">
           {ALLERGIES.map((a) => {
             const active = draft.allergies.includes(a);
             return (
-              <label
+              <button
                 key={a}
+                type="button"
+                onClick={() => toggleInList('allergies', a)}
                 className={cn(
-                  'flex cursor-pointer items-center gap-2 rounded-xl ring-1 px-3 py-2 text-sm font-medium transition-colors',
+                  'h-9 rounded-full ring-1 px-3 text-xs font-semibold transition-colors',
                   active
-                    ? 'ring-blue-600 bg-blue-600 text-white'
+                    ? 'ring-blue-600 bg-blue-600 text-white hover:bg-blue-700'
                     : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                 )}
               >
-                <input
-                  type="checkbox"
-                  checked={active}
-                  onChange={() => toggleInList('allergies', a)}
-                  className="h-4 w-4 accent-blue-600"
-                />
                 {a}
-              </label>
+              </button>
             );
           })}
         </div>
