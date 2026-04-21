@@ -14,7 +14,6 @@ import {
   Trophy,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -383,9 +382,6 @@ export function FitnessProfileWizard({ initial }: Props) {
       {/* ── Header & progress ─────────────────────────────── */}
       <header className="space-y-3">
         <div className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-            <Sparkles size={18} />
-          </span>
           <div className="flex-1 min-w-0">
             <h2 className="font-display text-lg font-semibold text-slate-900">Perfil fitness</h2>
             <p className="mt-0.5 text-xs text-slate-500">
