@@ -195,9 +195,9 @@ export default function AdminMembershipsPage() {
             className="h-9 max-w-[160px]"
           >
             <option value="">Todos los planes</option>
-            <option value="starter">Starter</option>
+            <option value="starter">Básico</option>
             <option value="pro">Pro</option>
-            <option value="elite">Elite</option>
+            <option value="elite">Élite</option>
           </Select>
 
           <div className="ml-auto flex items-center gap-2">

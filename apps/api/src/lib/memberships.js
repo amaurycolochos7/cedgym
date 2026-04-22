@@ -14,24 +14,24 @@ import dayjs from 'dayjs';
 export const PLAN_CATALOG = [
     {
         code: 'STARTER',
-        name: 'Starter',
-        monthly: 690,
-        quarterly: 1890,
-        annual: 6890,
+        name: 'Básico',
+        monthly: 599,
+        quarterly: 1617,
+        annual: 5750,
     },
     {
         code: 'PRO',
         name: 'Pro',
-        monthly: 1290,
-        quarterly: 3590,
-        annual: 13290,
+        monthly: 999,
+        quarterly: 2697,
+        annual: 9590,
     },
     {
         code: 'ELITE',
         name: 'Élite',
-        monthly: 2290,
-        quarterly: 6390,
-        annual: 23590,
+        monthly: 1590,
+        quarterly: 4293,
+        annual: 15264,
     },
 ];
 

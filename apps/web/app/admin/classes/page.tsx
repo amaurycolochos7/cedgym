@@ -639,9 +639,9 @@ function NewClassDialog({
                 }
               >
                 <option value="">—</option>
-                <option value="STARTER">Starter</option>
+                <option value="STARTER">Básico</option>
                 <option value="PRO">Pro</option>
-                <option value="ELITE">Elite</option>
+                <option value="ELITE">Élite</option>
               </Select>
             </div>
           </div>

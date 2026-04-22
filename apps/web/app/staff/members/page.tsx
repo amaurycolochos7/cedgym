@@ -286,7 +286,7 @@ function RenewModal({
                   onChange={(e) => setPlan(e.target.value as PlanCode)}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2"
                 >
-                  <option value="STARTER">Starter</option>
+                  <option value="STARTER">Básico</option>
                   <option value="PRO">Pro</option>
                   <option value="ELITE">Élite</option>
                 </select>

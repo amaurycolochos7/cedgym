@@ -180,28 +180,26 @@ export default function HomePage() {
             <PlanCarousel>
               <PlanCard
                 href="/register?redirect=/checkout/starter&product=starter&type=membership"
-                tier="Starter" subtitle="Para empezar"
+                tier="Básico" subtitle="Para empezar"
                 icon={<Zap className="h-5 w-5" />}
-                priceMonth="690" priceQ="1864" priceY="6624"
+                priceMonth="599" priceQ="1617" priceY="5750"
                 features={[
-                  { t: 'Acceso al gym con QR', hi: true },
                   { t: 'Sala general' },
-                  { t: '3 clases grupales / semana' },
-                  { t: 'Plan base del coach' },
+                  { t: 'Rutina personalizada en la app' },
                   { t: 'Panel del atleta + progreso' },
                 ]}
-                cta="Elegir Starter"
+                cta="Elegir Básico"
               />
               <PlanCard
                 href="/register?redirect=/checkout/pro&product=pro&type=membership"
                 tier="Pro" subtitle="Atleta regular" popular
                 icon={<Flame className="h-5 w-5" />}
-                priceMonth="1,290" priceQ="3483" priceY="12384"
+                priceMonth="999" priceQ="2697" priceY="9590"
                 features={[
-                  { t: 'Acceso al gym con QR', hi: true },
                   { t: 'Acceso ilimitado 6 días' },
                   { t: 'Clases grupales sin límite' },
                   { t: 'Plan del coach personalizado' },
+                  { t: 'Plan de comidas básico en la app' },
                   { t: '1 curso incluido / trimestre' },
                 ]}
                 cta="Elegir Pro"
@@ -210,13 +208,13 @@ export default function HomePage() {
                 href="/register?redirect=/checkout/elite&product=elite&type=membership"
                 tier="Élite" subtitle="Preparación deportiva"
                 icon={<Crown className="h-5 w-5" />}
-                priceMonth="2,290" priceQ="6183" priceY="21984"
+                priceMonth="1,590" priceQ="4293" priceY="15264"
                 features={[
-                  { t: 'Acceso al gym con QR', hi: true },
                   { t: 'Programa individualizado' },
                   { t: 'Prep física por deporte' },
                   { t: '2 sesiones 1:1 / semana' },
-                  { t: 'Nutrición + análisis de video' },
+                  { t: 'Nutrición con bioimpedancia (cada 2 meses)' },
+                  { t: 'Análisis de video incluido' },
                 ]}
                 cta="Elegir Élite"
               />

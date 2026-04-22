@@ -134,9 +134,9 @@ export default function AdminMiembrosPage() {
             className="h-9 w-full sm:max-w-[160px]"
           >
             <option value="">Plan</option>
-            <option value="starter">Starter</option>
+            <option value="starter">Básico</option>
             <option value="pro">Pro</option>
-            <option value="elite">Elite</option>
+            <option value="elite">Élite</option>
           </Select>
           <Select
             value={filters.sport}
@@ -256,9 +256,9 @@ function NewMemberDialog({
                   setForm({ ...form, plan_code: e.target.value })
                 }
               >
-                <option value="starter">Starter</option>
+                <option value="starter">Básico</option>
                 <option value="pro">Pro</option>
-                <option value="elite">Elite</option>
+                <option value="elite">Élite</option>
               </Select>
             </div>
           </div>
