@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { generateJSON } from '../lib/openai.js';
+import { assertAIQuota } from '../lib/ai-quota.js';
 
 export const autoPrefix = '/ai/routines';
 
@@ -289,6 +290,9 @@ export default async function aiRoutinesRoutes(fastify) {
                 throw err('BAD_BODY', parsed.error.message, 400);
             }
             const userId = req.user.sub || req.user.id;
+
+            // Enforce plan-tier quota BEFORE spending OpenAI tokens.
+            await assertAIQuota(prisma, userId, 'ROUTINE');
 
             const user = await prisma.user.findUnique({
                 where: { id: userId },

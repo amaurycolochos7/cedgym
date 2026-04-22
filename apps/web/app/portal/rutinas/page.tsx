@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Clock,
   Dumbbell,
   ExternalLink,
   Lightbulb,
@@ -91,6 +92,22 @@ interface Routine {
   days: RoutineDay[];
 }
 
+interface QuotaFeature {
+  used: number;
+  limit: number | null;
+  allowed: boolean;
+  unlimited: boolean;
+}
+
+interface AiQuota {
+  plan: 'STARTER' | 'PRO' | 'ELITE' | null;
+  has_active_membership: boolean;
+  period_ends_at: string | null;
+  days_until_renewal: number;
+  routine: QuotaFeature;
+  meal_plan: QuotaFeature;
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 /**
@@ -140,6 +157,14 @@ export default function PortalRutinasPage() {
     queryFn: async () => (await api.get('/auth/me')).data,
   });
 
+  // AI usage quota — drives status line above the generator CTA and the
+  // disabled state of the button when the user has exhausted this period.
+  const quotaQ = useQuery<AiQuota>({
+    queryKey: ['ai', 'quota', 'me'],
+    queryFn: async () => (await api.get('/ai/quota/me')).data,
+    retry: false,
+  });
+
   if (routineQ.isLoading) {
     return (
       <div className="flex items-center gap-3 text-slate-500">
@@ -160,12 +185,19 @@ export default function PortalRutinasPage() {
   const hasFitnessProfile = Boolean(fitnessProfile);
   const profileObjective = (fitnessProfile?.objective ?? '') as Objective | '';
 
+  const quota = quotaQ.data ?? null;
+  const onGenOrRegen = () => {
+    qc.invalidateQueries({ queryKey: ['routines', 'me'] });
+    qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
+  };
+
   if (!routine) {
     return (
       <GenerateRoutineCard
         hasFitnessProfile={hasFitnessProfile}
         defaultObjective={profileObjective}
-        onGenerated={() => qc.invalidateQueries({ queryKey: ['routines', 'me'] })}
+        quota={quota}
+        onGenerated={onGenOrRegen}
       />
     );
   }
@@ -174,7 +206,8 @@ export default function PortalRutinasPage() {
     <ActiveRoutineView
       routine={routine}
       hasFitnessProfile={hasFitnessProfile}
-      onRegenerated={() => qc.invalidateQueries({ queryKey: ['routines', 'me'] })}
+      quota={quota}
+      onRegenerated={onGenOrRegen}
     />
   );
 }
@@ -200,10 +233,12 @@ const DEFAULT_FORM: GenerateFormState = {
 function GenerateRoutineCard({
   hasFitnessProfile,
   defaultObjective,
+  quota,
   onGenerated,
 }: {
   hasFitnessProfile: boolean;
   defaultObjective?: Objective | '';
+  quota: AiQuota | null;
   onGenerated: () => void;
 }) {
   const [form, setForm] = useState<GenerateFormState>(() => ({
@@ -220,7 +255,15 @@ function GenerateRoutineCard({
     },
     onError: (e) => {
       const n = normalizeError(e);
-      if (n.status === 429) {
+      // Quota/plan gating errors surface the backend message directly so
+      // the user sees exact days-until-renewal or plan-upgrade copy.
+      if (
+        n.code === 'QUOTA_EXCEEDED' ||
+        n.code === 'MEMBERSHIP_REQUIRED' ||
+        n.code === 'FEATURE_NOT_IN_PLAN'
+      ) {
+        toast.error(n.message || 'No puedes generar una rutina ahora mismo.');
+      } else if (n.status === 429) {
         toast.error('Demasiadas generaciones. Espera un momento e intenta de nuevo.');
       } else if (n.status === 403) {
         toast.error('Necesitas una membresía activa para generar rutinas.');
@@ -230,7 +273,8 @@ function GenerateRoutineCard({
     },
   });
 
-  const disabled = !hasFitnessProfile || mut.isPending;
+  const quotaBlocks = !!quota && !quota.routine.allowed;
+  const disabled = !hasFitnessProfile || mut.isPending || quotaBlocks;
 
   return (
     <div className="space-y-6">
@@ -338,21 +382,37 @@ function GenerateRoutineCard({
             />
           </FieldBlock>
 
+          <QuotaStatus quota={quota} />
+
           <button
             type="button"
             disabled={disabled}
             onClick={() => mut.mutate(form)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold transition shadow-sm"
+            className={[
+              'group relative w-full inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl text-white font-bold text-base transition-all',
+              disabled
+                ? 'bg-slate-300 cursor-not-allowed opacity-50 shadow-none'
+                : 'bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:via-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/30 hover:shadow-xl hover:shadow-blue-600/40 active:scale-[0.99]',
+            ].join(' ')}
           >
             {mut.isPending ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generando tu rutina… ~20 segundos
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Generando tu rutina… ~20 s</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4" />
-                Generar mi rutina con IA
+                <span
+                  className={[
+                    'inline-flex h-8 w-8 items-center justify-center rounded-xl transition',
+                    disabled
+                      ? 'bg-white/30'
+                      : 'bg-white/15 ring-1 ring-white/25 group-hover:bg-white/20',
+                  ].join(' ')}
+                >
+                  <Sparkles className="w-4 h-4" />
+                </span>
+                <span className="tracking-tight">Generar mi rutina con IA</span>
               </>
             )}
           </button>
@@ -362,6 +422,78 @@ function GenerateRoutineCard({
   );
 }
 
+// ── Quota status line ────────────────────────────────────────────────────
+// Renders above the generate CTA. Four states, matching the backend's
+// `/ai/quota/me` contract: unlimited, not-in-plan (limit === 0), exhausted
+// (allowed === false but limit > 0), and normal "n rutinas left".
+function QuotaStatus({ quota }: { quota: AiQuota | null }) {
+  if (!quota) return null;
+  const r = quota.routine;
+
+  if (r.unlimited) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <Sparkles className="w-4 h-4 text-blue-500" />
+        <span>
+          Rutinas ilimitadas con tu plan {quota.plan ?? ''}.
+        </span>
+      </div>
+    );
+  }
+
+  if (r.limit === 0) {
+    return (
+      <div className="flex items-start gap-3 bg-amber-50 ring-1 ring-amber-200 text-amber-900 rounded-xl p-4">
+        <Lock className="w-5 h-5 shrink-0 mt-0.5" />
+        <div className="flex-1 text-sm">
+          <div className="font-semibold">
+            Tu plan actual no incluye generación de rutinas
+          </div>
+          <Link
+            href="/portal/membership"
+            className="inline-flex items-center gap-1 mt-2 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition"
+          >
+            Ver planes →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!r.allowed) {
+    const days = quota.days_until_renewal;
+    return (
+      <div className="flex items-start gap-3 bg-amber-50 ring-1 ring-amber-200 text-amber-900 rounded-xl p-4">
+        <Clock className="w-5 h-5 shrink-0 mt-0.5" />
+        <div className="flex-1 text-sm">
+          <div className="font-semibold">
+            Ya usaste tu rutina este periodo. Se renueva en {days} día
+            {days === 1 ? '' : 's'}.
+          </div>
+          {r.limit !== null && (
+            <div className="text-xs text-amber-800/80 mt-1">
+              Uso: {r.used}/{r.limit} este periodo.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Allowed with a finite limit > 0.
+  if (r.limit !== null && r.limit > 0) {
+    const remaining = Math.max(0, r.limit - r.used);
+    return (
+      <div className="text-sm text-slate-500">
+        Te queda{remaining === 1 ? '' : 'n'} {remaining} rutina
+        {remaining === 1 ? '' : 's'} este periodo.
+      </div>
+    );
+  }
+
+  return null;
+}
+
 // ═════════════════════════════════════════════════════════════════════════
 // Case 2: active routine view
 // ═════════════════════════════════════════════════════════════════════════
@@ -369,10 +501,12 @@ function GenerateRoutineCard({
 function ActiveRoutineView({
   routine,
   hasFitnessProfile,
+  quota,
   onRegenerated,
 }: {
   routine: Routine;
   hasFitnessProfile: boolean;
+  quota: AiQuota | null;
   onRegenerated: () => void;
 }) {
   // Sort days by day_of_week so tabs come out in weekday order.
@@ -460,6 +594,7 @@ function ActiveRoutineView({
         <RegenerateModal
           currentRoutine={routine}
           hasFitnessProfile={hasFitnessProfile}
+          quota={quota}
           onClose={() => setRegenOpen(false)}
           onDone={() => {
             setRegenOpen(false);
@@ -608,11 +743,13 @@ function ExerciseCard({
 function RegenerateModal({
   currentRoutine,
   hasFitnessProfile,
+  quota,
   onClose,
   onDone,
 }: {
   currentRoutine: Routine;
   hasFitnessProfile: boolean;
+  quota: AiQuota | null;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -632,13 +769,21 @@ function RegenerateModal({
     },
     onError: (e) => {
       const n = normalizeError(e);
-      if (n.status === 429) {
+      if (
+        n.code === 'QUOTA_EXCEEDED' ||
+        n.code === 'MEMBERSHIP_REQUIRED' ||
+        n.code === 'FEATURE_NOT_IN_PLAN'
+      ) {
+        toast.error(n.message || 'No puedes regenerar tu rutina ahora mismo.');
+      } else if (n.status === 429) {
         toast.error('Demasiadas generaciones. Espera un momento e intenta de nuevo.');
       } else {
         toast.error(n.message || 'No pudimos regenerar. Intenta de nuevo.');
       }
     },
   });
+
+  const quotaBlocks = !!quota && !quota.routine.allowed;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4">
@@ -732,11 +877,18 @@ function RegenerateModal({
           />
         </FieldBlock>
 
+        <QuotaStatus quota={quota} />
+
         <button
           type="button"
-          disabled={!hasFitnessProfile || mut.isPending}
+          disabled={!hasFitnessProfile || mut.isPending || quotaBlocks}
           onClick={() => mut.mutate(form)}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold transition shadow-sm"
+          className={[
+            'w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-semibold transition shadow-sm',
+            !hasFitnessProfile || mut.isPending || quotaBlocks
+              ? 'bg-slate-300 cursor-not-allowed opacity-50'
+              : 'bg-blue-600 hover:bg-blue-700',
+          ].join(' ')}
         >
           {mut.isPending ? (
             <>

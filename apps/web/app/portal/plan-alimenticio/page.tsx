@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Sparkles, Apple, Flame, Dumbbell, Wheat, Droplet, Download,
-  RefreshCw, ChevronDown, ChevronUp, AlertCircle, Clock,
+  RefreshCw, ChevronDown, ChevronUp, AlertCircle, Clock, Lock,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -45,6 +47,22 @@ interface MealPlan {
 interface ShoppingListItem {
   name: string;
   total: string;
+}
+
+interface QuotaFeature {
+  used: number;
+  limit: number | null;
+  allowed: boolean;
+  unlimited: boolean;
+}
+
+interface AiQuota {
+  plan: 'STARTER' | 'PRO' | 'ELITE' | null;
+  has_active_membership: boolean;
+  period_ends_at: string | null;
+  days_until_renewal: number;
+  routine: QuotaFeature;
+  meal_plan: QuotaFeature;
 }
 
 /* =========================================================================
@@ -120,6 +138,14 @@ export default function PlanAlimenticioPage() {
     },
   });
 
+  const { data: quota } = useQuery<AiQuota>({
+    queryKey: ['ai', 'quota', 'me'],
+    queryFn: async () => {
+      const r = await api.get('/ai/quota/me');
+      return r.data as AiQuota;
+    },
+  });
+
   const plan = data?.plan ?? null;
 
   if (isLoading) {
@@ -131,12 +157,20 @@ export default function PlanAlimenticioPage() {
       {!plan ? (
         <NoPlanView
           profileCompleted={!!user?.profile_completed}
-          onCreated={() => qc.invalidateQueries({ queryKey: ['ai', 'meal-plans', 'me'] })}
+          quota={quota}
+          onCreated={() => {
+            qc.invalidateQueries({ queryKey: ['ai', 'meal-plans', 'me'] });
+            qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
+          }}
         />
       ) : (
         <PlanView
           plan={plan}
-          onRegenerated={() => qc.invalidateQueries({ queryKey: ['ai', 'meal-plans', 'me'] })}
+          quota={quota}
+          onRegenerated={() => {
+            qc.invalidateQueries({ queryKey: ['ai', 'meal-plans', 'me'] });
+            qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
+          }}
         />
       )}
     </div>
@@ -149,11 +183,14 @@ export default function PlanAlimenticioPage() {
 
 function NoPlanView({
   profileCompleted,
+  quota,
   onCreated,
 }: {
   profileCompleted: boolean;
+  quota?: AiQuota;
   onCreated: () => void;
 }) {
+  const router = useRouter();
   const [calories, setCalories] = useState<string>('');
   const [mealsPerDay, setMealsPerDay] = useState<3 | 4 | 5>(5);
   const [budget, setBudget] = useState<'low' | 'medium' | 'high'>('medium');
@@ -180,7 +217,20 @@ function NoPlanView({
       return r.data;
     },
     onSuccess: () => onCreated(),
+    onError: (err: { code?: string; message?: string }) => {
+      const code = err?.code;
+      const message = err?.message ?? 'No se pudo generar el plan.';
+      toast.error(message);
+      if (code === 'FEATURE_NOT_IN_PLAN') {
+        router.push('/portal/membership');
+      }
+    },
   });
+
+  const mp = quota?.meal_plan;
+  const featureBlocked = mp?.limit === 0;
+  const quotaExhausted = mp && !featureBlocked && mp.allowed === false;
+  const disableGenerate = !!mp && !mp.allowed;
 
   function toggle(list: string[], setList: (v: string[]) => void, v: string) {
     setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -334,16 +384,124 @@ function NoPlanView({
           </div>
         )}
 
+        <QuotaStatus quota={quota} />
+
         <div>
-          <button
-            type="button"
-            onClick={() => generate.mutate()}
-            disabled={generate.isPending}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl shadow-sm transition"
+          {featureBlocked ? (
+            <UpgradeCard plan={quota?.plan} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => generate.mutate()}
+              disabled={generate.isPending || disableGenerate}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl shadow-sm transition"
+            >
+              <Sparkles className="w-4 h-4" />
+              {generate.isPending
+                ? 'Generando…'
+                : quotaExhausted
+                  ? 'Sin planes disponibles este periodo'
+                  : 'Generar mi plan con IA'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+ * Quota status + upgrade card
+ * =========================================================================*/
+
+function QuotaStatus({ quota }: { quota?: AiQuota }) {
+  if (!quota) return null;
+  const mp = quota.meal_plan;
+
+  // STARTER — feature not in plan. Rendered as the upgrade card instead of
+  // a quiet status line so the whole section below can swap for the CTA.
+  if (mp.limit === 0) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
+        <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <p className="text-amber-900 font-semibold">
+            Tu plan Básico no incluye plan alimenticio con IA.
+          </p>
+          <p className="text-amber-800/90 font-bold mt-0.5">
+            Mejora a PRO o Élite para desbloquearlo.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Quota exhausted
+  if (!mp.allowed) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
+        <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <p className="text-amber-900">
+          Ya usaste tu plan alimenticio de este periodo. Se renueva en{' '}
+          <strong className="font-semibold">{quota.days_until_renewal}</strong>{' '}
+          día{quota.days_until_renewal === 1 ? '' : 's'}.
+        </p>
+      </div>
+    );
+  }
+
+  // Unlimited (ELITE typically)
+  if (mp.unlimited) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <Sparkles className="w-4 h-4 text-blue-500" />
+        Planes alimenticios ilimitados con tu plan {quota.plan ?? 'actual'}.
+      </div>
+    );
+  }
+
+  // Allowed with a finite limit
+  if (mp.limit != null && mp.limit > 0) {
+    const remaining = Math.max(0, mp.limit - mp.used);
+    return (
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <Sparkles className="w-4 h-4 text-blue-500" />
+        Te queda{remaining === 1 ? '' : 'n'}{' '}
+        <strong className="text-slate-700 tabular-nums">{remaining}</strong>{' '}
+        plan{remaining === 1 ? '' : 'es'} este periodo.
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function UpgradeCard({ plan }: { plan?: AiQuota['plan'] }) {
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-amber-50 border border-blue-200 rounded-2xl p-5 sm:p-6">
+      <div className="flex items-start gap-4">
+        <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white ring-1 ring-blue-200 text-blue-700 shrink-0">
+          <Lock className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display text-xl sm:text-2xl tracking-wide text-slate-900">
+            Desbloquea el plan alimenticio con IA
+          </h3>
+          <p className="text-sm text-slate-600 mt-1">
+            {plan === 'STARTER'
+              ? 'Tu plan Básico no incluye esta función. '
+              : ''}
+            Mejora a <strong className="text-slate-900">PRO</strong> o{' '}
+            <strong className="text-slate-900">Élite</strong> para generar
+            planes alimenticios personalizados con IA.
+          </p>
+          <Link
+            href="/portal/membership"
+            className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm transition"
           >
             <Sparkles className="w-4 h-4" />
-            {generate.isPending ? 'Generando…' : 'Generar mi plan con IA'}
-          </button>
+            Ver planes
+          </Link>
         </div>
       </div>
     </div>
@@ -396,11 +554,14 @@ function CheckGrid({
 
 function PlanView({
   plan,
+  quota,
   onRegenerated,
 }: {
   plan: MealPlan;
+  quota?: AiQuota;
   onRegenerated: () => void;
 }) {
+  const router = useRouter();
   // Group meals by day
   const byDay = useMemo(() => {
     const map = new Map<number, Meal[]>();
@@ -432,7 +593,18 @@ function PlanView({
       return r.data;
     },
     onSuccess: () => onRegenerated(),
+    onError: (err: { code?: string; message?: string }) => {
+      const code = err?.code;
+      const message = err?.message ?? 'No se pudo regenerar el plan.';
+      toast.error(message);
+      if (code === 'FEATURE_NOT_IN_PLAN') {
+        router.push('/portal/membership');
+      }
+    },
   });
+
+  const mp = quota?.meal_plan;
+  const regenerateDisabled = !!mp && !mp.allowed;
 
   const [downloading, setDownloading] = useState(false);
 
@@ -482,8 +654,9 @@ function PlanView({
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => regenerate.mutate()}
-              disabled={regenerate.isPending}
-              className="inline-flex items-center gap-2 bg-white ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-60 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition"
+              disabled={regenerate.isPending || regenerateDisabled}
+              title={regenerateDisabled ? 'Quota agotada este periodo' : undefined}
+              className="inline-flex items-center gap-2 bg-white ring-1 ring-slate-300 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition"
             >
               <RefreshCw className={`w-4 h-4 ${regenerate.isPending ? 'animate-spin' : ''}`} />
               {regenerate.isPending ? 'Regenerando…' : 'Regenerar'}
@@ -506,6 +679,8 @@ function PlanView({
           <StatBig icon={<Droplet className="w-4 h-4" />} label="Grasas" value={plan.fats_g} unit="g" />
         </div>
       </div>
+
+      <QuotaStatus quota={quota} />
 
       {/* Day tabs */}
       <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 border-b border-slate-200">

@@ -15,11 +15,12 @@
 // maps thrown `err()` instances to the same shape.
 // ─────────────────────────────────────────────────────────────
 
-export function err(code, msg, statusCode = 400) {
+export function err(code, msg, statusCode = 400, details = null) {
     const e = new Error(msg);
     e.code = code;
     e.statusCode = statusCode;
     e.expose = true;
+    if (details) e.details = details;
     return e;
 }
 

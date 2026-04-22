@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import QRCode from 'react-qr-code';
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Lock, ShieldCheck, ScanLine } from 'lucide-react';
+import { RefreshCw, Lock, ShieldCheck, ScanLine, CameraOff } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
@@ -163,8 +163,10 @@ export default function PortalQRPage() {
         </div>
       </div>
 
-      {/* Instructions — 3 steps that reinforce the full habit: open the
-          app / log in every visit, show this exact QR, get access. */}
+      {/* Instructions — the critical habit: open the app LIVE every visit,
+          show the QR that appears on screen. Screenshots don't work because
+          the token rotates every ~60s, and that's the #1 thing members do
+          wrong if we don't spell it out. */}
       <div className="w-full max-w-md px-4">
         <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
           <ScanLine className="h-3 w-3 text-blue-600" />
@@ -176,9 +178,9 @@ export default function PortalQRPage() {
               1
             </span>
             <span>
-              Abre CED·GYM
+              Entra a CED·GYM
               <br />
-              en tu cuenta
+              desde tu celular
             </span>
           </li>
           <li className="flex flex-col items-center gap-1">
@@ -186,9 +188,9 @@ export default function PortalQRPage() {
               2
             </span>
             <span>
-              Muestra este QR
+              Muestra el QR
               <br />
-              en el escáner
+              que veas aquí
             </span>
           </li>
           <li className="flex flex-col items-center gap-1">
@@ -196,15 +198,19 @@ export default function PortalQRPage() {
               3
             </span>
             <span>
-              Tu visita
+              Escanéalo
               <br />
-              queda registrada
+              en la entrada
             </span>
           </li>
         </ol>
-        <p className="mt-3 text-center text-[11px] text-slate-500">
-          Tu QR es personal y único — preséntalo <strong className="text-slate-700">siempre</strong> al entrar.
-        </p>
+        <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-slate-500">
+          <CameraOff className="h-3.5 w-3.5 text-slate-400" />
+          <span>
+            No uses captura <span className="text-slate-300">·</span>{' '}
+            <strong className="font-semibold text-slate-700">ábrelo aquí</strong> cada visita
+          </span>
+        </div>
       </div>
 
       {/* Subtle refresh — only visible if something went wrong. No

@@ -22,6 +22,9 @@ import dayjs from 'dayjs';
 // `annual_price_mxn` keys, plus `duration_days_monthly` and
 // `features[]` — these are the fields the frontend consumes.
 // ────────────────────────────────────────────────────────────────
+// AI quotas are enforced per 30-day sub-period anchored to
+// `membership.starts_at` (see lib/ai-quota.js). `null` = unlimited,
+// `0` = feature not included in the plan.
 export const PLAN_CATALOG = [
     {
         code: 'STARTER',
@@ -35,6 +38,8 @@ export const PLAN_CATALOG = [
         quarterly_price_mxn: 1617,
         annual_price_mxn: 5750,
         duration_days_monthly: 30,
+        ai_routines_per_month: 1,
+        ai_meal_plans_per_month: 0,
         features: [
             '1 visita al día al gym',
             '1 rutina gratis generada en la app',
@@ -54,6 +59,8 @@ export const PLAN_CATALOG = [
         quarterly_price_mxn: 2697,
         annual_price_mxn: 9590,
         duration_days_monthly: 30,
+        ai_routines_per_month: null,
+        ai_meal_plans_per_month: 1,
         features: [
             'Entradas ilimitadas al día (AM + PM)',
             'Genera rutinas ilimitadas desde la app',
@@ -76,6 +83,8 @@ export const PLAN_CATALOG = [
         quarterly_price_mxn: 4293,
         annual_price_mxn: 15264,
         duration_days_monthly: 30,
+        ai_routines_per_month: null,
+        ai_meal_plans_per_month: null,
         features: [
             'Todo lo del plan Pro',
             'Rutina específica por deporte (football, powerlifting, HYROX, etc.)',
@@ -101,6 +110,8 @@ export function getPublicPlanCatalog() {
         quarterly_price_mxn: p.quarterly_price_mxn,
         annual_price_mxn: p.annual_price_mxn,
         duration_days_monthly: p.duration_days_monthly,
+        ai_routines_per_month: p.ai_routines_per_month ?? null,
+        ai_meal_plans_per_month: p.ai_meal_plans_per_month ?? null,
         features: [...p.features],
         popular: p.popular,
     }));

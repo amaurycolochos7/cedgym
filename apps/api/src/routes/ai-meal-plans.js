@@ -23,6 +23,7 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { generateJSON } from '../lib/openai.js';
+import { assertAIQuota } from '../lib/ai-quota.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 
@@ -303,6 +304,10 @@ export default async function aiMealPlansRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
 
         const userId = req.user.sub || req.user.id;
+
+        // Enforce plan-tier quota BEFORE spending OpenAI tokens.
+        await assertAIQuota(prisma, userId, 'MEAL_PLAN');
+
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
