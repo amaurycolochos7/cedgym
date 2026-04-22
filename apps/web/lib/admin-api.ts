@@ -283,24 +283,6 @@ export interface WhatsAppStatus {
   qr_png_base64?: string;
 }
 
-export interface Referral {
-  id: string;
-  referrer_id: string;
-  referrer_name: string;
-  referee_id?: string;
-  referee_name?: string;
-  status: 'PENDING' | 'CONFIRMED' | 'PAID';
-  credit_mxn?: number;
-  created_at: string;
-}
-
-export interface ReferralLeader {
-  user_id: string;
-  name: string;
-  confirmed_count: number;
-  credit_earned_mxn: number;
-}
-
 export interface GymSettings {
   name: string;
   logo_url?: string;
@@ -1024,18 +1006,6 @@ export const adminApi = {
         revenue_mxn: number;
         by_day: { day: string; uses: number }[];
       }>(`/admin/promocodes/${id}/stats`)
-      .then((r) => r.data),
-
-  // Referrals
-  referralLeaderboard: (month?: string) =>
-    api
-      .get<ReferralLeader[]>('/admin/referrals/leaderboard', {
-        params: { month },
-      })
-      .then((r) => r.data),
-  listReferrals: (params: { status?: string; page?: number }) =>
-    api
-      .get<Paginated<Referral>>('/admin/referrals', { params })
       .then((r) => r.data),
 
   // Reports

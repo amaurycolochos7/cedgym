@@ -179,21 +179,17 @@ export default async function usersRoutes(fastify) {
       membership,
       payments,
       check_ins,
-      emergency_contacts,
       purchases,
       measurements,
       bookings,
       reviews,
       progress,
       badges,
-      referralsMade,
-      referralReceived,
     ] = await Promise.all([
       fastify.prisma.user.findUnique({ where: { id: userId } }),
       fastify.prisma.membership.findUnique({ where: { user_id: userId } }),
       fastify.prisma.payment.findMany({ where: { user_id: userId }, orderBy: { created_at: 'desc' } }),
       fastify.prisma.checkIn.findMany({ where: { user_id: userId }, orderBy: { scanned_at: 'desc' } }),
-      fastify.prisma.emergencyContact.findMany({ where: { user_id: userId } }),
       fastify.prisma.productPurchase.findMany({
         where: { user_id: userId },
         include: { product: { select: { title: true, slug: true, type: true } } },
@@ -203,8 +199,6 @@ export default async function usersRoutes(fastify) {
       fastify.prisma.productReview.findMany({ where: { user_id: userId } }),
       fastify.prisma.userProgress.findUnique({ where: { user_id: userId } }).catch(() => null),
       fastify.prisma.userBadge.findMany({ where: { user_id: userId }, include: { badge: true } }).catch(() => []),
-      fastify.prisma.referral.findMany({ where: { referrer_id: userId } }).catch(() => []),
-      fastify.prisma.referral.findUnique({ where: { referred_id: userId } }).catch(() => null),
     ]);
 
     if (!user) {
@@ -215,7 +209,6 @@ export default async function usersRoutes(fastify) {
       exported_at: new Date().toISOString(),
       user: { ...user, password_hash: undefined },
       membership,
-      emergency_contacts,
       payments,
       check_ins,
       purchases,
@@ -224,10 +217,6 @@ export default async function usersRoutes(fastify) {
       reviews,
       progress,
       badges,
-      referrals: {
-        made: referralsMade,
-        received: referralReceived,
-      },
       notice:
         'Este archivo contiene una copia de tus datos personales conforme a la LFPDPPP (México). ' +
         'Guárdalo en un lugar seguro; contiene información sensible.',

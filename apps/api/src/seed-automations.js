@@ -115,12 +115,6 @@ const TEMPLATES = [
         body: `🔥 {nombre}, tu racha de {days} días está en peligro. ¡Entrena hoy!`,
     },
     {
-        code: 'referral.reward_granted',
-        name: 'Recompensa por referido',
-        channel: 'WHATSAPP',
-        body: `💰 {nombre}, ¡{referred_name} se inscribió con tu código!\nTienes *$200 MXN* de crédito en tu cuenta.`,
-    },
-    {
         code: 'class.reminder_2h',
         name: 'Recordatorio clase 2h antes',
         channel: 'WHATSAPP',
@@ -270,14 +264,6 @@ const AUTOMATIONS = [
         delay_minutes: 0,
         action: 'push.notify',
         template_code: 'gamification.streak_break_warning',
-    },
-    {
-        name: 'Referido recompensado',
-        trigger: 'referral.reward_granted',
-        filter: null,
-        delay_minutes: 0,
-        action: 'whatsapp.send_template',
-        template_code: 'referral.reward_granted',
     },
     {
         name: 'Recordatorio clase 2h antes',

@@ -15,7 +15,6 @@
 //   • 10 inventory items (Redis-backed; see routes/inventory.js)
 //   • 5 promo codes
 //   • Check-ins for heatmap seeding (Diego & María, last 20 days)
-//   • 2 referrals (one confirmed + rewarded)
 //   • 2 approved payments in the last 30 days
 //
 // Usage: `node apps/api/src/seed-demo.js` (from the repo root).
@@ -48,7 +47,6 @@ const counters = {
     inventory: 0,
     promos: 0,
     checkins: 0,
-    referrals: 0,
     payments: 0,
 };
 
@@ -253,15 +251,6 @@ async function main() {
         birth_date: new Date('1991-07-09'),
     });
 
-    // Extra phantom athlete — referral target.
-    const referido = await upsertUser({
-        workspace_id: WS, password_hash,
-        email: 'atleta6@demo.mx',
-        name: 'Carolina Méndez', full_name: 'Carolina Méndez Vargas',
-        phone: '+5216141000106', role: 'ATHLETE', gender: 'FEMALE',
-        birth_date: new Date('1999-03-22'),
-    });
-
     // 3) Memberships ───────────────────────────────────────────
     // Mirrors the brief: active / expiring-in-6-days / expired-yesterday
     // so the web UI has coverage for every renewal-lane edge case.
@@ -295,15 +284,6 @@ async function main() {
         price_mxn: PLAN_PRICES.STARTER.MONTHLY, billing_cycle: 'MONTHLY',
         sport: 'BOXING',
     });
-    // Referral target also needs a paid membership (that's what
-    // `first_payment_at` on the Referral row below points to).
-    await upsertMembership(WS, referido.id, {
-        plan: 'PRO', status: 'ACTIVE',
-        starts_at: daysFromNow(-15), expires_at: daysFromNow(15),
-        price_mxn: PLAN_PRICES.PRO.MONTHLY, billing_cycle: 'MONTHLY',
-        sport: 'FOOTBALL',
-    });
-
     // 4) Courses ───────────────────────────────────────────────
     // `schedule` is free-form JSON — frontend treats it as an array
     // of { day, start, end } so we emit that shape.
@@ -725,45 +705,7 @@ async function main() {
         }
     }
 
-    // 10) Referrals ───────────────────────────────────────────
-    // Diego → Carolina — CONFIRMED + rewarded.
-    const existingReferral1 = await prisma.referral.findUnique({ where: { referred_id: referido.id } });
-    if (!existingReferral1) {
-        await prisma.referral.create({
-            data: {
-                workspace_id: WS,
-                referrer_id: diego.id,
-                referred_id: referido.id,
-                code_used: 'DIEGO-CED',
-                reward_referrer_mxn: 200,
-                reward_referred_mxn: 100,
-                first_payment_at: daysFromNow(-15),
-                reward_paid_at: daysFromNow(-10),
-                status: 'REWARDED',
-            },
-        });
-        counters.referrals++;
-    }
-    // María → Pedro — PENDING (second referral slot, no reward yet).
-    // Pedro is already a real athlete with a membership; we reuse him
-    // as the "referred" party. Only meaningful if not already tied.
-    const existingReferral2 = await prisma.referral.findUnique({ where: { referred_id: pedro.id } });
-    if (!existingReferral2) {
-        await prisma.referral.create({
-            data: {
-                workspace_id: WS,
-                referrer_id: maria.id,
-                referred_id: pedro.id,
-                code_used: 'MARIA-CED',
-                reward_referrer_mxn: 0,
-                reward_referred_mxn: 0,
-                status: 'PENDING',
-            },
-        });
-        counters.referrals++;
-    }
-
-    // 11) Payments (dashboard revenue) ────────────────────────
+    // 10) Payments (dashboard revenue) ────────────────────────
     // Two APPROVED payments in the last 30d. mp_payment_id is
     // @unique so we gate on that and skip reruns cleanly.
     const PAY_ROWS = [
@@ -817,7 +759,6 @@ async function main() {
     console.log(`  Inventory items:      ${counters.inventory}`);
     console.log(`  Promo codes:          ${counters.promos}`);
     console.log(`  Check-ins seeded:     ${counters.checkins}`);
-    console.log(`  Referrals:            ${counters.referrals}`);
     console.log(`  Payments APPROVED:    ${counters.payments}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`  Demo password: ${DEMO_PASSWORD}`);

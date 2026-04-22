@@ -3,23 +3,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import {
-  Copy,
-  Share2,
   Trash2,
   Download,
-  ShieldAlert,
   CheckCircle2,
   Camera,
   User as UserIcon,
   Dumbbell,
-  Pencil,
-  Phone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { ApiError, Relationship } from '@/lib/schemas';
-import { COUNTRIES, DEFAULT_COUNTRY, parseE164, toE164 } from '@/lib/countries';
+import type { ApiError } from '@/lib/schemas';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
 import { ProfileRequirements } from '@/components/portal/profile-requirements';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
@@ -79,60 +73,6 @@ function LightFormError({ children }: { children?: React.ReactNode }) {
   );
 }
 
-function LightPhoneInput({
-  id,
-  value,
-  onChange,
-}: {
-  id?: string;
-  value: string;
-  onChange: (e164: string) => void;
-}) {
-  const { country, national } = parseE164(value);
-  return (
-    <div className="flex h-12 w-full items-stretch overflow-hidden rounded-xl border border-slate-300 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
-      <select
-        aria-label="Código de país"
-        value={country.code}
-        onChange={(e) => {
-          const next = COUNTRIES.find((c) => c.code === e.target.value) ?? DEFAULT_COUNTRY;
-          onChange(toE164(next, national));
-        }}
-        className="h-full border-r border-slate-200 bg-slate-50 px-2 text-sm text-slate-700 focus:outline-none"
-      >
-        {COUNTRIES.map((c) => (
-          <option key={`${c.code}-${c.dial}`} value={c.code}>
-            {c.flag} {c.dial}
-          </option>
-        ))}
-      </select>
-      <input
-        id={id}
-        type="tel"
-        inputMode="numeric"
-        autoComplete="tel-national"
-        placeholder={country.code === 'MX' ? '55 1234 5678' : 'Número'}
-        value={national}
-        onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, '').slice(0, 15);
-          onChange(toE164(country, digits));
-        }}
-        className="flex-1 bg-transparent px-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
-      />
-    </div>
-  );
-}
-
-const RELATIONSHIP_OPTIONS: { value: Relationship; label: string }[] = [
-  { value: 'padre', label: 'Padre' },
-  { value: 'madre', label: 'Madre' },
-  { value: 'hermano', label: 'Hermano/a' },
-  { value: 'pareja', label: 'Pareja' },
-  { value: 'amigo', label: 'Amigo/a' },
-  { value: 'tutor', label: 'Tutor/a' },
-  { value: 'otro', label: 'Otro' },
-];
-
 type Tab = 'cuenta' | 'fitness';
 
 export default function PortalPerfilPage() {
@@ -142,12 +82,6 @@ export default function PortalPerfilPage() {
   const { data: me } = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api.get('/auth/me')).data,
-  });
-
-  const { data: referrals } = useQuery({
-    queryKey: ['referrals', 'me'],
-    queryFn: async () => (await api.get('/referrals/me')).data,
-    retry: false,
   });
 
   const [tab, setTab] = useState<Tab>('cuenta');
@@ -161,31 +95,13 @@ export default function PortalPerfilPage() {
   const selfieUrl: string | null = me?.user?.selfie_url ?? null;
   const [selfieOpen, setSelfieOpen] = useState(false);
 
-  // Contacto de emergencia
-  const [ecName, setEcName] = useState('');
-  const [ecRel, setEcRel] = useState<Relationship>('padre');
-  const [ecPhone, setEcPhone] = useState('');
-  const [ecNotes, setEcNotes] = useState('');
-  const [ecError, setEcError] = useState<string | null>(null);
-  const [ecApiError, setEcApiError] = useState<string | null>(null);
-  const [editingEc, setEditingEc] = useState(false);
-
   useEffect(() => {
     if (me?.user) {
       setFullName(me.user.full_name ?? me.user.name ?? '');
-      const ec = me.user.emergency_contact;
-      if (ec) {
-        setEcName(ec.name ?? '');
-        setEcRel((ec.relationship as Relationship) ?? 'padre');
-        const digits = (ec.phone ?? '').replace(/\D/g, '').slice(-10);
-        setEcPhone(digits);
-        setEcNotes(ec.medical_notes ?? '');
-      }
     }
   }, [me]);
 
   const hasFitnessProfile = !!me?.user?.fitness_profile;
-  const hasEc = !!me?.user?.emergency_contact;
 
   const saveProfile = useMutation({
     mutationFn: async () => {
@@ -205,30 +121,6 @@ export default function PortalPerfilPage() {
     },
   });
 
-  const saveEc = useMutation({
-    mutationFn: async () => {
-      const res = await api.patch('/auth/complete-profile', {
-        emergency_contact: {
-          name: ecName.trim(),
-          relationship: ecRel,
-          phone: ecPhone,
-          ...(ecNotes.trim() ? { medical_notes: ecNotes.trim() } : {}),
-        },
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      toast.success('Contacto de emergencia guardado.');
-      setEditingEc(false);
-      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
-      refreshMe();
-    },
-    onError: (err) => {
-      const norm = normalizeError(err) as ApiError;
-      setEcApiError(norm.message);
-    },
-  });
-
   const onSaveProfile = () => {
     setProfileApiError(null);
     setNameError(null);
@@ -237,39 +129,6 @@ export default function PortalPerfilPage() {
       return;
     }
     saveProfile.mutate();
-  };
-
-  const onSaveEc = () => {
-    setEcApiError(null);
-    setEcError(null);
-    if (ecName.trim().length < 2) {
-      setEcError('Ingresa el nombre del contacto');
-      return;
-    }
-    if (!/^\+[1-9]\d{6,14}$/.test(ecPhone)) {
-      setEcError('Elige país y escribe un teléfono válido');
-      return;
-    }
-    saveEc.mutate();
-  };
-
-  const code = referrals?.code;
-  const shareUrl = code
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/r/${code}`
-    : '';
-
-  const copyCode = () => {
-    if (!code) return;
-    navigator.clipboard.writeText(shareUrl);
-    toast.success('Link copiado');
-  };
-
-  const shareWhatsapp = () => {
-    if (!code) return;
-    const msg = encodeURIComponent(
-      `Entrena conmigo en CED·GYM. Usa mi código ${code} y obtén descuento en tu primer pago: ${shareUrl}`,
-    );
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
   return (
@@ -293,7 +152,7 @@ export default function PortalPerfilPage() {
             onClick={() => setTab('cuenta')}
             icon={<UserIcon className="h-4 w-4" />}
             label="Mi cuenta"
-            hint="Datos, selfie y emergencia"
+            hint="Datos y selfie"
           />
           <TabButton
             active={tab === 'fitness'}
@@ -393,162 +252,6 @@ export default function PortalPerfilPage() {
             </div>
           </section>
 
-          {/* Contacto de emergencia — collapsed summary once saved,
-              full form while editing / empty. Saves real vertical space
-              on mobile where 4 fields + header take ~350px. */}
-          <section
-            id="emergencia"
-            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 scroll-mt-28"
-          >
-            {hasEc && !editingEc ? (
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <ShieldAlert size={18} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
-                      Emergencia
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                      <CheckCircle2 size={10} /> Guardado
-                    </span>
-                  </div>
-                  <div className="mt-0.5 truncate text-sm font-semibold text-slate-900">
-                    {ecName || '—'}
-                    <span className="ml-1.5 text-xs font-normal text-slate-500">
-                      ·{' '}
-                      {RELATIONSHIP_OPTIONS.find((o) => o.value === ecRel)?.label ??
-                        ecRel}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <Phone size={11} /> {ecPhone || '—'}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditingEc(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                  aria-label="Editar contacto de emergencia"
-                >
-                  <Pencil size={12} /> Editar
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <SectionHeader
-                  icon={<ShieldAlert size={18} />}
-                  title="Contacto de emergencia"
-                  description="Opcional. Solo lo usamos si necesitamos contactar a alguien en tu nombre."
-                />
-
-                <LightFormError>{ecError ?? ecApiError ?? undefined}</LightFormError>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <LightField id="ec_name" label="Nombre">
-                    <input
-                      id="ec_name"
-                      className={INPUT_CLS}
-                      value={ecName}
-                      onChange={(e) => setEcName(e.target.value)}
-                      placeholder="Nombre completo"
-                    />
-                  </LightField>
-
-                  <LightField id="ec_rel" label="Parentesco">
-                    <select
-                      id="ec_rel"
-                      value={ecRel}
-                      onChange={(e) => setEcRel(e.target.value as Relationship)}
-                      className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                    >
-                      {RELATIONSHIP_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </LightField>
-
-                  <LightField id="ec_phone" label="Teléfono">
-                    <LightPhoneInput id="ec_phone" value={ecPhone} onChange={setEcPhone} />
-                  </LightField>
-
-                  <LightField
-                    id="ec_notes"
-                    label="Notas médicas"
-                    hint="Alergias, padecimientos… (opcional)"
-                  >
-                    <textarea
-                      id="ec_notes"
-                      value={ecNotes}
-                      onChange={(e) => setEcNotes(e.target.value)}
-                      rows={3}
-                      maxLength={500}
-                      placeholder="Ej. alergia a la penicilina"
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                    />
-                  </LightField>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    className={BTN_PRIMARY}
-                    onClick={onSaveEc}
-                    disabled={saveEc.isPending}
-                  >
-                    {saveEc.isPending ? 'Guardando…' : 'Guardar contacto'}
-                  </button>
-                  {hasEc && (
-                    <button
-                      type="button"
-                      className={BTN_GHOST}
-                      onClick={() => {
-                        setEditingEc(false);
-                        setEcError(null);
-                        setEcApiError(null);
-                      }}
-                      disabled={saveEc.isPending}
-                    >
-                      Cancelar
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Referidos */}
-          <section className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-200 rounded-2xl p-4 sm:p-6 space-y-3">
-            <SectionHeader
-              title="Mi código de referidos"
-              description="$200 MXN de crédito por cada referido que se registre y pague."
-            />
-            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-[10px] uppercase text-slate-500 font-semibold tracking-widest">Tu código</div>
-                <div className="text-xl sm:text-2xl font-mono text-blue-600 mt-1 break-all font-bold tabular-nums">
-                  {code ?? '—'}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase text-slate-500 font-semibold tracking-widest">Crédito</div>
-                <div className="text-xl sm:text-2xl font-bold mt-1 text-slate-900 tabular-nums">
-                  ${(referrals?.credit_mxn ?? 0).toLocaleString('es-MX')}
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className={BTN_GHOST} onClick={copyCode} disabled={!code}>
-                <Copy className="w-4 h-4" /> Copiar link
-              </button>
-              <button type="button" className={BTN_GHOST} onClick={shareWhatsapp} disabled={!code}>
-                <Share2 className="w-4 h-4" /> WhatsApp
-              </button>
-            </div>
-          </section>
 
           {/* Privacidad */}
           <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-3">

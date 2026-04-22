@@ -149,12 +149,11 @@ async function buildVars(body, context = {}) {
         out.producto = context.producto || '';
     }
 
-    // ── Gamification / OTP / referral direct context ──
+    // ── Gamification / OTP direct context ──
     out.badge         = context.badge || '';
     out.xp            = context.xp != null ? String(context.xp) : '';
     out.days          = context.days != null ? String(context.days) : '';
     out.code          = context.code || '';
-    out.referred_name = context.referred_name || '';
     out.fecha_inicio  = context.fecha_inicio || (context.starts_at ? dayjs(context.starts_at).format('DD/MM/YYYY') : '');
 
     return out;

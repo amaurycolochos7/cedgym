@@ -45,9 +45,6 @@ const MAP: Record<string, { variant: Variant; label: string }> = {
   // ── Classes ────────────────────────────────────────────
   SCHEDULED: { variant: 'info', label: 'Programada' },
   COMPLETED: { variant: 'success', label: 'Completada' },
-  // ── Referrals ──────────────────────────────────────────
-  CONFIRMED: { variant: 'success', label: 'Confirmado' },
-  PAID: { variant: 'brand', label: 'Pagado' },
 };
 
 // Friendly fallback: if the status comes from a system we haven't

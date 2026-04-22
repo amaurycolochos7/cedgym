@@ -26,7 +26,6 @@ export const XP_REWARDS = {
     CLASS_ATTENDED: 25,
     PRODUCT_PURCHASED: 50,
     REVIEW_POSTED: 15,
-    REFERRAL_CONFIRMED: 100,
     MEMBERSHIP_RENEWED: 75,
     BADGE_EARNED: 0, // XP comes from Badge.xp_reward directly
 };

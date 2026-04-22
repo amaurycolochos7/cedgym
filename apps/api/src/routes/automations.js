@@ -34,7 +34,6 @@ const KNOWN_TRIGGERS = [
     'product.review_request',
     'gamification.badge_unlocked',
     'gamification.streak_break_warning',
-    'referral.reward_granted',
     'class.reminder_2h',
     'class.cancellation_alert',
     'measurement.reminder',

@@ -769,11 +769,6 @@ const FACILITIES = [
     body: 'Bancas, barras olímpicas, discos calibrados y racks.',
     img: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1000',
   },
-  {
-    title: 'Clases grupales',
-    body: 'Salón dedicado para HIIT, spinning y movilidad.',
-    img: 'https://images.unsplash.com/photo-1549060279-7e168fcee0c2?q=80&w=1000',
-  },
 ] as const;
 
 /* ═════════ Helpers ═════════ */

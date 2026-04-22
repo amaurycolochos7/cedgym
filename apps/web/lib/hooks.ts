@@ -59,21 +59,6 @@ export function useMeasurements() {
   });
 }
 
-export function useReferralInfo() {
-  return useQuery({
-    queryKey: ['portal', 'referrals'],
-    queryFn: () => portalApi.referralInfo(),
-  });
-}
-
-export function useProfile() {
-  return useQuery({
-    queryKey: ['portal', 'profile'],
-    queryFn: async () => {
-      return portalApi.emergencyContactsCRUD.list();
-    },
-  });
-}
 
 /* =========================================================================
  * QR token — auto-refreshing every 55s, cached offline-safe

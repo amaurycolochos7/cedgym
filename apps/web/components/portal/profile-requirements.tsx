@@ -17,14 +17,12 @@ interface RequirementItem {
  * Visual checklist shown at the top of the "Mi cuenta" tab on /portal/perfil.
  *
  * - Required fields (full name + selfie) gate membership purchase.
- * - Emergency contact is optional and shown only to encourage completion.
  * - When all required items are done, collapses into a success badge.
  */
 export function ProfileRequirements() {
   const {
     hasFullName,
     hasSelfie,
-    hasEmergency,
     canPurchaseMembership,
     requiredComplete,
     requiredTotal,
@@ -46,14 +44,6 @@ export function ProfileRequirements() {
       done: hasSelfie,
       required: true,
       anchor: '#selfie',
-    },
-    {
-      key: 'emergency',
-      label: 'Contacto de emergencia',
-      description: 'Opcional. Solo por si algo pasa durante tu entrenamiento.',
-      done: hasEmergency,
-      required: false,
-      anchor: '#emergencia',
     },
   ];
 

@@ -294,9 +294,6 @@ export const authApi = {
           full_name: input.fullName,
           birth_date: input.birthDate,
           gender: mapGenderToApi(input.gender),
-          ...(input.emergencyContact
-            ? { emergency_contact: input.emergencyContact }
-            : {}),
         },
       )
       .then((r) => r.data),
@@ -503,40 +500,9 @@ export const portalApi = {
       .post<{ ok: true }>('/users/me/password', input)
       .then((r) => r.data),
 
-  emergencyContactsCRUD: {
-    list: () =>
-      api
-        .get<{
-          items: (import('./schemas').EmergencyContact & { id: string })[];
-        }>('/users/me/emergency-contacts')
-        .then((r) => r.data.items),
-    add: (input: import('./schemas').EmergencyContact) =>
-      api
-        .post<{ ok: true }>('/users/me/emergency-contacts', input)
-        .then((r) => r.data),
-    remove: (id: string) =>
-      api
-        .delete<{ ok: true }>(`/users/me/emergency-contacts/${id}`)
-        .then((r) => r.data),
-  },
-
   toggle2FA: (on: boolean) =>
     api
       .post<{ ok: true }>('/users/me/2fa', { enable: on })
-      .then((r) => r.data),
-
-  referralInfo: () =>
-    api
-      .get<{
-        code: string;
-        referred_users: {
-          id: string;
-          name: string;
-          joined_at: string;
-          reward_mxn: number;
-        }[];
-        total_reward_mxn: number;
-      }>('/users/me/referrals')
       .then((r) => r.data),
 };
 

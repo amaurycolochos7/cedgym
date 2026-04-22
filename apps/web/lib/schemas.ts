@@ -90,48 +90,13 @@ export const genderEnum = z.enum([
 ]);
 export type Gender = z.infer<typeof genderEnum>;
 
-export const relationshipEnum = z.enum([
-  'padre',
-  'madre',
-  'hermano',
-  'pareja',
-  'amigo',
-  'tutor',
-  'otro',
-]);
-export type Relationship = z.infer<typeof relationshipEnum>;
-
-export const emergencyContactSchema = z.object({
-  name: z.string().trim().min(2, 'Nombre requerido'),
-  relationship: relationshipEnum,
-  phone: mxPhoneSchema,
-  medical_notes: z.string().trim().max(500).optional(),
+export const completeProfileSchema = z.object({
+  fullName: z.string().trim().min(2, 'Nombre completo requerido'),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida (YYYY-MM-DD)'),
+  gender: genderEnum,
 });
-export type EmergencyContact = z.infer<typeof emergencyContactSchema>;
-
-export const completeProfileSchema = z
-  .object({
-    fullName: z.string().trim().min(2, 'Nombre completo requerido'),
-    birthDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida (YYYY-MM-DD)'),
-    gender: genderEnum,
-    emergencyContact: emergencyContactSchema.optional(),
-  })
-  .superRefine((v, ctx) => {
-    const today = new Date();
-    const d = new Date(v.birthDate);
-    let age = today.getFullYear() - d.getFullYear();
-    const m = today.getMonth() - d.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age -= 1;
-    if (age < 18 && !v.emergencyContact) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['emergencyContact'],
-        message: 'Contacto de emergencia requerido para menores de 18 años',
-      });
-    }
-  });
 export type CompleteProfileInput = z.infer<typeof completeProfileSchema>;
 
 /* =========================================================================

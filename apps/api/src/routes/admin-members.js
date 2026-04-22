@@ -90,7 +90,6 @@ export default async function adminMembersRoutes(fastify) {
       where: { id: req.params.id },
       include: {
         membership: true,
-        emergency_contacts: true,
       },
     });
     if (!u) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' } });
@@ -360,9 +359,6 @@ export default async function adminMembersRoutes(fastify) {
     await safeDelete(() => prisma.productPurchase.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.productReview.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.classBooking.deleteMany({ where: { user_id: uid } }));
-    await safeDelete(() => prisma.referral.deleteMany({
-      where: { OR: [{ referrer_id: uid }, { referred_id: uid }] },
-    }));
     await safeDelete(() => prisma.userBadge.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.userProgress.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.bodyMeasurement.deleteMany({ where: { user_id: uid } }));

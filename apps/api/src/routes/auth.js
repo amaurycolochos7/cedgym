@@ -73,13 +73,6 @@ const completeProfileSchema = z.object({
     full_name: z.string().trim().min(2).max(120).optional(),
     birth_date: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
     gender: z.enum(['MALE', 'FEMALE', 'OTHER', 'PREFER_NOT_SAY']).optional(),
-    emergency_contact: z
-        .object({
-            name: z.string().trim().min(2).max(80),
-            relationship: z.string().trim().min(2).max(40),
-            phone: phoneSchema,
-        })
-        .optional(),
 });
 
 const loginSchema = z.object({
@@ -390,30 +383,9 @@ export default async function authRoutes(fastify) {
             // user chose to skip, and we don't want to keep nagging.
             userUpdates.profile_completed = true;
 
-            const result = await prisma.$transaction(async (tx) => {
-                const updatedUser = await tx.user.update({
-                    where: { id: userId },
-                    data: userUpdates,
-                });
-
-                if (data.emergency_contact) {
-                    // One primary contact per user. Demote existing primaries
-                    // before upserting the new one.
-                    await tx.emergencyContact.updateMany({
-                        where: { user_id: userId, is_primary: true },
-                        data: { is_primary: false },
-                    });
-                    await tx.emergencyContact.create({
-                        data: {
-                            user_id: userId,
-                            name: data.emergency_contact.name,
-                            relationship: data.emergency_contact.relationship,
-                            phone: data.emergency_contact.phone,
-                            is_primary: true,
-                        },
-                    });
-                }
-                return updatedUser;
+            const result = await prisma.user.update({
+                where: { id: userId },
+                data: userUpdates,
             });
 
             audit(fastify, {
@@ -753,10 +725,6 @@ export default async function authRoutes(fastify) {
                 where: { id: userId },
                 include: {
                     membership: true,
-                    emergency_contacts: {
-                        where: { is_primary: true },
-                        take: 1,
-                    },
                     workspace: {
                         select: { id: true, slug: true, name: true, plan: true },
                     },
@@ -770,7 +738,6 @@ export default async function authRoutes(fastify) {
                 membership: user.membership || null,
                 workspace: user.workspace || null,
                 profile_completed: !!user.profile_completed,
-                emergency_contact: user.emergency_contacts?.[0] || null,
             });
         }
     );
