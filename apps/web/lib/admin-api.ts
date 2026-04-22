@@ -677,6 +677,19 @@ export const adminApi = {
         data: reason ? { reason } : {},
       })
       .then((r) => r.data),
+  /**
+   * Soft-cancel a membership (keeps the row + history for audit).
+   * Sets status=CANCELED and expires_at=now so the member loses
+   * access immediately but the record stays visible in reports.
+   */
+  cancelMembership: (id: string) =>
+    api
+      .patch(`/admin/memberships/${id}`, {
+        status: 'CANCELED',
+        expires_at: new Date().toISOString(),
+        auto_renew: false,
+      })
+      .then((r) => r.data),
   listExpiredMemberships: () =>
     api
       .get<{

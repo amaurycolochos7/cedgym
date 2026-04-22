@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Send, Trash2 } from 'lucide-react';
+import { Plus, Send, Trash2, Ban } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -65,6 +65,7 @@ export default function AdminMembershipsPage() {
 
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [toDelete, setToDelete] = React.useState<AdminMember | null>(null);
+  const [toCancel, setToCancel] = React.useState<AdminMember | null>(null);
   const [assignPicker, setAssignPicker] = React.useState(false);
   const [assignFor, setAssignFor] = React.useState<AdminMember | null>(null);
 
@@ -89,6 +90,21 @@ export default function AdminMembershipsPage() {
       const msg =
         e?.response?.data?.error?.message ||
         'No se pudo eliminar la membresía';
+      toast.error(msg);
+    },
+  });
+
+  const cancel = useMutation({
+    mutationFn: (id: string) => adminApi.cancelMembership(id),
+    onSuccess: () => {
+      toast.success('Membresía retirada');
+      setToCancel(null);
+      qc.invalidateQueries({ queryKey: ['admin', 'memberships-active'] });
+    },
+    onError: (e: any) => {
+      const msg =
+        e?.response?.data?.error?.message ||
+        'No se pudo retirar la membresía';
       toast.error(msg);
     },
   });
@@ -145,19 +161,44 @@ export default function AdminMembershipsPage() {
             {
               id: 'actions',
               header: () => <span className="sr-only">Acciones</span>,
-              cell: ({ row }: { row: { original: AdminMember } }) => (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setToDelete(row.original);
-                  }}
-                  aria-label="Eliminar membresía"
-                  className="inline-flex items-center rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              ),
+              cell: ({ row }: { row: { original: AdminMember } }) => {
+                const m = row.original;
+                // Only show "Retirar" when the membership is currently
+                // active — retiring an already-canceled/expired row is
+                // a no-op and would confuse the admin.
+                const isActive =
+                  String(m.status ?? '').toUpperCase() === 'ACTIVE';
+                return (
+                  <div className="flex items-center gap-1">
+                    {isActive && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setToCancel(m);
+                        }}
+                        aria-label="Retirar membresía"
+                        title="Retirar (cancela pero mantiene historial)"
+                        className="inline-flex items-center rounded-lg p-1.5 text-amber-600 hover:bg-amber-50"
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setToDelete(m);
+                      }}
+                      aria-label="Eliminar membresía"
+                      title="Eliminar (borra el registro)"
+                      className="inline-flex items-center rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              },
             } as ColumnDef<AdminMember>,
           ]
         : []),
@@ -248,6 +289,45 @@ export default function AdminMembershipsPage() {
         }
         loading={del.isPending}
       />
+
+      {/* Retirar (soft-cancel) — confirmación sencilla, no borra data */}
+      <Dialog open={!!toCancel} onOpenChange={(v) => !v && setToCancel(null)}>
+        <DialogContent className="bg-white border-slate-200 text-slate-900">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900">
+              ¿Retirar membresía?
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Vas a cancelar la membresía de{' '}
+              <span className="font-semibold text-slate-900">
+                {toCancel?.name}
+              </span>
+              . El socio perderá acceso inmediatamente, pero el registro se
+              conserva en el historial (reportes, facturación). Para borrar
+              del todo usa el ícono rojo (basura).
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setToCancel(null)}
+              className={BTN_SECONDARY}
+              disabled={cancel.isPending}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => toCancel && cancel.mutate(toCancel.id)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-60 disabled:pointer-events-none"
+              disabled={cancel.isPending}
+            >
+              <Ban className="h-4 w-4" />
+              {cancel.isPending ? 'Retirando…' : 'Sí, retirar'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Picker para elegir el miembro al que asignar plan */}
       <Dialog
