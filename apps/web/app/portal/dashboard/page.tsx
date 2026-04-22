@@ -12,10 +12,15 @@ import { PlansModal } from '@/components/portal/plans-modal';
 export default function PortalDashboardPage() {
   const { user } = useAuth();
 
-  const { data: membership } = useQuery({
+  // GET /memberships/me returns `{ membership: {...} | null, days_remaining }`
+  // — unwrap so the tile below can read plan/status directly.
+  const { data: meResp } = useQuery({
     queryKey: ['memberships', 'me'],
     queryFn: async () => (await api.get('/memberships/me')).data,
   });
+  const membership = meResp?.membership
+    ? { ...meResp.membership, days_remaining: meResp.days_remaining ?? 0 }
+    : null;
 
   const { data: checkins } = useQuery({
     queryKey: ['checkins', 'me', 'history'],
@@ -31,7 +36,7 @@ export default function PortalDashboardPage() {
     : 0;
 
   const hasActiveMembership =
-    !!membership?.plan && (membership?.status?.toUpperCase?.() === 'ACTIVE' || membership?.days_remaining > 0);
+    !!membership?.plan && (membership?.status?.toUpperCase?.() === 'ACTIVE' || (membership?.days_remaining ?? 0) > 0);
 
   // Paywall state — when blocked, we surface a modal with the feature name
   // instead of routing to a "no plan" page.

@@ -24,10 +24,19 @@ export default function PortalMembershipPage() {
   });
   const needsSelfie = !!me && !me?.user?.selfie_url;
 
-  const { data: membership, isLoading } = useQuery({
+  // GET /memberships/me returns `{ membership: {...} | null, days_remaining }`.
+  // Unwrap so the rest of this page can read plan/status/expires_at directly.
+  const { data: meResp, isLoading } = useQuery({
     queryKey: ['memberships', 'me'],
     queryFn: async () => (await api.get('/memberships/me')).data,
   });
+  const membership = meResp?.membership
+    ? {
+        ...meResp.membership,
+        days_remaining: meResp.days_remaining ?? 0,
+        total_days: meResp.total_days ?? 30,
+      }
+    : null;
 
   const { data: history } = useQuery({
     queryKey: ['memberships', 'history'],
