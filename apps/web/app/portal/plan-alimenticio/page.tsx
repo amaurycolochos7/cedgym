@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  Sparkles, Apple, Flame, Dumbbell, Wheat, Droplet, Download,
+  Apple, Flame, Dumbbell, Wheat, Droplet, Download,
   RefreshCw, ChevronDown, ChevronUp, AlertCircle, Clock, Lock,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -260,14 +260,14 @@ function NoPlanView({
       <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6 sm:p-8">
         <div className="flex items-center gap-3 mb-3">
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-            <Sparkles className="w-5 h-5" />
+            <Apple className="w-5 h-5" />
           </div>
           <span className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
-            Powered by IA
+            Nutrición personalizada
           </span>
         </div>
         <h1 className="font-display text-4xl sm:text-5xl tracking-wide text-slate-900">
-          TU PLAN ALIMENTICIO CON IA
+          TU PLAN ALIMENTICIO
         </h1>
         <p className="text-slate-600 mt-2 max-w-2xl">
           6 comidas al día, ingredientes mexicanos, adaptado a tu objetivo.
@@ -394,14 +394,13 @@ function NoPlanView({
               type="button"
               onClick={() => generate.mutate()}
               disabled={generate.isPending || disableGenerate}
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl shadow-sm transition"
+              className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-5 py-3 rounded-xl text-sm shadow-sm transition"
             >
-              <Sparkles className="w-4 h-4" />
               {generate.isPending
                 ? 'Generando…'
                 : quotaExhausted
                   ? 'Sin planes disponibles este periodo'
-                  : 'Generar mi plan con IA'}
+                  : 'Generar mi plan'}
             </button>
           )}
         </div>
@@ -426,7 +425,7 @@ function QuotaStatus({ quota }: { quota?: AiQuota }) {
         <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="flex-1">
           <p className="text-amber-900 font-semibold">
-            Tu plan Básico no incluye plan alimenticio con IA.
+            Tu plan Básico no incluye plan alimenticio.
           </p>
           <p className="text-amber-800/90 font-bold mt-0.5">
             Mejora a PRO o Élite para desbloquearlo.
@@ -454,7 +453,7 @@ function QuotaStatus({ quota }: { quota?: AiQuota }) {
   if (mp.unlimited) {
     return (
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Sparkles className="w-4 h-4 text-blue-500" />
+        <Apple className="w-4 h-4 text-blue-500" />
         Planes alimenticios ilimitados con tu plan {quota.plan ?? 'actual'}.
       </div>
     );
@@ -465,7 +464,7 @@ function QuotaStatus({ quota }: { quota?: AiQuota }) {
     const remaining = Math.max(0, mp.limit - mp.used);
     return (
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Sparkles className="w-4 h-4 text-blue-500" />
+        <Apple className="w-4 h-4 text-blue-500" />
         Te queda{remaining === 1 ? '' : 'n'}{' '}
         <strong className="text-slate-700 tabular-nums">{remaining}</strong>{' '}
         plan{remaining === 1 ? '' : 'es'} este periodo.
@@ -485,7 +484,7 @@ function UpgradeCard({ plan }: { plan?: AiQuota['plan'] }) {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-display text-xl sm:text-2xl tracking-wide text-slate-900">
-            Desbloquea el plan alimenticio con IA
+            Desbloquea tu plan alimenticio
           </h3>
           <p className="text-sm text-slate-600 mt-1">
             {plan === 'STARTER'
@@ -493,13 +492,12 @@ function UpgradeCard({ plan }: { plan?: AiQuota['plan'] }) {
               : ''}
             Mejora a <strong className="text-slate-900">PRO</strong> o{' '}
             <strong className="text-slate-900">Élite</strong> para generar
-            planes alimenticios personalizados con IA.
+            planes alimenticios personalizados.
           </p>
           <Link
             href="/portal/membership"
             className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl shadow-sm transition"
           >
-            <Sparkles className="w-4 h-4" />
             Ver planes
           </Link>
         </div>

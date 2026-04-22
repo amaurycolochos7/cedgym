@@ -31,7 +31,6 @@ import {
   Loader2,
   Lock,
   RefreshCw,
-  Sparkles,
   Timer,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -281,14 +280,14 @@ function GenerateRoutineCard({
       <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6 sm:p-10">
         <div className="flex items-center gap-3 mb-4">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-            <Sparkles className="w-5 h-5" />
+            <Dumbbell className="w-5 h-5" />
           </span>
           <span className="text-xs uppercase tracking-[0.2em] text-slate-500 font-semibold">
             Rutina personalizada
           </span>
         </div>
         <h1 className="font-display text-3xl sm:text-5xl leading-tight text-slate-900">
-          GENERA TU RUTINA CON IA
+          GENERA TU RUTINA
         </h1>
         <p className="text-slate-600 mt-3 max-w-xl">
           Adaptada a tu objetivo, nivel y equipo disponible. Lista en 30 segundos.
@@ -389,31 +388,19 @@ function GenerateRoutineCard({
             disabled={disabled}
             onClick={() => mut.mutate(form)}
             className={[
-              'group relative w-full inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl text-white font-bold text-base transition-all',
+              'group relative w-full inline-flex items-center justify-center px-5 py-3 rounded-xl text-white font-semibold text-sm transition-all',
               disabled
                 ? 'bg-slate-300 cursor-not-allowed opacity-50 shadow-none'
-                : 'bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:via-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-600/30 hover:shadow-xl hover:shadow-blue-600/40 active:scale-[0.99]',
+                : 'bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-700 hover:via-blue-700 hover:to-indigo-700 shadow-md shadow-blue-600/25 hover:shadow-lg hover:shadow-blue-600/35 active:scale-[0.99]',
             ].join(' ')}
           >
             {mut.isPending ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Generando tu rutina… ~20 s</span>
-              </>
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generando tu rutina… ~20 s
+              </span>
             ) : (
-              <>
-                <span
-                  className={[
-                    'inline-flex h-8 w-8 items-center justify-center rounded-xl transition',
-                    disabled
-                      ? 'bg-white/30'
-                      : 'bg-white/15 ring-1 ring-white/25 group-hover:bg-white/20',
-                  ].join(' ')}
-                >
-                  <Sparkles className="w-4 h-4" />
-                </span>
-                <span className="tracking-tight">Generar mi rutina con IA</span>
-              </>
+              <span className="tracking-tight">Generar mi rutina</span>
             )}
           </button>
         </div>
@@ -433,7 +420,7 @@ function QuotaStatus({ quota }: { quota: AiQuota | null }) {
   if (r.unlimited) {
     return (
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Sparkles className="w-4 h-4 text-blue-500" />
+        <Dumbbell className="w-4 h-4 text-blue-500" />
         <span>
           Rutinas ilimitadas con tu plan {quota.plan ?? ''}.
         </span>
@@ -897,8 +884,8 @@ function RegenerateModal({
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4" />
-              Regenerar con IA
+              <RefreshCw className="w-4 h-4" />
+              Regenerar rutina
             </>
           )}
         </button>
@@ -985,7 +972,7 @@ function MembershipBlock() {
       <Lock className="w-10 h-10 text-slate-400 mx-auto mb-3" />
       <h2 className="font-display text-2xl mb-2 text-slate-900">NECESITAS UNA MEMBRESÍA ACTIVA</h2>
       <p className="text-slate-600 mb-6">
-        Las rutinas con IA están incluidas en todos los planes de CED·GYM.
+        Las rutinas personalizadas están incluidas en todos los planes de CED·GYM.
       </p>
       <Link
         href="/portal/membership"
