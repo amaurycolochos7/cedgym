@@ -19,6 +19,29 @@ export default function AdminWhatsAppPage() {
     refetchInterval: 2000,
   });
 
+  // Inspect which default automations are already active so the UI can
+  // show "ya activas" instead of the "Activar" button once the admin
+  // has provisioned them.
+  const { data: automations } = useQuery({
+    queryKey: ['admin', 'automations', 'welcome-check'],
+    queryFn: async () =>
+      (await api.get('/admin/automations?page=1&limit=200')).data,
+    enabled: !!status?.is_connected,
+  });
+  const welcomeAutos = (automations?.automations ?? []).filter(
+    (a: any) =>
+      a?.enabled &&
+      (a?.trigger === 'payment.approved' ||
+        a?.trigger === 'member.verified'),
+  );
+  const paymentAutoOn = welcomeAutos.some(
+    (a: any) => a.trigger === 'payment.approved',
+  );
+  const memberAutoOn = welcomeAutos.some(
+    (a: any) => a.trigger === 'member.verified',
+  );
+  const welcomeReady = paymentAutoOn && memberAutoOn;
+
   const { data: qrData } = useQuery({
     queryKey: ['whatsapp', 'qr'],
     queryFn: async () => (await api.get('/admin/whatsapp/qr')).data,
@@ -62,6 +85,9 @@ export default function AdminWhatsAppPage() {
           `Faltan plantillas: ${data.missing_templates.join(', ')}. Corre el seed completo.`,
         );
       }
+      // Refresh the automations list so the UI flips from "Activar" to
+      // the "Activas ✓" status card immediately.
+      qc.invalidateQueries({ queryKey: ['admin', 'automations', 'welcome-check'] });
     },
     onError: (e: any) => {
       const status = e?.response?.status ?? e?.status;
@@ -170,22 +196,52 @@ export default function AdminWhatsAppPage() {
             membresía, promociones y todas las notificaciones automáticas a tus
             socios.
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3 pt-4 border-t border-emerald-200">
-            <button
-              type="button"
-              onClick={() => ensureDefaults.mutate()}
-              disabled={ensureDefaults.isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-            >
-              <Bell className="h-4 w-4" />
-              {ensureDefaults.isPending
-                ? 'Activando…'
-                : 'Activar mensajes de bienvenida'}
-            </button>
-            <p className="text-xs text-emerald-900/70">
-              Crea las automatizaciones "Pago confirmado" y "Bienvenida al
-              activar membresía". Es seguro ejecutarlo varias veces.
-            </p>
+          <div className="mt-4 pt-4 border-t border-emerald-200">
+            {welcomeReady ? (
+              <div className="rounded-xl bg-white ring-1 ring-emerald-200 p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-semibold text-emerald-900">
+                    Mensajes de bienvenida activos
+                  </span>
+                </div>
+                <ul className="space-y-1 pl-6 text-xs text-slate-700">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                    Pago confirmado (al aprobarse el pago)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
+                    Bienvenida al activar membresía
+                  </li>
+                </ul>
+                <p className="pl-6 text-[11px] text-slate-500">
+                  Puedes editar el texto en la sección de plantillas de
+                  WhatsApp.
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => ensureDefaults.mutate()}
+                  disabled={ensureDefaults.isPending}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  <Bell className="h-4 w-4" />
+                  {ensureDefaults.isPending
+                    ? 'Activando…'
+                    : paymentAutoOn || memberAutoOn
+                    ? 'Completar activación'
+                    : 'Activar mensajes de bienvenida'}
+                </button>
+                <p className="text-xs text-emerald-900/70">
+                  {paymentAutoOn || memberAutoOn
+                    ? 'Falta una de las dos automatizaciones. Púlsalo para completar.'
+                    : 'Crea "Pago confirmado" y "Bienvenida al activar membresía".'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
