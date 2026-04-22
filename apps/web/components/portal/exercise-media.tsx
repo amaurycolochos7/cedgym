@@ -1,393 +1,498 @@
 'use client';
 
 /* -------------------------------------------------------------------------
- * ExerciseMedia
+ * ExerciseMedia — web-native SVG animations for exercise cards.
  *
- * Animated exercise demonstrations for the routine view. Pulls illustrated
- * frames from free-exercise-db (yuhonas/free-exercise-db on GitHub raw).
+ * No external images, no network, no API keys. Each exercise is classified
+ * into one of ~10 movement patterns by name keywords, and the pattern is
+ * rendered as a minimalist SVG scene looping infinitely via framer-motion.
  *
- * Why this source:
- *   - No API key, no rate limit in practice (GitHub raw CDN).
- *   - Every exercise has 0.jpg + 1.jpg — we cross-fade between them to
- *     synthesize a low-key animation (no real GIF needed).
- *   - Everything is fetched on demand; nothing is stored locally.
+ * Why not photos:
+ *   Real-person photos clash with the brand's clean slate/blue/glass
+ *   language. A stylized motion abstraction matches the Apple-Fitness /
+ *   Centr / Freeletics aesthetic the rest of the portal is going for.
  *
- * Strategy:
- *   1. Normalize the Spanish name (strip accents, lowercase, drop filler).
- *   2. Try a small hardcoded Spanish-to-slug map first — this covers the
- *      overwhelmingly common exercises without ever hitting the network
- *      for lookup metadata.
- *   3. If unmapped, lazily fetch the ~1 MB exercises.json index (once per
- *      session thanks to React Query's Infinity cache) and do a best-effort
- *      substring match against English names.
- *   4. On any failure, render a branded Dumbbell placeholder. Never throws.
+ * Public API (unchanged from the previous photo version):
+ *   <ExerciseMedia name="Press banca" size="sm" />
+ *   useExerciseMedia("Sentadilla") → { pattern, isLoading, isError }
  * -------------------------------------------------------------------------*/
 
-import { useQuery } from '@tanstack/react-query';
-import { Dumbbell } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 
 type Size = 'sm' | 'md' | 'lg';
 
-const RAW_BASE =
-  'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main';
-const INDEX_URL = `${RAW_BASE}/dist/exercises.json`;
-const img = (slug: string, frame: 0 | 1) =>
-  `${RAW_BASE}/exercises/${slug}/${frame}.jpg`;
+type Pattern =
+  | 'bench-push'
+  | 'squat'
+  | 'deadlift'
+  | 'row'
+  | 'pullup'
+  | 'overhead-press'
+  | 'curl'
+  | 'extension'
+  | 'plank'
+  | 'cardio'
+  | 'jump'
+  | 'generic';
 
-const SIZE_MAP: Record<
-  Size,
-  { box: string; icon: string; label: string }
-> = {
-  sm: {
-    box: 'w-20 h-20',
-    icon: 'w-7 h-7',
-    label: 'text-[10px]',
-  },
-  md: {
-    box: 'w-48 h-48',
-    icon: 'w-10 h-10',
-    label: 'text-xs',
-  },
-  lg: {
-    box: 'w-80 h-60',
-    icon: 'w-14 h-14',
-    label: 'text-sm',
-  },
+const SIZE_MAP: Record<Size, { w: number; h: number; box: string }> = {
+  sm: { w: 80, h: 80, box: 'w-20 h-20' },
+  md: { w: 192, h: 192, box: 'w-48 h-48' },
+  lg: { w: 320, h: 240, box: 'w-80 h-60' },
 };
 
 /* ------------------------------------------------------------------ */
-/* Name normalization + Spanish → slug lookup                          */
+/* Name → pattern classification                                       */
 /* ------------------------------------------------------------------ */
 
-const FILLER_WORDS = new Set(['en', 'con', 'de', 'del', 'la', 'el', 'los', 'las', 'a', 'al']);
+/** Spanish + English keywords that anchor each movement pattern. Order
+ *  matters for overlaps (e.g., "press militar" must match overhead-press
+ *  before generic "press"). */
+const PATTERN_RULES: Array<{ pattern: Pattern; keywords: string[] }> = [
+  { pattern: 'overhead-press', keywords: ['press militar', 'press de hombros', 'shoulder press', 'overhead', 'hombro', 'arnold'] },
+  { pattern: 'bench-push', keywords: ['press banca', 'press banco', 'bench', 'press de pecho', 'pecho', 'chest press', 'flexion', 'flexiones', 'push up', 'push-up', 'pushup', 'fondos', 'dips'] },
+  { pattern: 'squat', keywords: ['sentadilla', 'squat', 'desplante', 'zancada', 'lunge', 'prensa', 'leg press', 'pistol', 'step up'] },
+  { pattern: 'deadlift', keywords: ['peso muerto', 'deadlift', 'rumano', 'rdl', 'hip thrust', 'hinge', 'good morning', 'glute bridge', 'puente'] },
+  { pattern: 'row', keywords: ['remo', 'row', 'pulldown', 'jalon', 'face pull', 'rear delt'] },
+  { pattern: 'pullup', keywords: ['pull up', 'pull-up', 'pullup', 'dominada', 'chin up', 'muscle up'] },
+  { pattern: 'curl', keywords: ['curl', 'biceps', 'bicep'] },
+  { pattern: 'extension', keywords: ['extension', 'triceps', 'tricep', 'kickback', 'skull'] },
+  { pattern: 'plank', keywords: ['plancha', 'plank', 'abdominal', 'ab ', 'crunch', 'sit up', 'sit-up', 'hollow', 'dead bug', 'mountain climber', 'core'] },
+  { pattern: 'jump', keywords: ['salto', 'saltos', 'jump', 'box jump', 'burpee', 'jumping', 'plyo'] },
+  { pattern: 'cardio', keywords: ['correr', 'run', 'running', 'trot', 'sprint', 'caminar', 'bicicleta', 'bike', 'escalera', 'ladder', 'agilidad'] },
+];
 
-/** Strip accents, lowercase, collapse whitespace, drop filler words. */
 function normalize(input: string): string {
-  const stripped = input
+  return input
+    .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  return stripped
-    .split(' ')
-    .filter((w) => w && !FILLER_WORDS.has(w))
-    .join(' ');
 }
 
-/**
- * Hardcoded Spanish/English → free-exercise-db slug map. Keys are already
- * normalized (see `normalize`). These slugs were verified to return 200 for
- * both 0.jpg and 1.jpg on the GitHub raw CDN.
- */
-const SLUG_MAP: Record<string, string> = {
-  // Chest
-  'press banca': 'Barbell_Bench_Press_-_Medium_Grip',
-  'press banco': 'Barbell_Bench_Press_-_Medium_Grip',
-  'bench press': 'Barbell_Bench_Press_-_Medium_Grip',
-  'press banca inclinado': 'Barbell_Incline_Bench_Press_-_Medium_Grip',
-  'press inclinado': 'Barbell_Incline_Bench_Press_-_Medium_Grip',
-  'press banca cerrado': 'Close-Grip_Barbell_Bench_Press',
-  'press cerrado': 'Close-Grip_Barbell_Bench_Press',
-  'flexiones': 'Pushups',
-  'flexion': 'Pushups',
-  'lagartijas': 'Pushups',
-  'push ups': 'Pushups',
-  'push up': 'Pushups',
-  'pushups': 'Pushups',
-  'fondos': 'Dips_-_Chest_Version',
-  'dips': 'Dips_-_Chest_Version',
-  'aperturas': 'Dumbbell_Flyes',
-  'aperturas mancuernas': 'Dumbbell_Flyes',
-
-  // Back
-  'remo barra': 'Bent_Over_Barbell_Row',
-  'remo barra inclinado': 'Bent_Over_Barbell_Row',
-  'remo inclinado': 'Bent_Over_Barbell_Row',
-  'barbell row': 'Bent_Over_Barbell_Row',
-  'remo': 'Bent_Over_Barbell_Row',
-  'remo mancuerna': 'Bent_Over_One-Arm_Long_Bar_Row',
-  'remo t': 'T-Bar_Row_with_Handle',
-  'dominadas': 'Pullups',
-  'pull ups': 'Pullups',
-  'pullups': 'Pullups',
-  'pull up': 'Pullups',
-  'jalon pecho': 'Wide-Grip_Lat_Pulldown',
-  'jalon': 'Wide-Grip_Lat_Pulldown',
-  'pulldown': 'Wide-Grip_Lat_Pulldown',
-
-  // Legs
-  'sentadilla': 'Barbell_Full_Squat',
-  'sentadillas': 'Barbell_Full_Squat',
-  'squat': 'Barbell_Full_Squat',
-  'squats': 'Barbell_Full_Squat',
-  'peso muerto': 'Barbell_Deadlift',
-  'deadlift': 'Barbell_Deadlift',
-  'deadlifts': 'Barbell_Deadlift',
-  'desplantes': 'Barbell_Lunge',
-  'zancadas': 'Barbell_Lunge',
-  'lunges': 'Barbell_Lunge',
-  'lunge': 'Barbell_Lunge',
-  'hip thrust': 'Barbell_Hip_Thrust',
-  'empuje cadera': 'Barbell_Hip_Thrust',
-  'prensa': 'Leg_Press',
-  'prensa piernas': 'Leg_Press',
-  'leg press': 'Leg_Press',
-  'extension cuadriceps': 'Leg_Extensions',
-  'extensiones cuadriceps': 'Leg_Extensions',
-  'leg extension': 'Leg_Extensions',
-  'curl femoral': 'Lying_Leg_Curls',
-  'femoral': 'Lying_Leg_Curls',
-  'leg curl': 'Lying_Leg_Curls',
-  'pantorrillas': 'Standing_Calf_Raises',
-  'elevacion pantorrilla': 'Standing_Calf_Raises',
-  'calf raise': 'Standing_Calf_Raises',
-
-  // Shoulders
-  'press militar': 'Barbell_Shoulder_Press',
-  'shoulder press': 'Barbell_Shoulder_Press',
-  'overhead press': 'Barbell_Shoulder_Press',
-  'press hombros': 'Barbell_Shoulder_Press',
-  'elevaciones laterales': 'Side_Lateral_Raise',
-  'elevaciones lateral': 'Side_Lateral_Raise',
-  'lateral raise': 'Side_Lateral_Raise',
-  'elevaciones frontales': 'Front_Dumbbell_Raise',
-  'front raise': 'Front_Dumbbell_Raise',
-  'pajaro': 'Reverse_Flyes',
-  'pajaros': 'Reverse_Flyes',
-  'rear delt': 'Reverse_Flyes',
-  'reverse fly': 'Reverse_Flyes',
-
-  // Arms
-  'curl biceps': 'Barbell_Curl',
-  'curl de biceps': 'Barbell_Curl',
-  'curl barra': 'Barbell_Curl',
-  'biceps curl': 'Barbell_Curl',
-  'curl mancuernas': 'Dumbbell_Bicep_Curl',
-  'curl martillo': 'Hammer_Curls',
-  'hammer curl': 'Hammer_Curls',
-  'extensiones triceps': 'Triceps_Pushdown',
-  'extension triceps': 'Triceps_Pushdown',
-  'triceps extension': 'Triceps_Pushdown',
-  'triceps pushdown': 'Triceps_Pushdown',
-  'copa': 'Seated_Triceps_Press',
-  'frances': 'EZ-Bar_Skullcrusher',
-  'skullcrusher': 'EZ-Bar_Skullcrusher',
-
-  // Core / cardio
-  'plancha': 'Plank',
-  'plank': 'Plank',
-  'abdominales': 'Crunch_-_Legs_On_Exercise_Ball',
-  'crunch': 'Crunch_-_Legs_On_Exercise_Ball',
-  'crunches': 'Crunch_-_Legs_On_Exercise_Ball',
-  'mountain climbers': 'Mountain_Climbers',
-  'mountain climber': 'Mountain_Climbers',
-  'escaladores': 'Mountain_Climbers',
-};
-
-/* ------------------------------------------------------------------ */
-/* Index (lazy, once-per-session)                                      */
-/* ------------------------------------------------------------------ */
-
-type IndexEntry = { id: string; name: string };
-
-async function fetchIndex(): Promise<IndexEntry[]> {
-  const res = await fetch(INDEX_URL, { cache: 'force-cache' });
-  if (!res.ok) throw new Error(`index ${res.status}`);
-  const raw = (await res.json()) as Array<{ id: string; name: string }>;
-  // Strip the dataset down to just what we need for matching.
-  return raw.map((r) => ({ id: r.id, name: r.name.toLowerCase() }));
-}
-
-/** Substring-match the normalized query against every name in the index. */
-function findInIndex(index: IndexEntry[], normalized: string): string | null {
-  if (!normalized) return null;
-  const tokens = normalized.split(' ').filter(Boolean);
-  if (!tokens.length) return null;
-
-  // Prefer entries where ALL tokens appear, pick the shortest name
-  // (usually the canonical variant: "Plank" beats "Push Up to Side Plank").
-  let best: IndexEntry | null = null;
-  for (const entry of index) {
-    if (tokens.every((t) => entry.name.includes(t))) {
-      if (!best || entry.name.length < best.name.length) best = entry;
+export function classifyPattern(name: string): Pattern {
+  const n = normalize(name);
+  for (const { pattern, keywords } of PATTERN_RULES) {
+    for (const kw of keywords) {
+      if (n.includes(kw)) return pattern;
     }
   }
-  if (best) return best.id;
-
-  // Fallback: any entry containing the longest token.
-  const longest = tokens.reduce((a, b) => (a.length >= b.length ? a : b));
-  for (const entry of index) {
-    if (entry.name.includes(longest)) return entry.id;
-  }
-  return null;
+  return 'generic';
 }
 
 /* ------------------------------------------------------------------ */
-/* Hook                                                                */
+/* Hook (kept for API compatibility)                                   */
 /* ------------------------------------------------------------------ */
 
-export type ExerciseMediaResult = {
-  url?: string;
-  sourceUrl?: string;
-  frames?: [string, string];
+export function useExerciseMedia(name: string): {
+  pattern: Pattern;
   isLoading: boolean;
   isError: boolean;
-};
-
-export function useExerciseMedia(name: string): ExerciseMediaResult {
-  const normalized = normalize(name || '');
-  const directSlug = SLUG_MAP[normalized];
-
-  // Only fetch the index if the direct map misses. React Query dedupes
-  // across every card in the view, and staleTime:Infinity means once per
-  // session in practice.
-  const indexQuery = useQuery({
-    queryKey: ['exercise-media', 'index'],
-    queryFn: fetchIndex,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    enabled: !directSlug && normalized.length > 0,
-    retry: 1,
-  });
-
-  const slug =
-    directSlug ?? (indexQuery.data ? findInIndex(indexQuery.data, normalized) : null);
-
-  if (!normalized) {
-    return { isLoading: false, isError: true };
-  }
-
-  if (directSlug) {
-    return {
-      url: img(directSlug, 0),
-      sourceUrl: `https://github.com/yuhonas/free-exercise-db`,
-      frames: [img(directSlug, 0), img(directSlug, 1)],
-      isLoading: false,
-      isError: false,
-    };
-  }
-
-  if (indexQuery.isLoading) {
-    return { isLoading: true, isError: false };
-  }
-
-  if (!slug) {
-    return { isLoading: false, isError: true };
-  }
-
+} {
   return {
-    url: img(slug, 0),
-    sourceUrl: `https://github.com/yuhonas/free-exercise-db`,
-    frames: [img(slug, 0), img(slug, 1)],
+    pattern: classifyPattern(name),
     isLoading: false,
     isError: false,
   };
 }
 
 /* ------------------------------------------------------------------ */
-/* Component                                                           */
+/* Shared visual tokens                                                */
 /* ------------------------------------------------------------------ */
 
-function Placeholder({
-  name,
-  size,
-}: {
-  name: string;
-  size: Size;
-}) {
-  const s = SIZE_MAP[size];
-  // Deterministic hue per exercise so cards still feel visually distinct
-  // even when we fall back — keep within a blue/indigo band.
-  const hue = Array.from(name).reduce((acc, c) => acc + c.charCodeAt(0), 0) % 40;
+// Brand palette — NEVER change these inline; keep the whole component
+// coherent by sourcing every color from here.
+const COLORS = {
+  base: '#e2e8f0',       // slate-200 (static lines)
+  figure: '#475569',     // slate-600 (body)
+  accent: '#2563eb',     // blue-600 (moving part)
+  accentSoft: '#dbeafe', // blue-100 (glow backdrop)
+  ground: '#cbd5e1',     // slate-300 (floor line)
+};
+
+// Standard spring for framer-motion loops — tuned for a calm, premium
+// pace. Each pattern can override `duration`.
+const loop = (duration: number) => ({
+  duration,
+  repeat: Infinity,
+  ease: [0.4, 0, 0.6, 1] as const,
+});
+
+/* ------------------------------------------------------------------ */
+/* Individual motion scenes                                            */
+/* ------------------------------------------------------------------ */
+/* Each renders inside a 100×100 viewBox so the parent can scale to
+ * any size. Keep them minimalist — a line, a shape, a barbell. */
+
+function Frame({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={`${s.box} shrink-0 rounded-xl overflow-hidden ring-1 ring-slate-200 relative flex flex-col items-center justify-center gap-1 bg-slate-50`}
-      style={{
-        background: `linear-gradient(135deg, hsl(${210 + hue}, 85%, 96%), hsl(${220 + hue}, 80%, 90%))`,
-      }}
-      aria-label={name}
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="xMidYMid meet"
+      className="h-full w-full"
+      role="img"
+      aria-hidden
     >
-      <Dumbbell className={`${s.icon} text-blue-600/70`} strokeWidth={1.5} />
-      {size !== 'sm' && (
-        <span
-          className={`${s.label} font-medium text-slate-600/80 px-2 text-center line-clamp-2`}
-        >
-          {name}
-        </span>
-      )}
-    </div>
+      {/* Subtle backdrop glow */}
+      <circle cx="50" cy="50" r="42" fill={COLORS.accentSoft} opacity="0.35" />
+      {children}
+    </svg>
   );
 }
 
-function Skeleton({ size }: { size: Size }) {
-  const s = SIZE_MAP[size];
+// Barbell shape centered at (cx, cy) with given half-length.
+function Barbell({ cx, cy, half = 20 }: { cx: number; cy: number; half?: number }) {
   return (
-    <div
-      className={`${s.box} shrink-0 rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-100 animate-pulse`}
-      aria-hidden="true"
-    />
+    <g>
+      <line x1={cx - half} y1={cy} x2={cx + half} y2={cy} stroke={COLORS.accent} strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx={cx - half} cy={cy} r="3.5" fill={COLORS.accent} />
+      <circle cx={cx + half} cy={cy} r="3.5" fill={COLORS.accent} />
+    </g>
   );
 }
+
+// Ground line common to several scenes.
+function Ground({ y = 80 }: { y?: number }) {
+  return <line x1="15" y1={y} x2="85" y2={y} stroke={COLORS.ground} strokeWidth="1.2" strokeDasharray="2 3" strokeLinecap="round" />;
+}
+
+// Minimalist person silhouette as separate groups so we can animate
+// specific limbs per pattern.
+function PersonStanding({
+  accentPart,
+}: {
+  // Part that should be rendered with the accent color instead of the
+  // neutral figure gray. Everything else stays slate-600.
+  accentPart?: 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'core';
+}) {
+  const a = (part: string) => (accentPart === part ? COLORS.accent : COLORS.figure);
+  return (
+    <g strokeLinecap="round" strokeLinejoin="round" fill="none">
+      {/* Head */}
+      <circle cx="50" cy="24" r="5" fill={COLORS.figure} />
+      {/* Torso */}
+      <path d="M50 30 L50 54" stroke={a('chest')} strokeWidth="2.4" />
+      {/* Shoulders */}
+      <path d="M42 33 L58 33" stroke={a('shoulders')} strokeWidth="2.4" />
+      {/* Arms */}
+      <path d="M42 33 L38 48" stroke={a('arms')} strokeWidth="2.4" />
+      <path d="M58 33 L62 48" stroke={a('arms')} strokeWidth="2.4" />
+      {/* Legs */}
+      <path d="M50 54 L44 76" stroke={a('legs')} strokeWidth="2.4" />
+      <path d="M50 54 L56 76" stroke={a('legs')} strokeWidth="2.4" />
+    </g>
+  );
+}
+
+// Bench press / push-up — horizontal bar rising and falling over a
+// reclined figure outline.
+function BenchPushScene() {
+  return (
+    <Frame>
+      <Ground y={72} />
+      {/* Reclined figure (minimalist silhouette) */}
+      <g stroke={COLORS.figure} strokeWidth="2.4" strokeLinecap="round" fill="none">
+        {/* Head */}
+        <circle cx="28" cy="62" r="4.5" fill={COLORS.figure} />
+        {/* Body line */}
+        <path d="M32 62 L68 62" />
+        {/* Legs */}
+        <path d="M68 62 L76 56" />
+        {/* Arms reaching up */}
+        <motion.g
+          animate={{ y: [0, 10, 0] }}
+          transition={loop(2.4)}
+        >
+          <path d="M50 62 L50 36" />
+          {/* Barbell on top of hands */}
+          <g transform="translate(0,0)">
+            <line x1="32" y1="36" x2="68" y2="36" stroke={COLORS.accent} strokeWidth="2.6" />
+            <circle cx="32" cy="36" r="4" fill={COLORS.accent} />
+            <circle cx="68" cy="36" r="4" fill={COLORS.accent} />
+          </g>
+        </motion.g>
+      </g>
+    </Frame>
+  );
+}
+
+// Squat — standing figure that compresses vertically with a bar on
+// shoulders.
+function SquatScene() {
+  return (
+    <Frame>
+      <Ground />
+      <motion.g
+        style={{ transformOrigin: '50px 76px' }}
+        animate={{ scaleY: [1, 0.72, 1] }}
+        transition={loop(2.4)}
+      >
+        <PersonStanding />
+        {/* Bar on shoulders */}
+        <Barbell cx={50} cy={33} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Deadlift — barbell rising from the ground to hip height.
+function DeadliftScene() {
+  return (
+    <Frame>
+      <Ground />
+      <motion.g
+        style={{ transformOrigin: '50px 50px' }}
+        animate={{ rotate: [20, 0, 20] }}
+        transition={loop(2.6)}
+      >
+        <PersonStanding />
+      </motion.g>
+      <motion.g
+        animate={{ y: [22, 0, 22] }}
+        transition={loop(2.6)}
+      >
+        <Barbell cx={50} cy={55} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Row — standing figure with bar being pulled toward chest.
+function RowScene() {
+  return (
+    <Frame>
+      <Ground />
+      <PersonStanding accentPart="back" />
+      <motion.g
+        animate={{ x: [0, -10, 0] }}
+        transition={loop(2.2)}
+      >
+        <Barbell cx={70} cy={45} half={16} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Pull-up — figure rising along a vertical bar.
+function PullupScene() {
+  return (
+    <Frame>
+      {/* Horizontal bar up top */}
+      <line x1="22" y1="16" x2="78" y2="16" stroke={COLORS.accent} strokeWidth="2.6" strokeLinecap="round" />
+      <motion.g
+        animate={{ y: [8, -4, 8] }}
+        transition={loop(2.4)}
+      >
+        <PersonStanding accentPart="back" />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Overhead press — bar going from shoulders to overhead.
+function OverheadPressScene() {
+  return (
+    <Frame>
+      <Ground />
+      <PersonStanding accentPart="shoulders" />
+      <motion.g
+        animate={{ y: [0, -12, 0] }}
+        transition={loop(2.2)}
+      >
+        <Barbell cx={50} cy={28} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Curl — a forearm arc rotating to show elbow flexion.
+function CurlScene() {
+  return (
+    <Frame>
+      <Ground />
+      <PersonStanding accentPart="arms" />
+      {/* Right forearm animated around elbow */}
+      <motion.g
+        style={{ transformOrigin: '62px 48px' }}
+        animate={{ rotate: [0, -80, 0] }}
+        transition={loop(2.2)}
+      >
+        <line x1="62" y1="48" x2="68" y2="66" stroke={COLORS.accent} strokeWidth="2.6" strokeLinecap="round" />
+        {/* Dumbbell at the hand */}
+        <rect x="65" y="63" width="6" height="6" rx="1.2" fill={COLORS.accent} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Triceps extension — mirror of curl, extending down behind head.
+function ExtensionScene() {
+  return (
+    <Frame>
+      <Ground />
+      <PersonStanding accentPart="arms" />
+      <motion.g
+        style={{ transformOrigin: '50px 34px' }}
+        animate={{ rotate: [0, 70, 0] }}
+        transition={loop(2.2)}
+      >
+        <line x1="50" y1="34" x2="50" y2="18" stroke={COLORS.accent} strokeWidth="2.6" strokeLinecap="round" />
+        <rect x="47" y="14" width="6" height="6" rx="1.2" fill={COLORS.accent} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Plank / core — horizontal figure holding steady with gentle pulse.
+function PlankScene() {
+  return (
+    <Frame>
+      <Ground y={72} />
+      <g stroke={COLORS.figure} strokeWidth="2.4" strokeLinecap="round" fill="none">
+        {/* Head */}
+        <circle cx="22" cy="54" r="4" fill={COLORS.figure} />
+        {/* Body — accent for abs */}
+        <path d="M26 54 L74 60" stroke={COLORS.accent} />
+        {/* Arms */}
+        <path d="M26 54 L28 70" />
+        {/* Legs */}
+        <path d="M74 60 L82 70" />
+      </g>
+      {/* Pulse on abs */}
+      <motion.circle
+        cx="50"
+        cy="58"
+        r="3"
+        fill={COLORS.accent}
+        animate={{ opacity: [0.2, 0.8, 0.2], scale: [0.9, 1.2, 0.9] }}
+        transition={loop(1.8)}
+      />
+    </Frame>
+  );
+}
+
+// Jump — figure bouncing up and down.
+function JumpScene() {
+  return (
+    <Frame>
+      <Ground />
+      <motion.g
+        animate={{ y: [0, -18, 0] }}
+        transition={{ ...loop(1.6), ease: [0.45, 0, 0.55, 1] as const }}
+      >
+        <PersonStanding accentPart="legs" />
+      </motion.g>
+    </Frame>
+  );
+}
+
+// Cardio — running figure (alternating legs).
+function CardioScene() {
+  return (
+    <Frame>
+      <Ground />
+      <g strokeLinecap="round" strokeLinejoin="round" fill="none">
+        {/* Head */}
+        <circle cx="50" cy="24" r="5" fill={COLORS.figure} />
+        {/* Torso */}
+        <path d="M50 30 L50 54" stroke={COLORS.figure} strokeWidth="2.4" />
+        {/* Arms swinging */}
+        <motion.g
+          style={{ transformOrigin: '50px 33px' }}
+          animate={{ rotate: [-20, 20, -20] }}
+          transition={loop(0.8)}
+        >
+          <path d="M50 33 L42 48" stroke={COLORS.figure} strokeWidth="2.4" />
+        </motion.g>
+        <motion.g
+          style={{ transformOrigin: '50px 33px' }}
+          animate={{ rotate: [20, -20, 20] }}
+          transition={loop(0.8)}
+        >
+          <path d="M50 33 L58 48" stroke={COLORS.figure} strokeWidth="2.4" />
+        </motion.g>
+        {/* Legs alternating */}
+        <motion.g
+          style={{ transformOrigin: '50px 54px' }}
+          animate={{ rotate: [15, -15, 15] }}
+          transition={loop(0.8)}
+        >
+          <path d="M50 54 L44 76" stroke={COLORS.accent} strokeWidth="2.4" />
+        </motion.g>
+        <motion.g
+          style={{ transformOrigin: '50px 54px' }}
+          animate={{ rotate: [-15, 15, -15] }}
+          transition={loop(0.8)}
+        >
+          <path d="M50 54 L56 76" stroke={COLORS.accent} strokeWidth="2.4" />
+        </motion.g>
+      </g>
+    </Frame>
+  );
+}
+
+// Generic — pulsing dumbbell for anything unclassified.
+function GenericScene() {
+  return (
+    <Frame>
+      <motion.g
+        style={{ transformOrigin: '50px 50px' }}
+        animate={{ scale: [1, 1.08, 1], opacity: [0.75, 1, 0.75] }}
+        transition={loop(2.4)}
+      >
+        <rect x="22" y="44" width="10" height="12" rx="2" fill={COLORS.accent} />
+        <rect x="68" y="44" width="10" height="12" rx="2" fill={COLORS.accent} />
+        <rect x="32" y="48" width="36" height="4" rx="1.5" fill={COLORS.accent} />
+      </motion.g>
+    </Frame>
+  );
+}
+
+const SCENES: Record<Pattern, () => React.ReactElement> = {
+  'bench-push': BenchPushScene,
+  'squat': SquatScene,
+  'deadlift': DeadliftScene,
+  'row': RowScene,
+  'pullup': PullupScene,
+  'overhead-press': OverheadPressScene,
+  'curl': CurlScene,
+  'extension': ExtensionScene,
+  'plank': PlankScene,
+  'jump': JumpScene,
+  'cardio': CardioScene,
+  'generic': GenericScene,
+};
+
+/* ------------------------------------------------------------------ */
+/* Public component                                                    */
+/* ------------------------------------------------------------------ */
 
 export function ExerciseMedia({
   name,
-  size = 'md',
+  size = 'sm',
+  className = '',
 }: {
   name: string;
   size?: Size;
+  className?: string;
 }) {
-  const s = SIZE_MAP[size];
-  const media = useExerciseMedia(name);
-  const [frame, setFrame] = useState<0 | 1>(0);
-  const [imgFailed, setImgFailed] = useState(false);
-
-  // Cross-fade between the two frames every 800ms to fake motion.
-  useEffect(() => {
-    if (!media.frames) return;
-    const id = window.setInterval(() => {
-      setFrame((f) => (f === 0 ? 1 : 0));
-    }, 800);
-    return () => window.clearInterval(id);
-  }, [media.frames]);
-
-  // Reset the image-error flag when the underlying exercise changes.
-  useEffect(() => {
-    setImgFailed(false);
-  }, [media.frames?.[0]]);
-
-  if (media.isLoading) return <Skeleton size={size} />;
-  if (media.isError || !media.frames || imgFailed)
-    return <Placeholder name={name} size={size} />;
-
-  const [a, b] = media.frames;
+  const pattern = classifyPattern(name);
+  const Scene = SCENES[pattern];
+  const sz = SIZE_MAP[size];
 
   return (
     <div
-      className={`${s.box} shrink-0 rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-50 relative`}
-      aria-label={name}
-      role="img"
+      className={[
+        'relative overflow-hidden rounded-xl ring-1 ring-slate-200',
+        'bg-gradient-to-br from-slate-50 to-blue-50',
+        sz.box,
+        className,
+      ].join(' ')}
+      aria-label={`Animación del ejercicio: ${name}`}
     >
-      {/* Both frames stacked; opacity cross-fade drives the illusion of motion. */}
-      <img
-        src={a}
-        alt=""
-        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${frame === 0 ? 'opacity-100' : 'opacity-0'}`}
-        onError={() => setImgFailed(true)}
-        loading="lazy"
-        draggable={false}
-      />
-      <img
-        src={b}
-        alt=""
-        className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${frame === 1 ? 'opacity-100' : 'opacity-0'}`}
-        onError={() => setImgFailed(true)}
-        loading="lazy"
-        draggable={false}
-        aria-hidden="true"
-      />
+      <Scene />
     </div>
   );
 }
