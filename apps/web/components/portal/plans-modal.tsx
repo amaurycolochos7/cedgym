@@ -223,7 +223,7 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center"
+      className="fixed inset-0 z-[90]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="plans-modal-title"
@@ -238,10 +238,13 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
         className="absolute inset-0 bg-slate-900/75 backdrop-blur-md"
       />
 
+      {/* Mobile: pin to all four sides (true full-screen, no stray top gap).
+          Desktop: center a card with max width / height. */}
       <div
         className={cn(
-          'relative z-10 flex w-full h-[100dvh] flex-col overflow-hidden bg-white shadow-2xl',
-          'sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-3xl',
+          'absolute inset-0 z-10 flex flex-col overflow-hidden bg-white shadow-2xl',
+          'sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2',
+          'sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-3xl sm:rounded-3xl',
         )}
       >
         {/* Header */}
