@@ -45,7 +45,7 @@ const TEMPLATES = {
     REGISTER: (code) =>
         `🏋️ *CED-GYM*\n\nTu código de verificación es:\n*${code}*`,
     PASSWORD_RESET: (code) =>
-        `🔐 *Recuperación de contraseña*\n\nTu código es:\n\n*${code}*\n\nExpira en ${OTP_TTL_MIN} minutos. Nadie de CED-GYM te pedirá este código.`,
+        `🔐 Recuperación de contraseña de *CED-GYM*\n\nTu código es:\n*${code}*`,
     LOGIN_2FA: (code) =>
         `🔑 Código de acceso CED-GYM:\n\n*${code}*\n\nVálido ${OTP_TTL_MIN} min.`,
     PHONE_CHANGE: (code) =>
