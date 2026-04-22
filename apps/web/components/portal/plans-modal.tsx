@@ -21,7 +21,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   X,
@@ -649,6 +649,7 @@ function StepPay({
   onBack: () => void;
 }) {
   const router = useRouter();
+  const qc = useQueryClient();
   const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
 
   const [brickReady, setBrickReady] = useState(false);
@@ -773,6 +774,11 @@ function StepPay({
       const { data } = await api.post('/memberships/subscribe-card', body);
       if (data?.success) {
         toast.success('¡Membresía activada!');
+        // Bust caches so the dashboard / membership tile re-fetch the
+        // freshly activated membership instead of serving the stale
+        // "no active membership" snapshot.
+        qc.invalidateQueries({ queryKey: ['memberships'] });
+        qc.invalidateQueries({ queryKey: ['auth', 'me'] });
         onSuccess(data.welcome ?? {}, plan.name);
       } else {
         setLastError('No pudimos activar la membresía. Intenta de nuevo.');
@@ -808,6 +814,8 @@ function StepPay({
       const data = res.data;
       if (data?.success) {
         toast.success('¡Pago aprobado! Activando tu membresía…');
+        qc.invalidateQueries({ queryKey: ['memberships'] });
+        qc.invalidateQueries({ queryKey: ['auth', 'me'] });
         onSuccess(data.welcome ?? {}, plan.name);
       } else {
         setLastError('Respuesta inesperada del servidor.');
