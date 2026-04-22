@@ -47,15 +47,25 @@ await fastify.register(cors, {
             ...envOrigins,
         ];
         if (!origin) {
-            // Allow no-origin requests (curl, server-to-server) only if
-            // explicitly opted in — otherwise reject silently.
             if (process.env.CORS_ALLOW_NO_ORIGIN === 'true') return cb(null, true);
             return cb(null, false);
         }
-        if (allowed.includes(origin) || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        // Exact-match list + localhost (dev) + *.sslip.io (staging/preview
+        // deploys that use plain-IP domains via the sslip.io DNS wildcard).
+        // Previously we threw `new Error('Not allowed by CORS')` for
+        // unknown origins, which bubbled up as a generic 500 on every
+        // login attempt from a staging host. Reject silently with
+        // `cb(null, false)` instead — the browser gets a normal CORS
+        // denial, not a crashed server.
+        if (
+            allowed.includes(origin) ||
+            origin.includes('localhost') ||
+            origin.includes('127.0.0.1') ||
+            /\.sslip\.io$/.test(new URL(origin).hostname)
+        ) {
             return cb(null, true);
         }
-        cb(new Error('Not allowed by CORS'));
+        return cb(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
