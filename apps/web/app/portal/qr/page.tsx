@@ -122,28 +122,27 @@ export default function PortalQRPage() {
   // If a silent refetch fails the cached token keeps the QR usable for
   // another ~90s (offline-resilient).
   return (
-    <div className="flex min-h-[calc(100vh-12rem)] flex-col items-center gap-5 py-4 sm:py-8">
-      {/* Hero — member's name + the product promise */}
+    <div className="flex flex-col items-center gap-3 py-2">
+      {/* Hero — compact: eyebrow + title in 2 tight lines */}
       <div className="text-center px-4">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">
           <ShieldCheck className="h-3 w-3" />
           Acceso CED·GYM
         </div>
-        <h1 className="mt-3 font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+        <h1 className="mt-1.5 font-display text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
           {user?.name?.split(' ')[0] ?? 'Tu'} QR
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Tu pase personal para entrar al gym.
-        </p>
       </div>
 
       {/* QR card — subtle blue gradient frame so it feels like a membership
-          card, not a form input. Fills 82% of viewport, capped ~340px. */}
+          card, not a form input. Sized to leave room for the instructions
+          below without scrolling. Offline state is communicated through
+          the refresh button that pops up at the bottom, not a badge. */}
       <div
-        className="relative rounded-3xl bg-gradient-to-br from-blue-600 to-sky-500 p-[3px] shadow-xl shadow-blue-600/20"
-        style={{ width: 'min(82vw, 340px)' }}
+        className="relative rounded-3xl bg-gradient-to-br from-blue-600 to-sky-500 p-[3px] shadow-lg shadow-blue-600/20"
+        style={{ width: 'min(62vw, 260px)' }}
       >
-        <div className="rounded-[22px] bg-white p-5 sm:p-6">
+        <div className="rounded-[22px] bg-white p-3 sm:p-4">
           {token ? (
             <QRCode
               value={token}
@@ -158,62 +157,38 @@ export default function PortalQRPage() {
             <div className="aspect-square w-full animate-pulse rounded-xl bg-slate-100" />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-slate-100 px-4 text-center text-sm text-slate-500">
-              No fue posible cargar tu QR. Toca el botón de abajo para
-              reintentar.
+              No fue posible cargar tu QR.
             </div>
           )}
         </div>
-        {/* Live/offline badge — minimal, no countdown */}
-        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
-          <div
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest shadow-md ${
-              offline
-                ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
-                : 'bg-emerald-500 text-white'
-            }`}
-          >
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                offline ? 'bg-amber-500' : 'bg-white animate-pulse'
-              }`}
-            />
-            {offline ? 'Sin conexión' : 'Listo'}
-          </div>
-        </div>
       </div>
 
-      {/* Instructions — what to do at the door */}
-      <div className="w-full max-w-md px-4 pt-4">
-        <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <ScanLine className="h-4 w-4 text-blue-600" />
-            <h2 className="font-display text-sm font-bold uppercase tracking-widest text-slate-900">
-              Cómo entrar al gym
-            </h2>
-          </div>
-          <ol className="space-y-2.5 text-sm text-slate-700">
-            <li className="flex gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                1
-              </span>
-              <span>Abre esta pantalla cada vez que llegues.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                2
-              </span>
-              <span>Acércala al escáner de la recepción.</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                3
-              </span>
-              <span>
-                Listo — las puertas se abren y tu visita queda registrada.
-              </span>
-            </li>
-          </ol>
+      {/* Instructions — 3 steps in a tight row, no card chrome */}
+      <div className="w-full max-w-md px-4">
+        <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <ScanLine className="h-3 w-3 text-blue-600" />
+          Cómo entrar
         </div>
+        <ol className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] leading-snug text-slate-700">
+          <li className="flex flex-col items-center gap-1">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+              1
+            </span>
+            <span>Abre esta pantalla</span>
+          </li>
+          <li className="flex flex-col items-center gap-1">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+              2
+            </span>
+            <span>Acércala al escáner</span>
+          </li>
+          <li className="flex flex-col items-center gap-1">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+              3
+            </span>
+            <span>Listo, entra</span>
+          </li>
+        </ol>
       </div>
 
       {/* Subtle refresh — only visible if something went wrong. No
