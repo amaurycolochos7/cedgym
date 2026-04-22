@@ -43,7 +43,7 @@ export function otpExpiresAt() {
 // ── WhatsApp templates ───────────────────────────────────────
 const TEMPLATES = {
     REGISTER: (code) =>
-        `🏋️ *CED-GYM*\n\nTu código de verificación es:\n\n*${code}*\n\nExpira en ${OTP_TTL_MIN} minutos. Si no solicitaste este código, ignora este mensaje.`,
+        `🏋️ *CED-GYM*\n\nTu código de verificación es:\n*${code}*`,
     PASSWORD_RESET: (code) =>
         `🔐 *Recuperación de contraseña*\n\nTu código es:\n\n*${code}*\n\nExpira en ${OTP_TTL_MIN} minutos. Nadie de CED-GYM te pedirá este código.`,
     LOGIN_2FA: (code) =>
