@@ -456,6 +456,26 @@ export default async function membershipsRoutes(fastify) {
                     );
                 }
 
+                // Mirror what the MP webhook does on real approvals so the
+                // worker's automations (WhatsApp welcome, etc.) run for the
+                // courtesy flow too. Without this, members who activate via
+                // a 100%-off code never receive the "Pago confirmado"
+                // message because the event was never dispatched.
+                try {
+                    await fireEvent('payment.approved', {
+                        workspaceId: approvedPayment.workspace_id,
+                        paymentId: approvedPayment.id,
+                        userId: approvedPayment.user_id,
+                        type: approvedPayment.type,
+                        amount: approvedPayment.amount,
+                    });
+                } catch (e) {
+                    req.log.warn(
+                        { err: e, paymentId: approvedPayment.id },
+                        '[memberships/subscribe-card] payment.approved event failed'
+                    );
+                }
+
                 const membership = await prisma.membership.findUnique({
                     where: { user_id: user.id },
                 });
