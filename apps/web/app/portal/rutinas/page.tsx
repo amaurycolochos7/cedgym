@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
+import { AIGenerationOverlay } from '@/components/portal/ai-generation-overlay';
 
 // ── Types ────────────────────────────────────────────────────────────────
 type Location = 'GYM' | 'HOME' | 'BOTH';
@@ -247,7 +248,7 @@ function GenerateRoutineCard({
 
   const mut = useMutation({
     mutationFn: async (body: GenerateFormState) =>
-      (await api.post('/ai/routines/generate', body)).data,
+      (await api.post('/ai/routines/generate', body, { timeout: 90_000 })).data,
     onSuccess: () => {
       toast.success('Tu rutina está lista.');
       onGenerated();
@@ -277,6 +278,7 @@ function GenerateRoutineCard({
 
   return (
     <div className="space-y-6">
+      <AIGenerationOverlay open={mut.isPending} kind="routine" />
       <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6 sm:p-10">
         <div className="flex items-center gap-3 mb-4">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
@@ -749,7 +751,7 @@ function RegenerateModal({
 
   const mut = useMutation({
     mutationFn: async (body: GenerateFormState) =>
-      (await api.post('/ai/routines/generate', body)).data,
+      (await api.post('/ai/routines/generate', body, { timeout: 90_000 })).data,
     onSuccess: () => {
       toast.success('Nueva rutina generada.');
       onDone();
@@ -774,6 +776,7 @@ function RegenerateModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4">
+      <AIGenerationOverlay open={mut.isPending} kind="routine" />
       <div className="w-full sm:max-w-lg bg-white ring-1 ring-slate-200 shadow-xl rounded-t-2xl sm:rounded-2xl p-6 space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>

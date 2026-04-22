@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { AIGenerationOverlay } from '@/components/portal/ai-generation-overlay';
 
 /* =========================================================================
  * Types
@@ -213,7 +214,7 @@ function NoPlanView({
         .map((s) => s.trim())
         .filter(Boolean);
       if (disliked_foods.length) body.disliked_foods = disliked_foods;
-      const r = await api.post('/ai/meal-plans/generate', body);
+      const r = await api.post('/ai/meal-plans/generate', body, { timeout: 90_000 });
       return r.data;
     },
     onSuccess: () => onCreated(),
@@ -238,6 +239,7 @@ function NoPlanView({
 
   return (
     <div className="space-y-6">
+      <AIGenerationOverlay open={generate.isPending} kind="meal_plan" />
       {!profileCompleted && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -587,7 +589,7 @@ function PlanView({
 
   const regenerate = useMutation({
     mutationFn: async () => {
-      const r = await api.post('/ai/meal-plans/generate', { country: 'MX' });
+      const r = await api.post('/ai/meal-plans/generate', { country: 'MX' }, { timeout: 90_000 });
       return r.data;
     },
     onSuccess: () => onRegenerated(),
@@ -634,6 +636,7 @@ function PlanView({
 
   return (
     <div className="space-y-6">
+      <AIGenerationOverlay open={regenerate.isPending} kind="meal_plan" />
       {/* Header / stats */}
       <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">

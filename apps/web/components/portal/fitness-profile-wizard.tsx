@@ -170,7 +170,7 @@ const OBJECTIVES: {
   { value: 'MAINTENANCE', title: 'Mantenimiento', emoji: '⚖️' },
   { value: 'STRENGTH', title: 'Fuerza', emoji: '🏋️' },
   { value: 'ENDURANCE', title: 'Resistencia', emoji: '🏃' },
-  { value: 'GENERAL_FITNESS', title: 'Fitness general', emoji: '✨' },
+  { value: 'GENERAL_FITNESS', title: 'Fitness general', emoji: '🤸' },
 ];
 
 const LEVELS: { value: Level; label: string }[] = [
