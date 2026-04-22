@@ -8,9 +8,7 @@ import {
   Crown,
   Flame,
   Instagram,
-  LogIn,
   MapPin,
-  Menu,
   MessageCircle,
   Navigation,
   Phone,
@@ -18,13 +16,13 @@ import {
   ShieldCheck,
   Trophy,
   UserCheck,
-  UserPlus,
   Users,
   Zap,
 } from 'lucide-react';
 import { FeaturedProducts } from '@/components/home/featured-products';
 import { FounderSection } from '@/components/home/founder-section';
 import { InteractivityClient } from '@/components/home/InteractivityClient';
+import { MobileMenu } from '@/components/home/mobile-menu';
 import { PlanCarousel } from '@/components/ui/plan-carousel';
 
 export default function HomePage() {
@@ -75,53 +73,7 @@ export default function HomePage() {
               </Link>
             </div>
 
-            <button
-              id="mobile-menu-btn"
-              className="z-50 p-2 text-slate-700 transition hover:text-blue-600 focus:outline-none lg:hidden"
-              aria-label="Toggle menu"
-              suppressHydrationWarning
-            >
-              <Menu className="h-7 w-7" />
-            </button>
-          </div>
-        </div>
-
-        <div
-          id="mobile-menu"
-          className="fixed inset-0 z-40 flex translate-x-full flex-col overflow-y-auto bg-white px-6 pt-24 transition-transform duration-300 lg:hidden"
-        >
-          <div className="mt-4 flex flex-col space-y-5 text-xl font-bold tracking-tight text-slate-900">
-            {[
-              ['Planes', '#planes'],
-              ['Método', '#metodo'],
-              ['Coach', '#fundador'],
-              ['Para ti', '#para-ti'],
-              ['Instalaciones', '#instalaciones'],
-              ['Tienda', '/tienda'],
-              ['Contacto', '#ubicacion'],
-            ].map(([label, href]) => (
-              <a
-                key={href}
-                href={href!}
-                className="mobile-link border-b border-slate-200 pb-4 text-slate-900 transition hover:text-blue-600"
-              >
-                {label}
-              </a>
-            ))}
-          </div>
-          <div className="mt-8 space-y-3 pb-12">
-            <Link
-              href="/register"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-4 text-center text-sm font-bold uppercase tracking-[0.15em] text-white shadow-sm shadow-blue-600/30"
-            >
-              <UserPlus className="h-5 w-5" /> Crear cuenta
-            </Link>
-            <Link
-              href="/login"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white ring-1 ring-slate-300 py-4 text-center text-sm font-semibold uppercase tracking-[0.15em] text-slate-700"
-            >
-              <LogIn className="h-5 w-5" /> Iniciar sesión
-            </Link>
+            <MobileMenu />
           </div>
         </div>
       </nav>

@@ -22,28 +22,6 @@ export function InteractivityClient() {
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    /* ---------- Mobile menu ---------- */
-    const mobileBtn = document.getElementById('mobile-menu-btn');
-    const mobileMenu = document.getElementById('mobile-menu');
-    let menuOpen = false;
-    const toggleMenu = () => {
-      menuOpen = !menuOpen;
-      if (!mobileMenu || !navbar) return;
-      if (menuOpen) {
-        mobileMenu.classList.remove('translate-x-full');
-        document.body.classList.add('overflow-hidden');
-      } else {
-        mobileMenu.classList.add('translate-x-full');
-        document.body.classList.remove('overflow-hidden');
-      }
-    };
-    mobileBtn?.addEventListener('click', toggleMenu);
-    const mobileLinks = document.querySelectorAll('.mobile-link');
-    const linkClose = () => {
-      if (menuOpen) toggleMenu();
-    };
-    mobileLinks.forEach((l) => l.addEventListener('click', linkClose));
-
     /* ---------- Hero rotator ---------- */
     const rotator = document.querySelector('.rotator');
     let rotatorInterval: ReturnType<typeof setInterval> | null = null;
@@ -108,8 +86,6 @@ export function InteractivityClient() {
 
     return () => {
       window.removeEventListener('scroll', onScroll);
-      mobileBtn?.removeEventListener('click', toggleMenu);
-      mobileLinks.forEach((l) => l.removeEventListener('click', linkClose));
       cycleBtns.forEach((b) => b.removeEventListener('click', handleCycle));
       if (rotatorInterval) clearInterval(rotatorInterval);
     };
