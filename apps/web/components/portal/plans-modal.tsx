@@ -41,6 +41,53 @@ import {
   Tag,
 } from 'lucide-react';
 
+/**
+ * Maps Mercado Pago Brick error codes / status_detail strings to friendly
+ * Spanish text. Covers both card-input errors (happen before charge) and
+ * post-authorization decline codes. Fallback is a generic retry message —
+ * never surface raw error codes to the end user.
+ */
+function friendlyMpError(input: unknown): string {
+  const raw = typeof input === 'string'
+    ? input
+    : ((input as any)?.message || (input as any)?.status_detail || '');
+  const code = String(raw).toLowerCase();
+
+  // Card-input problems (fire from the Brick onError before submit)
+  if (code.includes('no_payment_method_for_provided_bin'))
+    return 'Esa tarjeta no está habilitada para esta cuenta. Si estás probando, pide al admin un código 100 % OFF.';
+  if (code.includes('invalid_card_number') || code.includes('card_number'))
+    return 'Revisa el número de tarjeta.';
+  if (code.includes('invalid_expiration_date') || code.includes('expiration'))
+    return 'La fecha de vencimiento no es válida.';
+  if (code.includes('invalid_security_code') || code.includes('security_code'))
+    return 'El código de seguridad (CVV) no es válido.';
+  if (code.includes('invalid_cardholder_name') || code.includes('cardholder'))
+    return 'Escribe el nombre tal como aparece en la tarjeta.';
+
+  // Post-authorization declines (from /subscribe-card 402 response)
+  if (code.includes('cc_rejected_insufficient_amount'))
+    return 'Fondos insuficientes.';
+  if (code.includes('cc_rejected_bad_filled_card_number'))
+    return 'El número de tarjeta está mal. Revísalo.';
+  if (code.includes('cc_rejected_bad_filled_date'))
+    return 'Fecha de vencimiento mal escrita.';
+  if (code.includes('cc_rejected_bad_filled_security_code'))
+    return 'CVV incorrecto.';
+  if (code.includes('cc_rejected_call_for_authorize'))
+    return 'Tu banco pide autorizar el pago. Llámale y vuelve a intentar.';
+  if (code.includes('cc_rejected_card_disabled'))
+    return 'Tu tarjeta está desactivada. Contacta a tu banco.';
+  if (code.includes('cc_rejected_high_risk'))
+    return 'El pago fue rechazado por seguridad. Intenta con otra tarjeta.';
+  if (code.includes('cc_rejected_max_attempts'))
+    return 'Muchos intentos fallidos. Espera unos minutos o usa otra tarjeta.';
+  if (code.includes('cc_rejected_other_reason') || code.includes('cc_rejected'))
+    return 'Tu banco rechazó el pago. Prueba con otra tarjeta.';
+
+  return 'Hubo un problema con el pago. Revisa los datos y vuelve a intentar.';
+}
+
 function reasonLabel(reason?: string | null) {
   switch (reason) {
     case 'NOT_FOUND':
@@ -756,11 +803,13 @@ function StepPay({
         }
         setLastError(message);
       } else if (status === 402 || code === 'PAYMENT_DECLINED') {
-        toast.error(`Pago rechazado: ${message}`);
-        setLastError(`${message} — puedes intentar de nuevo con otra tarjeta.`);
+        const friendly = friendlyMpError(message);
+        toast.error(friendly);
+        setLastError(`${friendly} Puedes intentar con otra tarjeta.`);
       } else {
-        toast.error(message);
-        setLastError(message);
+        const friendly = friendlyMpError(message);
+        toast.error(friendly);
+        setLastError(friendly);
       }
     } finally {
       setSubmitting(false);
@@ -901,10 +950,7 @@ function StepPay({
                 }}
                 onError={(error: any) => {
                   console.error('[CardPayment onError]', error);
-                  setLastError(
-                    error?.message ??
-                      'Revisa los datos de tu tarjeta e intenta de nuevo.',
-                  );
+                  setLastError(friendlyMpError(error));
                 }}
               />
             );
