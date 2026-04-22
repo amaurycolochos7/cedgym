@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, QrCode, Dumbbell, User, LogOut, Apple,
+  Home, Dumbbell, User, LogOut, Apple,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,6 @@ import { useAuth } from '@/lib/auth';
 
 const NAV = [
   { href: '/portal/dashboard',        label: 'Inicio',     icon: Home },
-  { href: '/portal/qr',               label: 'QR',         icon: QrCode },
   { href: '/portal/rutinas',          label: 'Rutinas',    icon: Dumbbell },
   { href: '/portal/plan-alimenticio', label: 'Plan alim.', icon: Apple },
   { href: '/portal/perfil',           label: 'Perfil',     icon: User },
