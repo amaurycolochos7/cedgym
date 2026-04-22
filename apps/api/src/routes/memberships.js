@@ -424,6 +424,56 @@ export default async function membershipsRoutes(fastify) {
                 },
             });
 
+            // 1.5) Promo 100% bypass — if the resolved amount is 0 MXN
+            // (e.g. a courtesy/test code that wipes the whole charge)
+            // Mercado Pago will reject the transaction anyway. Mark the
+            // Payment as APPROVED ourselves, activate the membership
+            // synchronously via the shared helper, and short-circuit
+            // before touching MP. The activation helper also bumps the
+            // promo used_count via meta.promo_id, so we don't need to
+            // bump it here.
+            if (amount === 0) {
+                const approvedPayment = await prisma.payment.update({
+                    where: { id: payment.id },
+                    data: {
+                        status: 'APPROVED',
+                        paid_at: new Date(),
+                        metadata: {
+                            ...(payment.metadata || {}),
+                            bypass: 'promo_100',
+                            promo_code: promo?.code || null,
+                            payment_method: 'COMPLIMENTARY',
+                        },
+                    },
+                });
+
+                try {
+                    await activateMembershipFromPayment(fastify, approvedPayment);
+                } catch (e) {
+                    req.log.error(
+                        { err: e, paymentId: approvedPayment.id },
+                        '[memberships/subscribe-card] promo_100 activation failed'
+                    );
+                }
+
+                const membership = await prisma.membership.findUnique({
+                    where: { user_id: user.id },
+                });
+
+                return {
+                    success: true,
+                    payment: {
+                        id: approvedPayment.id,
+                        amount: approvedPayment.amount,
+                        status: approvedPayment.status,
+                        mp_payment_id: null,
+                        discount_mxn: discount,
+                    },
+                    membership,
+                    welcome: welcomeCopyFor(plan),
+                };
+            }
+
             // 2) Charge MP via the Brick token.
             let mpResp;
             try {

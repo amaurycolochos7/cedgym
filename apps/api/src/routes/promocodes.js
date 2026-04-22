@@ -2,7 +2,9 @@
 // Promo codes.
 //
 // Authenticated:
-//   POST /promocodes/validate     { code, amount, applies_to }
+//   POST /promocodes/validate     { code, (amount|amount_mxn), applies_to? }
+//     → { valid, reason, discount_mxn, final_amount,
+//         final_amount_mxn_preview, discount_type, value, promo }
 //
 // Admin:
 //   GET    /admin/promocodes
@@ -15,11 +17,21 @@ import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { applyPromoToAmount } from '../lib/memberships.js';
 
-const validateBody = z.object({
-    code: z.string().trim().min(1).max(64),
-    amount: z.number().int().positive(),
-    applies_to: z.string().optional(),
-});
+// `amount` is kept for backwards compatibility with early callers;
+// new code should pass `amount_mxn` (same type/semantics) so the
+// request body matches the rest of the membership endpoints. At
+// least one of the two must be present and positive.
+const validateBody = z
+    .object({
+        code: z.string().trim().min(1).max(64),
+        amount: z.number().int().positive().optional(),
+        amount_mxn: z.number().int().positive().optional(),
+        applies_to: z.string().optional(),
+    })
+    .refine((d) => d.amount != null || d.amount_mxn != null, {
+        message: 'amount or amount_mxn is required',
+        path: ['amount'],
+    });
 
 const createBody = z.object({
     code: z.string().trim().min(3).max(64),
@@ -46,14 +58,27 @@ export default async function promocodesRoutes(fastify) {
             if (!parsed.success) {
                 throw err('BAD_BODY', parsed.error.message, 400);
             }
-            const { code, amount, applies_to } = parsed.data;
+            const { code, applies_to } = parsed.data;
+            // Accept either `amount` (legacy) or `amount_mxn` (preferred).
+            const amountMxn = parsed.data.amount_mxn ?? parsed.data.amount;
             const promo = await prisma.promoCode.findUnique({ where: { code } });
-            const res = applyPromoToAmount(promo, amount, applies_to);
+            const res = applyPromoToAmount(promo, amountMxn, applies_to);
+            // Return shape is additive: we keep the legacy fields
+            // (`discount_mxn`, `final_amount`, `promo`) for older
+            // frontends and add `discount_type` + `value` +
+            // `final_amount_mxn_preview` so the new modal can render
+            // "Ahorras $X" before attempting the charge. When the
+            // promo is invalid we still return `final_amount_mxn_preview`
+            // equal to the input amount so the UI can show the full
+            // price without a null-check.
             return {
                 valid: res.valid,
                 reason: res.reason || null,
                 discount_mxn: res.discount_mxn,
                 final_amount: res.final_amount,
+                final_amount_mxn_preview: res.final_amount,
+                discount_type: res.valid ? promo.type : null,
+                value: res.valid ? promo.value : null,
                 promo: res.valid
                     ? { code: promo.code, type: promo.type, value: promo.value }
                     : null,
