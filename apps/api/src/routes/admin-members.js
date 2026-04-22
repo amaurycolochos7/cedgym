@@ -116,17 +116,20 @@ export default async function adminMembersRoutes(fastify) {
 
   fastify.post('/admin/miembros', adminOnly, async (req, reply) => {
     const { name, email, phone, password } = req.body ?? {};
-    if (!name || !email || !phone) {
-      return reply.status(400).send({ error: { code: 'INVALID_BODY', message: 'name, email y phone son requeridos' } });
+    if (!name || !phone) {
+      return reply.status(400).send({ error: { code: 'INVALID_BODY', message: 'name y phone son requeridos' } });
     }
-    const exists = await fastify.prisma.user.findFirst({ where: { OR: [{ email }, { phone }] } });
+    const normalizedEmail = email && email.trim() ? email.trim().toLowerCase() : null;
+    const exists = await fastify.prisma.user.findFirst({
+      where: { OR: [{ phone }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])] },
+    });
     if (exists) {
-      return reply.status(409).send({ error: { code: 'USER_EXISTS', message: 'Email o teléfono ya registrado' } });
+      return reply.status(409).send({ error: { code: 'USER_EXISTS', message: 'Teléfono o correo ya registrado' } });
     }
     const user = await fastify.prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         phone,
         role: 'ATHLETE',
         status: 'ACTIVE',

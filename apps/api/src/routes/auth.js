@@ -54,7 +54,12 @@ const passwordSchema = z
 
 const registerSchema = z.object({
     name: z.string().trim().min(2).max(80),
-    email: z.string().email().transform((s) => s.trim().toLowerCase()),
+    email: z
+        .string()
+        .email()
+        .transform((s) => s.trim().toLowerCase())
+        .optional()
+        .or(z.literal('').transform(() => undefined)),
     phone: phoneSchema,
     password: passwordSchema,
 });
@@ -186,9 +191,12 @@ export default async function authRoutes(fastify) {
 
             // Pre-check uniqueness so we can give a clean error. The DB
             // unique constraint is the real gate — but checking first
-            // avoids an ugly P2002.
+            // avoids an ugly P2002. Email is optional; only include it
+            // in the OR when present.
             const existing = await prisma.user.findFirst({
-                where: { OR: [{ email }, { phone }] },
+                where: {
+                    OR: [{ phone }, ...(email ? [{ email }] : [])],
+                },
                 select: { id: true, email: true, phone: true, status: true },
             });
             if (existing) {

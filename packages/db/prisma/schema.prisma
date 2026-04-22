@@ -232,7 +232,7 @@ model User {
   workspace_id      String
   name              String
   full_name         String?
-  email             String     @unique
+  email             String?    @unique
   phone             String?    @unique
   birth_date        DateTime?
   gender            Gender?
