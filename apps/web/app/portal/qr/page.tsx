@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import QRCode from 'react-qr-code';
 import { useEffect, useMemo, useState } from 'react';
-import { QrCode, RefreshCw, Lock } from 'lucide-react';
+import { RefreshCw, Lock, ShieldCheck, ScanLine } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
@@ -88,19 +88,6 @@ export default function PortalQRPage() {
     }
   }, [qrQuery.data, qrQuery.isLoading]);
 
-  // Countdown until next auto-refresh (visual only — the query handles the
-  // actual poll).
-  const [secondsLeft, setSecondsLeft] = useState(60);
-  useEffect(() => {
-    if (qrQuery.data) setSecondsLeft(60);
-  }, [qrQuery.data]);
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setSecondsLeft((s) => (s <= 1 ? 60 : s - 1));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
   const token = qrQuery.data?.token ?? cached;
   const offline = !qrQuery.data && !!cached;
 
@@ -127,86 +114,124 @@ export default function PortalQRPage() {
     );
   }
 
-  // --- Main QR view --------------------------------------------------
+  // --- Main QR view ---------------------------------------------------
+  // Designed as the member's "digital membership card". The token rotates
+  // every ~60s under the hood (refetchInterval above), but we don't
+  // surface that to the user — showing a countdown stresses them out and
+  // makes them question whether the QR they're about to show is "stale".
+  // If a silent refetch fails the cached token keeps the QR usable for
+  // another ~90s (offline-resilient).
   return (
-    <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center gap-6 py-6 sm:py-10">
-      <div className="text-center">
-        <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
-          {user?.name?.split(' ')[0] ?? ''}
+    <div className="flex min-h-[calc(100vh-12rem)] flex-col items-center gap-5 py-4 sm:py-8">
+      {/* Hero — member's name + the product promise */}
+      <div className="text-center px-4">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700">
+          <ShieldCheck className="h-3 w-3" />
+          Acceso CED·GYM
         </div>
-        <h1 className="mt-1 font-display text-2xl sm:text-3xl font-bold text-slate-900">
-          Mi QR de acceso
+        <h1 className="mt-3 font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          {user?.name?.split(' ')[0] ?? 'Tu'} QR
         </h1>
-        <p className="mt-2 text-sm sm:text-base text-slate-500 px-4">
-          Muéstralo al staff en la entrada.
+        <p className="mt-1 text-sm text-slate-500">
+          Tu pase personal para entrar al gym.
         </p>
       </div>
 
-      {/* QR card — fills 80% of viewport on mobile, capped at 340px. */}
+      {/* QR card — subtle blue gradient frame so it feels like a membership
+          card, not a form input. Fills 82% of viewport, capped ~340px. */}
       <div
-        className="rounded-3xl bg-white ring-1 ring-slate-200 shadow-md p-5 sm:p-8"
-        style={{ width: 'min(80vw, 340px)' }}
+        className="relative rounded-3xl bg-gradient-to-br from-blue-600 to-sky-500 p-[3px] shadow-xl shadow-blue-600/20"
+        style={{ width: 'min(82vw, 340px)' }}
       >
-        {token ? (
-          <QRCode
-            value={token}
-            level="M"
-            style={{
-              height: 'auto',
-              maxWidth: '100%',
-              width: '100%',
-            }}
-          />
-        ) : qrQuery.isLoading ? (
-          <div className="aspect-square w-full animate-pulse rounded-xl bg-slate-100" />
-        ) : (
-          <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-slate-100 px-4 text-center text-sm text-slate-500">
-            No fue posible cargar tu QR. Verifica tu conexión e intenta otra
-            vez.
+        <div className="rounded-[22px] bg-white p-5 sm:p-6">
+          {token ? (
+            <QRCode
+              value={token}
+              level="M"
+              style={{
+                height: 'auto',
+                maxWidth: '100%',
+                width: '100%',
+              }}
+            />
+          ) : qrQuery.isLoading ? (
+            <div className="aspect-square w-full animate-pulse rounded-xl bg-slate-100" />
+          ) : (
+            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-slate-100 px-4 text-center text-sm text-slate-500">
+              No fue posible cargar tu QR. Toca el botón de abajo para
+              reintentar.
+            </div>
+          )}
+        </div>
+        {/* Live/offline badge — minimal, no countdown */}
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2">
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest shadow-md ${
+              offline
+                ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
+                : 'bg-emerald-500 text-white'
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                offline ? 'bg-amber-500' : 'bg-white animate-pulse'
+              }`}
+            />
+            {offline ? 'Sin conexión' : 'Listo'}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Status + countdown */}
-      <div className="flex flex-col items-center gap-2 text-center">
-        <div
-          className={`inline-flex items-center gap-2 rounded-full ring-1 px-3 py-1 text-xs font-semibold uppercase tracking-widest ${
-            offline
-              ? 'ring-amber-200 bg-amber-50 text-amber-700'
-              : 'ring-slate-200 bg-white text-slate-600'
-          }`}
-        >
-          <RefreshCw size={12} className={qrQuery.isFetching ? 'animate-spin' : ''} />
-          {offline
-            ? 'Modo offline — QR en caché'
-            : `Válido por ${secondsLeft} seg`}
+      {/* Instructions — what to do at the door */}
+      <div className="w-full max-w-md px-4 pt-4">
+        <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ScanLine className="h-4 w-4 text-blue-600" />
+            <h2 className="font-display text-sm font-bold uppercase tracking-widest text-slate-900">
+              Cómo entrar al gym
+            </h2>
+          </div>
+          <ol className="space-y-2.5 text-sm text-slate-700">
+            <li className="flex gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                1
+              </span>
+              <span>Abre esta pantalla cada vez que llegues.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                2
+              </span>
+              <span>Acércala al escáner de la recepción.</span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                3
+              </span>
+              <span>
+                Listo — las puertas se abren y tu visita queda registrada.
+              </span>
+            </li>
+          </ol>
         </div>
+      </div>
+
+      {/* Subtle refresh — only visible if something went wrong. No
+          countdown, no "válido por X seg". The QR is always fresh when
+          the user opens this screen, and it silently rotates in the
+          background. */}
+      {(qrQuery.error || offline) && (
         <button
           type="button"
           onClick={() => qrQuery.refetch()}
-          className="text-xs text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+          className="inline-flex items-center gap-1.5 rounded-full bg-white ring-1 ring-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
         >
-          Actualizar ahora
+          <RefreshCw
+            size={12}
+            className={qrQuery.isFetching ? 'animate-spin' : ''}
+          />
+          Volver a generar
         </button>
-      </div>
-
-      {/* Soft helper — what to do if the QR fails */}
-      <div className="w-full max-w-md px-4">
-        <div className="rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm p-4 text-xs text-slate-600">
-          <div className="flex items-start gap-2">
-            <QrCode size={14} className="mt-0.5 shrink-0 text-blue-600" />
-            <p className="leading-relaxed">
-              Tu QR se actualiza automáticamente cada minuto por seguridad. Si
-              el escáner no lo lee, pulsa <em>Actualizar ahora</em>.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {qrQuery.error && !cached && (
-        <div className="max-w-md px-4 text-center text-sm text-red-600">
-          No pudimos generar tu QR ahora. Intenta de nuevo en unos segundos.
-        </div>
       )}
     </div>
   );
