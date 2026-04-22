@@ -181,10 +181,13 @@ function buildUserPrompt({
     disliked_foods,
     meals_per_day,
     budget,
+    firstName,
 }) {
     const listOrNone = (arr) => (arr && arr.length ? arr.join(', ') : 'ninguna');
-    return `Genera un plan alimenticio semanal (7 días × ${meals_per_day} comidas) para este atleta mexicano.
+    const firstNameStr = firstName && firstName.trim() ? firstName.trim() : '(sin nombre)';
+    return `Genera un plan alimenticio semanal (7 días × ${meals_per_day} comidas) para este socio mexicano.
 
+NOMBRE DEL SOCIO: ${firstNameStr}
 OBJETIVO: ${objective}
 CALORÍAS DIARIAS: ${calories_target} kcal
 MACROS: ${protein_g}g proteína / ${carbs_g}g carbos / ${fats_g}g grasas
@@ -201,10 +204,16 @@ REGLAS:
 - Suma de calorías por día ≈ target (±10%)
 - Lista de ingredientes en cada comida, en gramos o unidades claras
 
+EN EL NOMBRE DEL PLAN ("plan.name"):
+- SIEMPRE incluye el nombre del socio si está disponible (no es "(sin nombre)").
+- Refleja el objetivo y el target calórico.
+- Ejemplos: "Plan de Amaury — hipertrofia 2400 kcal", "Bajada de grasa de Ana — 1700 kcal", "Mantenimiento de Luis — 2100 kcal".
+- NUNCA nombres genéricos como "Plan alimenticio estándar" o "Plan general".
+
 SCHEMA JSON:
 {
   "plan": {
-    "name": "string (ej 'Plan bajada de grasa 1700 kcal')",
+    "name": "string — nombre personalizado según las reglas de arriba",
     "goal": "WEIGHT_LOSS | MUSCLE_GAIN | MAINTENANCE | STRENGTH | ENDURANCE | GENERAL_FITNESS",
     "calories_target": number,
     "protein_g": number,
@@ -315,9 +324,12 @@ export default async function aiMealPlansRoutes(fastify) {
                 workspace_id: true,
                 gender: true,
                 fitness_profile: true,
+                name: true,
+                full_name: true,
             },
         });
         if (!user) throw err('USER_NOT_FOUND', 'Usuario no encontrado', 404);
+        const firstName = (user.full_name || user.name || '').trim().split(/\s+/)[0] || '';
 
         const objective = parsed.data.objective || 'MAINTENANCE';
         const meals_per_day = parsed.data.meals_per_day || 5;
@@ -351,6 +363,7 @@ export default async function aiMealPlansRoutes(fastify) {
             meals_per_day,
             budget,
             country,
+            firstName,
         });
 
         let aiResult;

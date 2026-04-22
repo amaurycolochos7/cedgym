@@ -126,6 +126,7 @@ function buildUserPrompt({
     injuries,
     notes,
     exerciseLibrary,
+    firstName,
 }) {
     const libJson = JSON.stringify(
         exerciseLibrary.map((e) => ({
@@ -144,10 +145,12 @@ function buildUserPrompt({
         : '(ninguna)';
     const notesStr = notes && notes.trim() ? notes.trim() : '(sin notas)';
     const disciplineStr = discipline ? discipline : '(no aplica)';
+    const firstNameStr = firstName && firstName.trim() ? firstName.trim() : '(sin nombre)';
 
     return `Genera una rutina semanal de ${days_per_week} días para este socio.
 
 PERFIL:
+- Nombre del socio: ${firstNameStr}
 - Tipo de usuario: ${user_type} (ADULT=adulto 18-55, SENIOR=55+, KID=6-17, ATHLETE=deportista)
 - Disciplina/Deporte: ${disciplineStr}
 - Objetivo: ${objective}
@@ -183,10 +186,17 @@ EN CADA EJERCICIO, la nota (notes) debe ser una frase corta estilo coach mexican
 
 EN EL TITLE DEL DÍA, usa formato tipo Excel del Coach: "Pecho + Tríceps", "Espalda + Hombro", "Pierna (Cuádriceps + Femoral)", "Entrenamiento Funcional".
 
+EN EL NOMBRE DE LA RUTINA ("routine.name"):
+- SIEMPRE incluye el nombre del socio si está disponible (no es "(sin nombre)").
+- Refleja el objetivo y los días a la semana en el nombre.
+- Si el socio es ATHLETE con una disciplina concreta, menciónala en el nombre (no uses "ATHLETE" crudo — usa el deporte en español: "fútbol", "football americano", "powerlifting", etc.).
+- Ejemplos válidos: "Rutina de Amaury — hipertrofia 4 días", "Plan de fuerza de Luis — 5 días", "Fútbol americano — rutina de Mario (4 días)", "Pérdida de grasa de Ana — 3 días".
+- NUNCA uses nombres genéricos como "Rutina general fitness" o "Plan estándar" — queremos que el socio sienta que es para él.
+
 SCHEMA JSON (respondes EXACTAMENTE esto, nada más):
 {
   "routine": {
-    "name": "string (ej 'Rutina pérdida de grasa 4 días')",
+    "name": "string — nombre personalizado según las reglas de arriba",
     "goal": "WEIGHT_LOSS | MUSCLE_GAIN | MAINTENANCE | STRENGTH | ENDURANCE | GENERAL_FITNESS",
     "location": "GYM | HOME | BOTH",
     "days_per_week": number
@@ -296,11 +306,18 @@ export default async function aiRoutinesRoutes(fastify) {
 
             const user = await prisma.user.findUnique({
                 where: { id: userId },
-                select: { id: true, workspace_id: true, fitness_profile: true },
+                select: {
+                    id: true,
+                    workspace_id: true,
+                    fitness_profile: true,
+                    name: true,
+                    full_name: true,
+                },
             });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario no encontrado', 404);
 
             const merged = mergeProfile(parsed.data, user.fitness_profile);
+            const firstName = (user.full_name || user.name || '').trim().split(/\s+/)[0] || '';
 
             // 1. Load exercise library (filtered by equipment for HOME)
             const library = await loadExerciseLibrary(prisma, {
@@ -322,6 +339,7 @@ export default async function aiRoutinesRoutes(fastify) {
                 injuries: merged.injuries,
                 notes: merged.notes,
                 exerciseLibrary: library,
+                firstName,
             });
 
             const { data, aiGenerationId, costUsd, durationMs } = await generateJSON({
