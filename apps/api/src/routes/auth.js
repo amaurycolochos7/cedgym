@@ -111,6 +111,34 @@ const resendSchema = z.object({
     purpose: z.enum(['REGISTER', 'PASSWORD_RESET', 'LOGIN_2FA', 'PHONE_CHANGE']),
 });
 
+// PATCH /auth/me — self-service edits to name + email. Phone edits go
+// through the OTP-verified /auth/phone/change flow. Email is optional
+// (sparse UNIQUE in Postgres treats NULL as distinct, so clearing it
+// is safe for multiple users).
+const updateMeSchema = z.object({
+    full_name: z.string().trim().min(2).max(120).optional(),
+    email: z
+        .union([
+            z.string().trim().email(),
+            z.literal(''),
+            z.null(),
+        ])
+        .optional()
+        .transform((v) => {
+            if (v === '' || v === null) return null;
+            return v?.toLowerCase();
+        }),
+});
+
+const phoneChangeStartSchema = z.object({
+    new_phone: phoneSchema,
+});
+
+const phoneChangeConfirmSchema = z.object({
+    new_phone: phoneSchema,
+    code: z.string().regex(/^\d{6}$/, 'El código debe ser de 6 dígitos'),
+});
+
 // ── Helpers ──────────────────────────────────────────────────
 function sanitizeUser(user) {
     if (!user) return null;
@@ -739,6 +767,229 @@ export default async function authRoutes(fastify) {
                 workspace: user.workspace || null,
                 profile_completed: !!user.profile_completed,
             });
+        }
+    );
+
+    // ── PATCH /auth/me ──────────────────────────────────────
+    // Self-service edits for name + email. Phone lives behind the
+    // OTP flow below because it's a login credential.
+    fastify.patch(
+        '/me',
+        { preHandler: [fastify.authenticate] },
+        async (request, reply) => {
+            const parsed = updateMeSchema.safeParse(request.body);
+            if (!parsed.success) {
+                return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
+            }
+            const userId = request.user.sub;
+            const updates = {};
+            if (parsed.data.full_name !== undefined) updates.full_name = parsed.data.full_name;
+            // email === null means "clear it"; undefined means "no change".
+            // We don't run email verification in this product (email is
+            // optional and not a login credential), so any change resets
+            // email_verified_at to null.
+            if (parsed.data.email !== undefined) {
+                updates.email = parsed.data.email;
+                updates.email_verified_at = null;
+            }
+
+            if (Object.keys(updates).length === 0) {
+                return reply.status(400).send(errPayload('NO_CHANGES', 'No hay cambios que guardar'));
+            }
+
+            let user;
+            try {
+                user = await prisma.user.update({
+                    where: { id: userId },
+                    data: updates,
+                });
+            } catch (e) {
+                // P2002 on email @unique → someone else already has this email.
+                if (e?.code === 'P2002') {
+                    return reply.status(409).send(errPayload('EMAIL_TAKEN', 'Ese correo ya está registrado en otra cuenta'));
+                }
+                throw e;
+            }
+
+            audit(fastify, {
+                workspace_id: user.workspace_id,
+                actor_id: user.id,
+                action: 'auth.profile.updated',
+                target_type: 'user',
+                target_id: user.id,
+                ...auditCtx(request),
+            });
+
+            return reply.send({ success: true, user: sanitizeUser(user) });
+        }
+    );
+
+    // ── POST /auth/phone/change/start ───────────────────────
+    // Sends a 6-digit OTP via WhatsApp to the NEW phone number. The
+    // OTP row lives under the new phone (not the current one) so the
+    // confirm step can look it up the same way /auth/verify-register
+    // does. Reuses the same rate-limit keys as other OTP flows.
+    fastify.post(
+        '/phone/change/start',
+        { preHandler: [fastify.authenticate] },
+        async (request, reply) => {
+            const parsed = phoneChangeStartSchema.safeParse(request.body);
+            if (!parsed.success) {
+                return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
+            }
+            const { new_phone } = parsed.data;
+            const userId = request.user.sub;
+
+            const me = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { id: true, phone: true, workspace_id: true },
+            });
+            if (!me) {
+                return reply.status(404).send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
+            }
+            if (me.phone === new_phone) {
+                return reply.status(400).send(errPayload('SAME_PHONE', 'El nuevo teléfono es igual al actual'));
+            }
+
+            const collision = await prisma.user.findUnique({
+                where: { phone: new_phone },
+                select: { id: true },
+            });
+            if (collision && collision.id !== userId) {
+                return reply.status(409).send(errPayload('PHONE_TAKEN', 'Ese teléfono ya está registrado en otra cuenta'));
+            }
+
+            const rl = await checkAndBumpOtpRateLimit(redis, new_phone);
+            if (!rl.ok) {
+                return reply
+                    .status(429)
+                    .header('retry-after', String(rl.retryAfterSec))
+                    .send(errPayload(
+                        rl.reason === 'cooldown' ? 'OTP_COOLDOWN' : 'OTP_HOURLY_LIMIT',
+                        rl.reason === 'cooldown'
+                            ? `Espera ${rl.retryAfterSec}s antes de pedir otro código`
+                            : 'Demasiados códigos solicitados. Intenta en una hora.',
+                        429
+                    ));
+            }
+
+            // Reuse-or-create — same pattern as /auth/otp/resend.
+            const existing = await prisma.otpCode.findFirst({
+                where: {
+                    phone: new_phone,
+                    purpose: 'PHONE_CHANGE',
+                    verified_at: null,
+                    expires_at: { gt: new Date() },
+                },
+                orderBy: { created_at: 'desc' },
+            });
+            const code = generateOtpCode();
+            const code_hash = await hashOtpCode(code);
+            if (existing) {
+                await prisma.otpCode.update({
+                    where: { id: existing.id },
+                    data: { code_hash, attempts: 0, expires_at: otpExpiresAt() },
+                });
+            } else {
+                await prisma.otpCode.create({
+                    data: {
+                        phone: new_phone,
+                        code_hash,
+                        purpose: 'PHONE_CHANGE',
+                        expires_at: otpExpiresAt(),
+                        max_attempts: OTP_MAX_ATTEMPTS,
+                    },
+                });
+            }
+
+            const send = await sendOtpViaWhatsApp({
+                workspaceId: me.workspace_id,
+                phone: new_phone,
+                code,
+                purpose: 'PHONE_CHANGE',
+                logger: fastify.log,
+            });
+
+            return reply.send({
+                success: true,
+                ...(send.ok ? {} : { otp_delivery: send.error }),
+            });
+        }
+    );
+
+    // ── POST /auth/phone/change/confirm ─────────────────────
+    // Validates the code, updates user.phone, flips phone_verified_at,
+    // and rotates refresh tokens so other devices re-auth with the
+    // new number. Returns the sanitized user row.
+    fastify.post(
+        '/phone/change/confirm',
+        { preHandler: [fastify.authenticate] },
+        async (request, reply) => {
+            const parsed = phoneChangeConfirmSchema.safeParse(request.body);
+            if (!parsed.success) {
+                return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
+            }
+            const { new_phone, code } = parsed.data;
+            const userId = request.user.sub;
+
+            const collision = await prisma.user.findUnique({
+                where: { phone: new_phone },
+                select: { id: true },
+            });
+            if (collision && collision.id !== userId) {
+                return reply.status(409).send(errPayload('PHONE_TAKEN', 'Ese teléfono ya está registrado en otra cuenta'));
+            }
+
+            const otp = await prisma.otpCode.findFirst({
+                where: {
+                    phone: new_phone,
+                    purpose: 'PHONE_CHANGE',
+                    verified_at: null,
+                    expires_at: { gt: new Date() },
+                },
+                orderBy: { created_at: 'desc' },
+            });
+            if (!otp) {
+                return reply.status(400).send(errPayload('OTP_NOT_FOUND', 'Código no encontrado o expirado'));
+            }
+            if (otp.attempts >= otp.max_attempts) {
+                return reply.status(429).send(errPayload('OTP_ATTEMPTS_EXCEEDED', 'Demasiados intentos. Pide un código nuevo.'));
+            }
+
+            const match = await compareOtpCode(code, otp.code_hash);
+            if (!match) {
+                await prisma.otpCode.update({
+                    where: { id: otp.id },
+                    data: { attempts: { increment: 1 } },
+                });
+                return reply.status(400).send(errPayload('OTP_INVALID', 'Código incorrecto'));
+            }
+
+            // Atomically: mark OTP used, flip the user's phone.
+            const [, updatedUser] = await prisma.$transaction([
+                prisma.otpCode.update({
+                    where: { id: otp.id },
+                    data: { verified_at: new Date() },
+                }),
+                prisma.user.update({
+                    where: { id: userId },
+                    data: {
+                        phone: new_phone,
+                        phone_verified_at: new Date(),
+                    },
+                }),
+            ]);
+
+            audit(fastify, {
+                workspace_id: updatedUser.workspace_id,
+                actor_id: updatedUser.id,
+                action: 'auth.phone.changed',
+                target_type: 'user',
+                target_id: updatedUser.id,
+                ...auditCtx(request),
+            });
+
+            return reply.send({ success: true, user: sanitizeUser(updatedUser) });
         }
     );
 }
