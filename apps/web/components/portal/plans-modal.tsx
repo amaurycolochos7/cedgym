@@ -103,6 +103,14 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
     return () => document.body.classList.remove('overflow-hidden');
   }, [open]);
 
+  // Pre-warm the MP SDK as soon as the modal opens so by the time the
+  // user reaches the pay step the ~200KB bundle + CDN init are already
+  // done. Fires once per modal session, safe to no-op if unavailable.
+  useEffect(() => {
+    if (!open) return;
+    import('@mercadopago/sdk-react').catch(() => {});
+  }, [open]);
+
   // Close on Escape, except on the pay step (don't interrupt the brick).
   useEffect(() => {
     if (!open) return;
@@ -159,13 +167,13 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
           if (step === 'pay') return; // don't close mid-payment
           onClose();
         }}
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/75 backdrop-blur-md"
       />
 
       <div
         className={cn(
-          'relative z-10 flex w-full max-h-[92vh] flex-col overflow-hidden bg-white shadow-2xl',
-          'rounded-t-3xl sm:max-w-3xl sm:rounded-3xl',
+          'relative z-10 flex w-full h-[100dvh] flex-col overflow-hidden bg-white shadow-2xl',
+          'sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-3xl',
         )}
       >
         {/* Header */}
