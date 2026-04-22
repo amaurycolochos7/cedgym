@@ -42,6 +42,24 @@ import {
 } from 'lucide-react';
 
 /**
+ * Extracts a human-readable message from an API error, stripping raw
+ * zod validation JSON (`[{"code":"invalid_type"...}]`) that our backend
+ * sometimes passes through unformatted. Always returns prose, never JSON.
+ */
+function friendlyApiError(err: unknown, fallback: string): string {
+  const raw =
+    (err as any)?.message ??
+    (err as any)?.response?.data?.error?.message ??
+    (err as any)?.response?.data?.message ??
+    '';
+  const s = String(raw || '').trim();
+  if (!s) return fallback;
+  // Raw zod error (starts with "[" + has code/path). Don't expose it.
+  if (s.startsWith('[') && /"code"|"path"/.test(s)) return fallback;
+  return s;
+}
+
+/**
  * Maps Mercado Pago Brick error codes / status_detail strings to friendly
  * Spanish text. Covers both card-input errors (happen before charge) and
  * post-authorization decline codes. Fallback is a generic retry message —
@@ -292,8 +310,8 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
               profileReady={profileReady}
               hasSelfie={hasSelfie}
               hasFullName={hasFullName}
-              onContinue={() => {
-                if (!selectedPlan) {
+              onContinue={(planId) => {
+                if (!planId) {
                   toast.error('Elige un plan para continuar');
                   return;
                 }
@@ -301,6 +319,8 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
                   toast.error('Completa tu perfil antes de continuar');
                   return;
                 }
+                // Keep state in sync in case the caller didn't pre-set it.
+                setSelectedPlan(planId);
                 setStep('pay');
               }}
             />
@@ -361,7 +381,7 @@ function StepPlans({
   profileReady: boolean;
   hasSelfie: boolean;
   hasFullName: boolean;
-  onContinue: () => void;
+  onContinue: (planId: PlanId) => void;
 }) {
   return (
     <div className="space-y-5">
@@ -429,29 +449,23 @@ function StepPlans({
               plan={p}
               cycle={cycle}
               selected={selectedPlan === p.id}
-              onSelect={() => onSelect(p.id)}
+              onSelect={() => {
+                onSelect(p.id);
+                // Auto-advance to the pay step on click — no separate
+                // "Continuar" button. Pass planId explicitly because
+                // the React state update from onSelect hasn't landed
+                // yet when onContinue runs in the same tick.
+                onContinue(p.id);
+              }}
             />
           ))}
         </div>
       )}
 
-      <div className="flex flex-col-reverse items-stretch gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-          <ShieldCheck className="h-4 w-4 text-blue-600" />
-          Pagos seguros · Mercado Pago
-        </p>
-        <button
-          type="button"
-          onClick={onContinue}
-          disabled={!selectedPlan || !profileReady}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700',
-            'disabled:cursor-not-allowed disabled:opacity-50',
-          )}
-        >
-          Continuar <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
+      <p className="flex items-center justify-center gap-1.5 pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+        <ShieldCheck className="h-4 w-4 text-blue-600" />
+        Pagos seguros · Mercado Pago
+      </p>
     </div>
   );
 }
@@ -743,29 +757,29 @@ function StepPay({
     setSubmitting(true);
     setLastError(null);
     try {
-      const { data } = await api.post('/memberships/subscribe-card', {
+      // Backend schema marks payer_email as .optional() (accepts
+      // undefined) but NOT .nullable() — explicitly omit the key when
+      // the user has no email on file instead of sending null.
+      const body: Record<string, unknown> = {
         plan: plan.id,
         cycle,
-        // No token/payment_method when amount is 0 — backend short-circuits.
         token: 'courtesy',
         payment_method_id: 'courtesy',
         installments: 1,
-        payer_email: payerEmail,
-        promo_code: promoCode,
-      });
+      };
+      if (payerEmail) body.payer_email = payerEmail;
+      if (promoCode) body.promo_code = promoCode;
+
+      const { data } = await api.post('/memberships/subscribe-card', body);
       if (data?.success) {
         toast.success('¡Membresía activada!');
         onSuccess(data.welcome ?? {}, plan.name);
       } else {
-        setLastError('Respuesta inesperada del servidor.');
+        setLastError('No pudimos activar la membresía. Intenta de nuevo.');
       }
     } catch (err: any) {
-      const message =
-        err?.message ??
-        err?.response?.data?.error?.message ??
-        'No pudimos activar la membresía.';
-      setLastError(message);
-      toast.error(message);
+      setLastError(friendlyApiError(err, 'No pudimos activar la membresía.'));
+      toast.error(friendlyApiError(err, 'No pudimos activar la membresía.'));
     } finally {
       setSubmitting(false);
     }
@@ -775,15 +789,22 @@ function StepPay({
     setSubmitting(true);
     setLastError(null);
     try {
-      const res = await api.post('/memberships/subscribe-card', {
+      // Build the body conditionally — backend schema rejects null
+      // on optional string fields, so omit keys instead of sending null.
+      const body: Record<string, unknown> = {
         plan: plan.id,
         cycle,
         token: formData.token,
         payment_method_id: formData.payment_method_id,
         installments: formData.installments ?? 1,
-        payer_email: formData.payer?.email || payerEmail,
-        promo_code: promoCode || undefined,
-      });
+      };
+      const emailFromBrick = formData.payer?.email;
+      if (emailFromBrick || payerEmail) {
+        body.payer_email = emailFromBrick || payerEmail;
+      }
+      if (promoCode) body.promo_code = promoCode;
+
+      const res = await api.post('/memberships/subscribe-card', body);
       const data = res.data;
       if (data?.success) {
         toast.success('¡Pago aprobado! Activando tu membresía…');
