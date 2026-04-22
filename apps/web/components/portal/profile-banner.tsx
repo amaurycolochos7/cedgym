@@ -1,23 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { AlertCircle, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 
 export function ProfileCompletionBanner() {
   const { user } = useAuth();
-  const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
+  const [pathname, setPathname] = useState<string>('');
 
+  // Read pathname from window instead of next/navigation's usePathname
+  // — Next 14 + Turbopack has a recurring HMR bug where adding a hook
+  // to an already-compiled client component boots the app with a null
+  // React context on the next re-render. window.location works across
+  // that boundary.
   useEffect(() => {
-    setDismissed(localStorage.getItem('cedgym_profile_banner_dismissed') === '1');
+    setDismissed(
+      typeof window !== 'undefined' &&
+        localStorage.getItem('cedgym_profile_banner_dismissed') === '1',
+    );
+    if (typeof window !== 'undefined') setPathname(window.location.pathname);
   }, []);
 
   // Never show the banner on the perfil page itself — it's redundant noise
   // when the user is already on the destination.
-  if (pathname?.startsWith('/portal/perfil')) return null;
+  if (pathname.startsWith('/portal/perfil')) return null;
   if (dismissed || !user || user.profile_completed) return null;
 
   return (
