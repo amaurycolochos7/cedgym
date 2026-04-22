@@ -115,6 +115,81 @@ export default async function automationsRoutes(fastify) {
         ],
     };
 
+    // ─── POST /admin/automations/ensure-defaults ────────────────
+    // Idempotent: creates the out-of-the-box automations
+    // (payment.approved welcome, member.created drip, etc.) for the
+    // caller's workspace if they're missing. Safe to re-run — existing
+    // rows are left untouched. Returns what was created vs. skipped.
+    fastify.post('/admin/automations/ensure-defaults', guard, async (req) => {
+        const ws = await adminWorkspaceId(fastify, req);
+
+        // Minimal subset that covers the "¡Bienvenid@!" flow. Each entry
+        // lists the template codes we need and the automation wiring.
+        // Templates must already exist in MessageTemplate (run
+        // `node apps/api/src/seed-automations.js` once per deploy for
+        // the full catalogue — this endpoint only unblocks the welcome).
+        const defaults = [
+            {
+                name: 'Pago confirmado',
+                trigger: 'payment.approved',
+                action: 'whatsapp.send_template',
+                template_code: 'payment.approved',
+                delay_minutes: 0,
+            },
+            {
+                name: 'Bienvenida al activar membresía',
+                trigger: 'member.verified',
+                action: 'whatsapp.send_template',
+                template_code: 'member.created',
+                delay_minutes: 0,
+            },
+        ];
+
+        const created = [];
+        const skipped = [];
+        const missingTemplates = [];
+
+        for (const def of defaults) {
+            // Look up the template id.
+            const tpl = await prisma.messageTemplate.findFirst({
+                where: { workspace_id: ws, code: def.template_code },
+                select: { id: true },
+            });
+            if (!tpl) {
+                missingTemplates.push(def.template_code);
+                continue;
+            }
+            // Skip if an automation for this trigger + template already exists.
+            const existing = await prisma.automation.findFirst({
+                where: {
+                    workspace_id: ws,
+                    trigger: def.trigger,
+                    action: def.action,
+                    params: { path: ['template_id'], equals: tpl.id },
+                },
+            });
+            if (existing) {
+                skipped.push({ trigger: def.trigger, id: existing.id });
+                continue;
+            }
+            const row = await prisma.automation.create({
+                data: {
+                    workspace_id: ws,
+                    name: def.name,
+                    trigger: def.trigger,
+                    action: def.action,
+                    enabled: true,
+                    filter: null,
+                    delay_minutes: def.delay_minutes,
+                    params: { template_id: tpl.id, to: 'member' },
+                },
+            });
+            created.push({ trigger: def.trigger, id: row.id });
+        }
+
+        return { created, skipped, missing_templates: missingTemplates };
+    });
+
     // ─── GET /admin/automations ─────────────────────────────────
     fastify.get('/admin/automations', guard, async (req) => {
         const parsed = listQuery.safeParse(req.query || {});

@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { LogOut, Smartphone, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { LogOut, Smartphone, RefreshCw, CheckCircle2, Bell, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 
 const BTN_DANGER =
@@ -36,6 +37,38 @@ export default function AdminWhatsAppPage() {
   const logout = useMutation({
     mutationFn: async () => (await api.post('/admin/whatsapp/logout')).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['whatsapp'] }),
+  });
+
+  // Enable the out-of-the-box welcome/payment-approved automations for
+  // this workspace. Idempotent — re-running is safe. The backend
+  // returns `{ created, skipped, missing_templates }` so we can tell
+  // the admin exactly what happened.
+  const ensureDefaults = useMutation({
+    mutationFn: async () =>
+      (await api.post('/admin/automations/ensure-defaults')).data,
+    onSuccess: (data: { created: any[]; skipped: any[]; missing_templates: string[] }) => {
+      const created = data?.created?.length ?? 0;
+      const skipped = data?.skipped?.length ?? 0;
+      const missing = data?.missing_templates?.length ?? 0;
+      if (created > 0) {
+        toast.success(
+          `Listas ${created} automatizaciones. ${skipped > 0 ? `(${skipped} ya existían)` : ''}`,
+        );
+      } else if (skipped > 0 && missing === 0) {
+        toast.success('Todas las automatizaciones ya estaban activas.');
+      }
+      if (missing > 0) {
+        toast.error(
+          `Faltan plantillas: ${data.missing_templates.join(', ')}. Corre el seed completo.`,
+        );
+      }
+    },
+    onError: (e: any) => {
+      toast.error(
+        e?.response?.data?.error?.message ||
+          'No pudimos activar las automatizaciones.',
+      );
+    },
   });
 
   const autoStartedRef = useRef(false);
@@ -132,6 +165,23 @@ export default function AdminWhatsAppPage() {
             El bot está listo para enviar OTPs de registro, recordatorios de
             membresía, promociones y todas las notificaciones automáticas a tus
             socios.
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3 pt-4 border-t border-emerald-200">
+            <button
+              type="button"
+              onClick={() => ensureDefaults.mutate()}
+              disabled={ensureDefaults.isPending}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              <Bell className="h-4 w-4" />
+              {ensureDefaults.isPending
+                ? 'Activando…'
+                : 'Activar mensajes de bienvenida'}
+            </button>
+            <p className="text-xs text-emerald-900/70">
+              Crea las automatizaciones "Pago confirmado" y "Bienvenida al
+              activar membresía". Es seguro ejecutarlo varias veces.
+            </p>
           </div>
         </div>
       )}
