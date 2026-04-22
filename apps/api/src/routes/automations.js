@@ -124,23 +124,32 @@ export default async function automationsRoutes(fastify) {
         const ws = await adminWorkspaceId(fastify, req);
 
         // Minimal subset that covers the "¡Bienvenid@!" flow. Each entry
-        // lists the template codes we need and the automation wiring.
-        // Templates must already exist in MessageTemplate (run
-        // `node apps/api/src/seed-automations.js` once per deploy for
-        // the full catalogue — this endpoint only unblocks the welcome).
+        // lists the template we need and the automation wiring. We create
+        // the MessageTemplate row if missing so a single click unblocks
+        // the whole flow — no separate seed step required.
         const defaults = [
             {
                 name: 'Pago confirmado',
                 trigger: 'payment.approved',
                 action: 'whatsapp.send_template',
-                template_code: 'payment.approved',
+                template: {
+                    code: 'payment.approved',
+                    name: 'Pago confirmado',
+                    channel: 'WHATSAPP',
+                    body: '✅ *CED-GYM*\n\nPago confirmado, {nombre}.\nTu membresía *{plan}* está activa hasta *{fecha_venc}*.\n\nTu QR de acceso: {qr_url}',
+                },
                 delay_minutes: 0,
             },
             {
                 name: 'Bienvenida al activar membresía',
                 trigger: 'member.verified',
                 action: 'whatsapp.send_template',
-                template_code: 'member.created',
+                template: {
+                    code: 'member.created',
+                    name: 'Bienvenida nuevo miembro',
+                    channel: 'WHATSAPP',
+                    body: '👋 ¡Bienvenido a *CED-GYM*, {nombre}!\n\nYa puedes acceder al gym con tu QR dinámico:\n{qr_url}\n\nTu portal: {link_portal}',
+                },
                 delay_minutes: 0,
             },
         ];
@@ -151,14 +160,33 @@ export default async function automationsRoutes(fastify) {
 
         for (const def of defaults) {
             try {
-                // Look up the template id.
-                const tpl = await prisma.messageTemplate.findFirst({
-                    where: { workspace_id: ws, code: def.template_code },
+                // Ensure the MessageTemplate exists. Create it if missing so
+                // the admin gets a working pipeline in one click — they can
+                // tweak the copy later from the templates admin UI.
+                let tpl = await prisma.messageTemplate.findFirst({
+                    where: { workspace_id: ws, code: def.template.code },
                     select: { id: true },
                 });
                 if (!tpl) {
-                    missingTemplates.push(def.template_code);
-                    continue;
+                    try {
+                        tpl = await prisma.messageTemplate.create({
+                            data: {
+                                workspace_id: ws,
+                                code: def.template.code,
+                                name: def.template.name,
+                                channel: def.template.channel,
+                                body: def.template.body,
+                            },
+                            select: { id: true },
+                        });
+                    } catch (e) {
+                        fastify.log.error(
+                            { err: e, code: def.template.code },
+                            '[automations/ensure-defaults] could not seed template',
+                        );
+                        missingTemplates.push(def.template.code);
+                        continue;
+                    }
                 }
                 // Dedup by trigger + action within the workspace. JSON path
                 // filters can misbehave across Prisma versions, so we pull
