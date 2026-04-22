@@ -163,32 +163,48 @@ export default function PortalQRPage() {
         </div>
       </div>
 
-      {/* Instructions — 3 steps in a tight row, no card chrome */}
+      {/* Instructions — 3 steps that reinforce the full habit: open the
+          app / log in every visit, show this exact QR, get access. */}
       <div className="w-full max-w-md px-4">
         <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
           <ScanLine className="h-3 w-3 text-blue-600" />
-          Cómo entrar
+          Cada visita al gym
         </div>
         <ol className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] leading-snug text-slate-700">
           <li className="flex flex-col items-center gap-1">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
               1
             </span>
-            <span>Abre esta pantalla</span>
+            <span>
+              Abre CED·GYM
+              <br />
+              en tu cuenta
+            </span>
           </li>
           <li className="flex flex-col items-center gap-1">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
               2
             </span>
-            <span>Acércala al escáner</span>
+            <span>
+              Muestra este QR
+              <br />
+              en el escáner
+            </span>
           </li>
           <li className="flex flex-col items-center gap-1">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
               3
             </span>
-            <span>Listo, entra</span>
+            <span>
+              Tu visita
+              <br />
+              queda registrada
+            </span>
           </li>
         </ol>
+        <p className="mt-3 text-center text-[11px] text-slate-500">
+          Tu QR es personal y único — preséntalo <strong className="text-slate-700">siempre</strong> al entrar.
+        </p>
       </div>
 
       {/* Subtle refresh — only visible if something went wrong. No
