@@ -64,10 +64,14 @@ export default function AdminWhatsAppPage() {
       }
     },
     onError: (e: any) => {
-      toast.error(
+      const status = e?.response?.status ?? e?.status;
+      const code = e?.response?.data?.error?.code ?? e?.code;
+      const msg =
         e?.response?.data?.error?.message ||
-          'No pudimos activar las automatizaciones.',
-      );
+        e?.message ||
+        'No pudimos activar las automatizaciones.';
+      // Surface enough context so the admin can report it if it fails.
+      toast.error(`${msg}${status ? ` (HTTP ${status}${code ? `, ${code}` : ''})` : ''}`);
     },
   });
 

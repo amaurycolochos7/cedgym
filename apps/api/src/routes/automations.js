@@ -150,41 +150,53 @@ export default async function automationsRoutes(fastify) {
         const missingTemplates = [];
 
         for (const def of defaults) {
-            // Look up the template id.
-            const tpl = await prisma.messageTemplate.findFirst({
-                where: { workspace_id: ws, code: def.template_code },
-                select: { id: true },
-            });
-            if (!tpl) {
-                missingTemplates.push(def.template_code);
-                continue;
+            try {
+                // Look up the template id.
+                const tpl = await prisma.messageTemplate.findFirst({
+                    where: { workspace_id: ws, code: def.template_code },
+                    select: { id: true },
+                });
+                if (!tpl) {
+                    missingTemplates.push(def.template_code);
+                    continue;
+                }
+                // Dedup by trigger + action within the workspace. JSON path
+                // filters can misbehave across Prisma versions, so we pull
+                // candidate rows in-memory and compare params.template_id.
+                const candidates = await prisma.automation.findMany({
+                    where: {
+                        workspace_id: ws,
+                        trigger: def.trigger,
+                        action: def.action,
+                    },
+                    select: { id: true, params: true },
+                });
+                const duplicate = candidates.find(
+                    (c) => c.params && c.params.template_id === tpl.id,
+                );
+                if (duplicate) {
+                    skipped.push({ trigger: def.trigger, id: duplicate.id });
+                    continue;
+                }
+                const row = await prisma.automation.create({
+                    data: {
+                        workspace_id: ws,
+                        name: def.name,
+                        trigger: def.trigger,
+                        action: def.action,
+                        enabled: true,
+                        filter: null,
+                        delay_minutes: def.delay_minutes,
+                        params: { template_id: tpl.id, to: 'member' },
+                    },
+                });
+                created.push({ trigger: def.trigger, id: row.id });
+            } catch (e) {
+                fastify.log.error(
+                    { err: e, def },
+                    '[automations/ensure-defaults] failed to provision one automation',
+                );
             }
-            // Skip if an automation for this trigger + template already exists.
-            const existing = await prisma.automation.findFirst({
-                where: {
-                    workspace_id: ws,
-                    trigger: def.trigger,
-                    action: def.action,
-                    params: { path: ['template_id'], equals: tpl.id },
-                },
-            });
-            if (existing) {
-                skipped.push({ trigger: def.trigger, id: existing.id });
-                continue;
-            }
-            const row = await prisma.automation.create({
-                data: {
-                    workspace_id: ws,
-                    name: def.name,
-                    trigger: def.trigger,
-                    action: def.action,
-                    enabled: true,
-                    filter: null,
-                    delay_minutes: def.delay_minutes,
-                    params: { template_id: tpl.id, to: 'member' },
-                },
-            });
-            created.push({ trigger: def.trigger, id: row.id });
         }
 
         return { created, skipped, missing_templates: missingTemplates };
