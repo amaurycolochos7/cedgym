@@ -131,13 +131,6 @@ enum DiscountType {
   FIXED_AMOUNT
 }
 
-enum ReferralStatus {
-  PENDING
-  CONFIRMED
-  REWARDED
-  EXPIRED
-}
-
 enum BookingStatus {
   CONFIRMED
   WAITLIST
@@ -258,8 +251,6 @@ model User {
   product_purchases  ProductPurchase[]
   product_reviews    ProductReview[]
   refresh_tokens     RefreshToken[]
-  referrals_made     Referral[]         @relation("Referrer")
-  referral_received  Referral?          @relation("Referred")
   routines           Routine[]
   mealPlans          MealPlan[]
   ai_generations     AIGeneration[]
@@ -700,28 +691,6 @@ model UserBadge {
 
   @@unique([user_id, badge_id])
   @@map("user_badges")
-}
-
-// ────────────────────────────────────────────────────────────────
-// Referral program
-// ────────────────────────────────────────────────────────────────
-model Referral {
-  id                  String         @id @default(cuid())
-  workspace_id        String
-  referrer_id         String
-  referred_id         String         @unique
-  code_used           String
-  reward_referrer_mxn Int            @default(0)
-  reward_referred_mxn Int            @default(0)
-  first_payment_at    DateTime?
-  reward_paid_at      DateTime?
-  status              ReferralStatus @default(PENDING)
-  created_at          DateTime       @default(now())
-
-  referrer User @relation("Referrer", fields: [referrer_id], references: [id])
-  referred User @relation("Referred", fields: [referred_id], references: [id])
-
-  @@map("referrals")
 }
 
 // ────────────────────────────────────────────────────────────────
