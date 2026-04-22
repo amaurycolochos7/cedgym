@@ -18,24 +18,45 @@
  * -------------------------------------------------------------------------*/
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
+  Check,
   ChevronDown,
-  ChevronUp,
   Clock,
   Dumbbell,
   ExternalLink,
   Lightbulb,
   Loader2,
   Lock,
+  MapPin,
   RefreshCw,
-  Timer,
+  Target,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
 import { AIGenerationOverlay } from '@/components/portal/ai-generation-overlay';
+import { ExerciseMedia } from '@/components/portal/exercise-media';
+
+// ── Localization maps ────────────────────────────────────────────────────
+const GOAL_LABELS: Record<string, string> = {
+  WEIGHT_LOSS: 'Pérdida de grasa',
+  MUSCLE_GAIN: 'Hipertrofia',
+  MAINTENANCE: 'Mantenimiento',
+  STRENGTH: 'Fuerza',
+  ENDURANCE: 'Resistencia',
+  GENERAL_FITNESS: 'Fitness general',
+};
+
+const LOCATION_LABELS: Record<string, string> = {
+  GYM: 'En el gym',
+  HOME: 'En casa',
+  BOTH: 'Gym + casa',
+};
+
+const DAY_LABELS_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 // ── Types ────────────────────────────────────────────────────────────────
 type Location = 'GYM' | 'HOME' | 'BOTH';
@@ -135,6 +156,27 @@ function formatStartedAt(iso?: string | null): string | null {
   } catch {
     return iso.slice(0, 10);
   }
+}
+
+function daysSince(iso?: string | null): number | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const diffMs = Date.now() - t;
+  if (diffMs < 0) return 0;
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function countTotalExercises(days: RoutineDay[]): number {
+  return days.reduce((acc, d) => acc + (d.exercises?.length ?? 0), 0);
+}
+
+// Normalized "today" key so per-day progress auto-resets when the UTC
+// date rolls over. We could gate per routine week, but a day-key is
+// enough for the lightweight checkbox contract.
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -507,77 +549,273 @@ function ActiveRoutineView({
   const [regenOpen, setRegenOpen] = useState(false);
 
   const activeDay = sortedDays[activeDayIdx];
+  const totalExercises = useMemo(() => countTotalExercises(sortedDays), [sortedDays]);
+
+  // ── Progress tracking (localStorage, per routine+day, auto-resets on
+  // date change) ───────────────────────────────────────────────────────
+  const progressKey = activeDay
+    ? `cedgym-routine-progress-${routine.id}-${activeDay.day_of_week}`
+    : '';
+  const [doneSet, setDoneSet] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!progressKey || typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(progressKey);
+      if (!raw) {
+        setDoneSet(new Set());
+        return;
+      }
+      const parsed = JSON.parse(raw) as { date?: string; keys?: string[] };
+      if (parsed?.date === todayKey() && Array.isArray(parsed.keys)) {
+        setDoneSet(new Set(parsed.keys));
+      } else {
+        // Stale day → reset.
+        window.localStorage.removeItem(progressKey);
+        setDoneSet(new Set());
+      }
+    } catch {
+      setDoneSet(new Set());
+    }
+  }, [progressKey]);
+
+  const toggleDone = (key: string) => {
+    if (!progressKey) return;
+    setDoneSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        window.localStorage.setItem(
+          progressKey,
+          JSON.stringify({ date: todayKey(), keys: Array.from(next) }),
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
+  const dayExerciseCount = activeDay?.exercises.length ?? 0;
+  const dayDoneCount = activeDay
+    ? activeDay.exercises.filter((_, i) => doneSet.has(`${activeDay.day_of_week}-${i}`)).length
+    : 0;
+  const dayProgressPct =
+    dayExerciseCount > 0 ? Math.round((dayDoneCount / dayExerciseCount) * 100) : 0;
+
+  // ── Quota-aware regenerate trigger state ─────────────────────────────
+  const r = quota?.routine;
+  const regenState: 'allowed' | 'locked-days' | 'unlimited' | 'no-quota' = !quota
+    ? 'no-quota'
+    : r?.unlimited
+      ? 'unlimited'
+      : r?.allowed
+        ? 'allowed'
+        : 'locked-days';
+
+  const startedLabel = formatStartedAt(routine.started_at);
+  const startedDays = daysSince(routine.started_at);
+  const goalLabel = routine.goal ? GOAL_LABELS[routine.goal] ?? routine.goal : null;
+  const locationLabel = routine.location ? LOCATION_LABELS[routine.location] ?? routine.location : null;
 
   return (
-    <div className="space-y-6">
-      {/* ── Top bar ──────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl leading-tight text-slate-900">
+    <div className="space-y-6 sm:space-y-8">
+      {/* ─────────────────────────────────────────────────────────────
+         Hero section — glass-on-blue gradient. Keeps the light palette
+         of the rest of the portal but feels like a flagship screen.
+         ───────────────────────────────────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-3xl ring-1 ring-slate-900/5 shadow-xl shadow-blue-900/10"
+      >
+        {/* Layered gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-slate-900 to-slate-950" />
+        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-indigo-500/15 blur-3xl" />
+        {/* subtle grid */}
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
+
+        <div className="relative p-6 sm:p-10">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur ring-1 ring-white/15 text-white">
+              <Dumbbell className="w-4 h-4" />
+            </span>
+            <span className="text-[11px] uppercase tracking-[0.25em] text-white/60 font-semibold">
+              Tu rutina activa
+            </span>
+          </div>
+
+          <h1 className="font-display text-3xl sm:text-5xl leading-[1.05] text-white max-w-3xl">
             {routine.name}
           </h1>
-          {routine.started_at && (
-            <span className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-blue-50 ring-1 ring-blue-200 text-xs text-blue-700">
-              <Timer className="w-3.5 h-3.5" />
-              Iniciada {formatStartedAt(routine.started_at)}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setRegenOpen(true)}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm bg-white ring-1 ring-slate-300 text-slate-700 hover:bg-slate-50 transition"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Regenerar
-        </button>
-      </div>
 
-      {/* ── Day tabs ─────────────────────────────────────────── */}
-      <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-none border-b border-slate-200">
-        <div className="flex gap-1 px-4 sm:px-0 min-w-max snap-x snap-mandatory">
-          {sortedDays.map((day, idx) => {
-            const active = idx === activeDayIdx;
-            return (
-              <button
-                key={day.id ?? `${day.day_of_week}-${idx}`}
-                type="button"
-                onClick={() => setActiveDayIdx(idx)}
-                className={`snap-start shrink-0 px-4 py-2.5 text-sm font-medium transition border-b-2 ${
-                  active
-                    ? 'text-blue-700 border-blue-600'
-                    : 'text-slate-500 hover:text-slate-700 border-transparent'
-                }`}
-              >
-                {DAY_LABELS[day.day_of_week] ?? `D${day.day_of_week + 1}`}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Day content ─────────────────────────────────────── */}
-      {activeDay && (
-        <div className="space-y-4">
-          <div>
-            <h2 className="font-display text-xl sm:text-2xl text-slate-900">{activeDay.title}</h2>
-            {activeDay.notes && (
-              <p className="italic text-slate-500 text-sm mt-1">{activeDay.notes}</p>
+          {/* Key stats row */}
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <HeroPill icon={<Dumbbell className="w-3.5 h-3.5" />}>
+              {routine.days_per_week} días / semana
+            </HeroPill>
+            <HeroPill>
+              {totalExercises} ejercicio{totalExercises === 1 ? '' : 's'}
+            </HeroPill>
+            {goalLabel && (
+              <HeroPill icon={<Target className="w-3.5 h-3.5" />} accent>
+                {goalLabel}
+              </HeroPill>
+            )}
+            {locationLabel && (
+              <HeroPill icon={<MapPin className="w-3.5 h-3.5" />}>
+                {locationLabel}
+              </HeroPill>
             )}
           </div>
 
-          <div className="space-y-3">
-            {activeDay.exercises.map((ex, i) => (
-              <ExerciseCard
-                key={ex.id ?? `${activeDay.day_of_week}-${i}`}
-                routineId={routine.id}
-                exerciseKey={`${activeDay.day_of_week}-${i}`}
-                exercise={ex}
-              />
-            ))}
+          {startedLabel && (
+            <div className="mt-4 text-xs text-white/50">
+              {startedDays !== null && startedDays > 0
+                ? `Iniciada hace ${startedDays} día${startedDays === 1 ? '' : 's'} · ${startedLabel}`
+                : `Iniciada ${startedLabel}`}
+            </div>
+          )}
+
+          {/* Action row */}
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            {regenState === 'locked-days' ? (
+              <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 ring-1 ring-white/10 text-sm text-white/70 backdrop-blur">
+                <Lock className="w-4 h-4" />
+                Próxima rutina disponible en {quota?.days_until_renewal ?? 0} día
+                {(quota?.days_until_renewal ?? 0) === 1 ? '' : 's'}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRegenOpen(true)}
+                className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 text-sm font-semibold ring-1 ring-white/80 hover:bg-blue-50 hover:ring-blue-200 shadow-sm transition-all active:scale-[0.98]"
+              >
+                <RefreshCw className="w-4 h-4 text-blue-600 transition-transform group-hover:rotate-180 duration-500" />
+                Regenerar
+                {regenState === 'unlimited' && (
+                  <span className="ml-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-blue-700 font-bold">
+                    · {quota?.plan ?? 'PRO'}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
-      )}
+      </motion.section>
+
+      {/* ─────────────────────────────────────────────────────────────
+         Day navigation — pill tabs with day number anchor.
+         ───────────────────────────────────────────────────────────── */}
+      <div>
+        <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 px-4 sm:px-0 min-w-max sm:justify-center snap-x snap-mandatory">
+            {sortedDays.map((day, idx) => {
+              const active = idx === activeDayIdx;
+              const dayNum = idx + 1;
+              const hasExercises = (day.exercises?.length ?? 0) > 0;
+              return (
+                <button
+                  key={day.id ?? `${day.day_of_week}-${idx}`}
+                  type="button"
+                  onClick={() => setActiveDayIdx(idx)}
+                  className={[
+                    'snap-start shrink-0 relative flex items-center gap-2 pl-2 pr-4 py-2 rounded-full text-sm font-semibold transition-all',
+                    active
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30 ring-1 ring-blue-500'
+                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-slate-300 hover:text-slate-900',
+                  ].join(' ')}
+                >
+                  <span
+                    className={[
+                      'inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold tabular-nums',
+                      active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 text-slate-700',
+                    ].join(' ')}
+                  >
+                    {dayNum}
+                  </span>
+                  <span>{DAY_LABELS[day.day_of_week] ?? `D${day.day_of_week + 1}`}</span>
+                  {hasExercises && (
+                    <span
+                      className={[
+                        'inline-block w-1.5 h-1.5 rounded-full',
+                        active ? 'bg-white/80' : 'bg-blue-500',
+                      ].join(' ')}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+         Day content — title + progress ring + exercise tiles.
+         ───────────────────────────────────────────────────────────── */}
+      <AnimatePresence mode="wait">
+        {activeDay && (
+          <motion.div
+            key={activeDay.id ?? `${activeDay.day_of_week}-${activeDayIdx}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-5"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-400 font-semibold mb-1">
+                  {DAY_LABELS_FULL[activeDay.day_of_week] ?? `Día ${activeDayIdx + 1}`}
+                </div>
+                <h2 className="font-display text-2xl sm:text-3xl text-slate-900 leading-tight">
+                  {activeDay.title}
+                </h2>
+                {activeDay.notes && (
+                  <p className="italic text-slate-500 text-sm mt-2 max-w-2xl">
+                    {activeDay.notes}
+                  </p>
+                )}
+              </div>
+
+              {dayExerciseCount > 0 && (
+                <ProgressRing
+                  percent={dayProgressPct}
+                  done={dayDoneCount}
+                  total={dayExerciseCount}
+                />
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {activeDay.exercises.map((ex, i) => {
+                const exKey = `${activeDay.day_of_week}-${i}`;
+                return (
+                  <ExerciseCard
+                    key={ex.id ?? exKey}
+                    index={i}
+                    exercise={ex}
+                    done={doneSet.has(exKey)}
+                    onToggleDone={() => toggleDone(exKey)}
+                  />
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {regenOpen && (
         <RegenerateModal
@@ -595,135 +833,284 @@ function ActiveRoutineView({
   );
 }
 
+// ── Hero pill ────────────────────────────────────────────────────────────
+function HeroPill({
+  children,
+  icon,
+  accent = false,
+}: {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  accent?: boolean;
+}) {
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm ring-1',
+        accent
+          ? 'bg-blue-400/15 ring-blue-300/30 text-blue-100'
+          : 'bg-white/8 ring-white/15 text-white/85',
+      ].join(' ')}
+    >
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+// ── Progress ring ────────────────────────────────────────────────────────
+function ProgressRing({
+  percent,
+  done,
+  total,
+}: {
+  percent: number;
+  done: number;
+  total: number;
+}) {
+  const size = 64;
+  const stroke = 6;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+  const complete = percent >= 100;
+
+  return (
+    <div className="shrink-0 relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          className="stroke-slate-200"
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          className={complete ? 'stroke-emerald-500' : 'stroke-blue-600'}
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        {complete ? (
+          <Check className="w-5 h-5 text-emerald-500" strokeWidth={3} />
+        ) : (
+          <>
+            <span className="text-[11px] font-bold tabular-nums text-slate-900 leading-none">
+              {done}/{total}
+            </span>
+            <span className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold mt-0.5">
+              Hoy
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Exercise card ────────────────────────────────────────────────────────
 
 function ExerciseCard({
-  routineId,
-  exerciseKey,
+  index,
   exercise,
+  done,
+  onToggleDone,
 }: {
-  routineId: string;
-  exerciseKey: string;
+  index: number;
   exercise: RoutineExercise;
+  done: boolean;
+  onToggleDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const lsKey = `cedgym-routine-done-${routineId}-${exerciseKey}`;
 
-  // Local-only "done" state. Intentional: per spec we don't persist to
-  // the API. Re-reads on mount from localStorage so the check survives
-  // a reload but resets next week when a new routine is generated.
-  const [done, setDone] = useState(false);
-  useMemo(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      setDone(window.localStorage.getItem(lsKey) === '1');
-    } catch {
-      /* private mode / quota — silently ignore */
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lsKey]);
-
-  const toggleDone = () => {
-    const next = !done;
-    setDone(next);
-    try {
-      if (next) window.localStorage.setItem(lsKey, '1');
-      else window.localStorage.removeItem(lsKey);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const name = exercise.exercise_name_snapshot ?? exercise.exercise_name ?? exercise.exercise?.name ?? 'Ejercicio';
+  const name =
+    exercise.exercise_name_snapshot ??
+    exercise.exercise_name ??
+    exercise.exercise?.name ??
+    'Ejercicio';
   const embedUrl = getYouTubeEmbedUrl(exercise.video_url);
   const hasSearchUrl =
     !embedUrl && !!exercise.video_url && /\/results\?search_query=/.test(exercise.video_url);
 
   return (
-    <div
-      className={`bg-white ring-1 rounded-2xl overflow-hidden transition shadow-sm hover:shadow-md ${
-        done ? 'ring-emerald-300' : 'ring-slate-200'
-      }`}
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        type: 'spring',
+        stiffness: 220,
+        damping: 26,
+        delay: Math.min(index * 0.04, 0.4),
+      }}
+      className={[
+        'group bg-white rounded-2xl overflow-hidden ring-1 transition-all',
+        done
+          ? 'ring-emerald-300 shadow-sm shadow-emerald-500/10'
+          : 'ring-slate-200 shadow-sm hover:shadow-lg hover:shadow-blue-900/5 hover:ring-slate-300 hover:-translate-y-0.5',
+      ].join(' ')}
     >
-      <button
+      <motion.button
+        layout
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left"
+        className="w-full flex items-center gap-4 p-3 sm:p-4 text-left"
       >
+        {/* Media slot */}
+        <ExerciseMedia name={name} size="sm" />
+
+        {/* Main info */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <Dumbbell className="w-4 h-4 text-slate-400 shrink-0" />
+            <span className="text-[10px] font-bold tabular-nums text-slate-400 bg-slate-100 rounded-md px-1.5 py-0.5">
+              {String(index + 1).padStart(2, '0')}
+            </span>
             <h3 className="font-semibold text-slate-900 truncate">{name}</h3>
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-500">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 ring-1 ring-blue-200 font-mono tabular-nums">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-xs">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 ring-1 ring-blue-200 font-mono tabular-nums font-semibold">
               {exercise.sets} × {exercise.reps}
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Timer className="w-3 h-3" />
-              {exercise.rest_sec}s descanso
+            <span className="inline-flex items-center gap-1 text-slate-500">
+              <Clock className="w-3 h-3" />
+              {exercise.rest_sec}s
             </span>
+            {done && (
+              <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold">
+                <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                Hecho
+              </span>
+            )}
           </div>
         </div>
-        {open ? (
-          <ChevronUp className="w-5 h-5 text-slate-400 shrink-0" />
-        ) : (
-          <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />
+
+        {/* Expand chevron */}
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+          className="shrink-0 inline-flex w-8 h-8 items-center justify-center rounded-full text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-100"
+        >
+          <ChevronDown className="w-5 h-5" />
+        </motion.span>
+      </motion.button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="details"
+            layout
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-4 border-t border-slate-100 pt-4">
+              {/* Enlarged media / embed */}
+              {embedUrl ? (
+                <div className="relative w-full aspect-video rounded-xl overflow-hidden ring-1 ring-slate-200 bg-black">
+                  <iframe
+                    src={embedUrl}
+                    title={name}
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                </div>
+              ) : (
+                <ExerciseMedia name={name} size="lg" />
+              )}
+
+              {exercise.video_url && !embedUrl && (
+                <a
+                  href={exercise.video_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  {hasSearchUrl ? 'Ver video completo en YouTube' : 'Ver video completo'}
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+
+              {exercise.exercise?.description && (
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  {exercise.exercise.description}
+                </p>
+              )}
+
+              {exercise.notes && (
+                <div className="flex items-start gap-2 text-sm bg-blue-50/60 ring-1 ring-blue-100 text-slate-800 rounded-xl p-3.5">
+                  <Lightbulb className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{exercise.notes}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={onToggleDone}
+                  className={[
+                    'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ring-1',
+                    done
+                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-300 hover:bg-emerald-100'
+                      : 'bg-slate-900 text-white ring-slate-900 hover:bg-slate-800 shadow-sm',
+                  ].join(' ')}
+                >
+                  {done ? (
+                    <>
+                      <Check className="w-4 h-4" strokeWidth={3} />
+                      Completado
+                    </>
+                  ) : (
+                    <>Marcar hecho</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
-      </button>
+      </AnimatePresence>
 
-      {open && (
-        <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-4 border-t border-slate-200 pt-4">
-          {embedUrl ? (
-            <div className="relative w-full aspect-video rounded-xl overflow-hidden ring-1 ring-slate-200 bg-black">
-              <iframe
-                src={embedUrl}
-                title={name}
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
-              />
-            </div>
-          ) : exercise.video_url ? (
-            <a
-              href={exercise.video_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 underline underline-offset-4 font-medium"
-            >
-              {hasSearchUrl ? 'Ver video en YouTube' : 'Abrir video'}
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          ) : null}
-
-          {exercise.exercise?.description && (
-            <p className="text-sm text-slate-700 leading-relaxed">
-              {exercise.exercise.description}
-            </p>
-          )}
-
-          {exercise.notes && (
-            <div className="flex items-start gap-2 text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3">
-              <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <span className="italic">{exercise.notes}</span>
-            </div>
-          )}
-
+      {/* Compact "done" toggle in the collapsed state for fast tap */}
+      {!open && (
+        <div className="flex items-center justify-end px-3 sm:px-4 pb-3">
           <button
             type="button"
-            onClick={toggleDone}
-            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition ring-1 ${
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleDone();
+            }}
+            className={[
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ring-1',
               done
                 ? 'bg-emerald-50 text-emerald-700 ring-emerald-300'
-                : 'bg-white text-slate-700 ring-slate-300 hover:bg-slate-50'
-            }`}
+                : 'bg-white text-slate-500 ring-slate-200 hover:text-slate-900 hover:ring-slate-300',
+            ].join(' ')}
           >
-            {done ? '✓ Hecho' : 'Marcar como hecho'}
+            {done ? (
+              <>
+                <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                Hecho
+              </>
+            ) : (
+              'Marcar hecho'
+            )}
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
