@@ -3,7 +3,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Plus, Trash2, Pencil, FlaskConical } from 'lucide-react';
-import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { api, normalizeError } from '@/lib/api';
+import type { ApiError } from '@/lib/schemas';
 
 const INPUT_CLS =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
@@ -122,27 +124,34 @@ export default function AdminPromocodesPage() {
   });
 
   const buildPayload = () => {
+    // Backend zod schema rejects `null` on optional fields — omit them
+    // instead of sending null so the request actually validates.
     const appliesTo =
       form.applies_to.length === 0 ? ['ALL'] : form.applies_to;
-    return {
+    const payload: Record<string, unknown> = {
       code: form.code,
       type: form.type,
       value: Number(form.value),
       applies_to: appliesTo,
-      min_amount_mxn: form.min_amount_mxn
-        ? Number(form.min_amount_mxn)
-        : null,
-      max_uses: form.max_uses ? Number(form.max_uses) : null,
-      expires_at: form.expires_at || null,
       enabled: form.enabled,
     };
+    if (form.min_amount_mxn) payload.min_amount_mxn = Number(form.min_amount_mxn);
+    if (form.max_uses) payload.max_uses = Number(form.max_uses);
+    if (form.expires_at) payload.expires_at = form.expires_at;
+    return payload;
   };
 
   const create = useMutation({
     mutationFn: async () => (await api.post('/admin/promocodes', buildPayload())).data,
     onSuccess: () => {
+      toast.success('Código creado.');
       closeModal();
       qc.invalidateQueries({ queryKey: ['promocodes'] });
+    },
+    onError: (e) => {
+      const msg = (normalizeError(e) as ApiError)?.message || 'No pudimos crear el código.';
+      setError(msg);
+      toast.error(msg);
     },
   });
 
@@ -150,17 +159,29 @@ export default function AdminPromocodesPage() {
     mutationFn: async () =>
       (await api.patch(`/admin/promocodes/${editingId}`, buildPayload())).data,
     onSuccess: () => {
+      toast.success('Código actualizado.');
       closeModal();
       qc.invalidateQueries({ queryKey: ['promocodes'] });
+    },
+    onError: (e) => {
+      const msg = (normalizeError(e) as ApiError)?.message || 'No pudimos guardar el código.';
+      setError(msg);
+      toast.error(msg);
     },
   });
 
   const del = useMutation({
     mutationFn: async (id: string) => api.delete(`/admin/promocodes/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['promocodes'] }),
+    onError: (e) => {
+      const msg = (normalizeError(e) as ApiError)?.message || 'No pudimos borrar el código.';
+      toast.error(msg);
+    },
   });
 
-  const items = data?.items ?? [];
+  // Backend responds with `{ promocodes: [...] }`. Fall back to `items`
+  // in case an older build is still being served during the deploy.
+  const items = data?.promocodes ?? data?.items ?? [];
 
   const closeModal = () => {
     setModalMode('closed');
@@ -377,12 +398,12 @@ export default function AdminPromocodesPage() {
 
       {modalOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-slate-900/75 backdrop-blur-md z-[90] flex items-end sm:items-center justify-center sm:p-4"
           onClick={closeModal}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-xl max-h-[90vh] overflow-y-auto"
+            className="bg-white w-full h-[100dvh] overflow-y-auto p-5 sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:p-6 sm:max-w-lg sm:border sm:border-slate-200 sm:shadow-xl space-y-4"
           >
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-slate-900">
