@@ -18,9 +18,11 @@ interface QrTokenData {
 }
 
 interface MembershipData {
-  id?: string;
-  plan?: string;
-  status?: string;
+  membership: {
+    id?: string;
+    plan?: string;
+    status?: string;
+  } | null;
   days_remaining?: number | null;
 }
 
@@ -44,12 +46,13 @@ export default function PortalQRPage() {
   });
 
   const hasActivePlan = useMemo(() => {
-    const m = membershipQuery.data;
-    if (!m) return null; // unknown — still loading
-    if (!m.plan) return false;
+    const resp = membershipQuery.data;
+    if (!resp) return null; // unknown — still loading
+    const m = resp.membership;
+    if (!m || !m.plan) return false;
     if (m.status && !['active', 'ACTIVE', 'trial', 'TRIAL'].includes(m.status))
       return false;
-    if (typeof m.days_remaining === 'number' && m.days_remaining <= 0)
+    if (typeof resp.days_remaining === 'number' && resp.days_remaining <= 0)
       return false;
     return true;
   }, [membershipQuery.data]);
