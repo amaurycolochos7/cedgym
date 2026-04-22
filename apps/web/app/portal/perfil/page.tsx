@@ -12,6 +12,8 @@ import {
   Camera,
   User as UserIcon,
   Dumbbell,
+  Pencil,
+  Phone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
@@ -166,6 +168,7 @@ export default function PortalPerfilPage() {
   const [ecNotes, setEcNotes] = useState('');
   const [ecError, setEcError] = useState<string | null>(null);
   const [ecApiError, setEcApiError] = useState<string | null>(null);
+  const [editingEc, setEditingEc] = useState(false);
 
   useEffect(() => {
     if (me?.user) {
@@ -216,6 +219,7 @@ export default function PortalPerfilPage() {
     },
     onSuccess: () => {
       toast.success('Contacto de emergencia guardado.');
+      setEditingEc(false);
       qc.invalidateQueries({ queryKey: ['auth', 'me'] });
       refreshMe();
     },
@@ -389,77 +393,131 @@ export default function PortalPerfilPage() {
             </div>
           </section>
 
-          {/* Contacto de emergencia */}
+          {/* Contacto de emergencia — collapsed summary once saved,
+              full form while editing / empty. Saves real vertical space
+              on mobile where 4 fields + header take ~350px. */}
           <section
             id="emergencia"
-            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4 scroll-mt-28"
+            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 scroll-mt-28"
           >
-            <SectionHeader
-              icon={<ShieldAlert size={18} />}
-              title="Contacto de emergencia"
-              description="Opcional. Solo lo usamos si necesitamos contactar a alguien en tu nombre."
-              badge={hasEc ? 'Guardado' : undefined}
-            />
-
-            <LightFormError>{ecError ?? ecApiError ?? undefined}</LightFormError>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <LightField id="ec_name" label="Nombre">
-                <input
-                  id="ec_name"
-                  className={INPUT_CLS}
-                  value={ecName}
-                  onChange={(e) => setEcName(e.target.value)}
-                  placeholder="Nombre completo"
-                />
-              </LightField>
-
-              <LightField id="ec_rel" label="Parentesco">
-                <select
-                  id="ec_rel"
-                  value={ecRel}
-                  onChange={(e) => setEcRel(e.target.value as Relationship)}
-                  className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+            {hasEc && !editingEc ? (
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <ShieldAlert size={18} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                      Emergencia
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      <CheckCircle2 size={10} /> Guardado
+                    </span>
+                  </div>
+                  <div className="mt-0.5 truncate text-sm font-semibold text-slate-900">
+                    {ecName || '—'}
+                    <span className="ml-1.5 text-xs font-normal text-slate-500">
+                      ·{' '}
+                      {RELATIONSHIP_OPTIONS.find((o) => o.value === ecRel)?.label ??
+                        ecRel}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <Phone size={11} /> {ecPhone || '—'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingEc(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  aria-label="Editar contacto de emergencia"
                 >
-                  {RELATIONSHIP_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </LightField>
-
-              <LightField id="ec_phone" label="Teléfono">
-                <LightPhoneInput id="ec_phone" value={ecPhone} onChange={setEcPhone} />
-              </LightField>
-
-              <LightField
-                id="ec_notes"
-                label="Notas médicas"
-                hint="Alergias, padecimientos… (opcional)"
-              >
-                <textarea
-                  id="ec_notes"
-                  value={ecNotes}
-                  onChange={(e) => setEcNotes(e.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="Ej. alergia a la penicilina"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                  <Pencil size={12} /> Editar
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <SectionHeader
+                  icon={<ShieldAlert size={18} />}
+                  title="Contacto de emergencia"
+                  description="Opcional. Solo lo usamos si necesitamos contactar a alguien en tu nombre."
                 />
-              </LightField>
-            </div>
 
-            <div className="pt-1">
-              <button
-                type="button"
-                className={BTN_PRIMARY}
-                onClick={onSaveEc}
-                disabled={saveEc.isPending}
-              >
-                {saveEc.isPending ? 'Guardando…' : 'Guardar contacto'}
-              </button>
-            </div>
+                <LightFormError>{ecError ?? ecApiError ?? undefined}</LightFormError>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <LightField id="ec_name" label="Nombre">
+                    <input
+                      id="ec_name"
+                      className={INPUT_CLS}
+                      value={ecName}
+                      onChange={(e) => setEcName(e.target.value)}
+                      placeholder="Nombre completo"
+                    />
+                  </LightField>
+
+                  <LightField id="ec_rel" label="Parentesco">
+                    <select
+                      id="ec_rel"
+                      value={ecRel}
+                      onChange={(e) => setEcRel(e.target.value as Relationship)}
+                      className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                    >
+                      {RELATIONSHIP_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </LightField>
+
+                  <LightField id="ec_phone" label="Teléfono">
+                    <LightPhoneInput id="ec_phone" value={ecPhone} onChange={setEcPhone} />
+                  </LightField>
+
+                  <LightField
+                    id="ec_notes"
+                    label="Notas médicas"
+                    hint="Alergias, padecimientos… (opcional)"
+                  >
+                    <textarea
+                      id="ec_notes"
+                      value={ecNotes}
+                      onChange={(e) => setEcNotes(e.target.value)}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Ej. alergia a la penicilina"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                    />
+                  </LightField>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    onClick={onSaveEc}
+                    disabled={saveEc.isPending}
+                  >
+                    {saveEc.isPending ? 'Guardando…' : 'Guardar contacto'}
+                  </button>
+                  {hasEc && (
+                    <button
+                      type="button"
+                      className={BTN_GHOST}
+                      onClick={() => {
+                        setEditingEc(false);
+                        setEcError(null);
+                        setEcApiError(null);
+                      }}
+                      disabled={saveEc.isPending}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Referidos */}
