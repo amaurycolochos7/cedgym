@@ -10,30 +10,101 @@ import dayjs from 'dayjs';
 
 // ────────────────────────────────────────────────────────────────
 // Catalog. Keep in sync with the /plans endpoint contract.
+//
+// This is the canonical source of truth for plans, prices and
+// feature bullets. The landing page and portal MUST fetch this
+// via GET /memberships/plans instead of hardcoding copy.
+//
+// NOTE: `monthly`/`quarterly`/`annual` are legacy short keys kept
+// for back-compat with getPlanPrice(). The richer public contract
+// (what /memberships/plans returns) also exposes the same values
+// under explicit `monthly_price_mxn` / `quarterly_price_mxn` /
+// `annual_price_mxn` keys, plus `duration_days_monthly` and
+// `features[]` — these are the fields the frontend consumes.
 // ────────────────────────────────────────────────────────────────
 export const PLAN_CATALOG = [
     {
         code: 'STARTER',
+        id: 'STARTER',
         name: 'Básico',
+        tagline: 'Para empezar',
         monthly: 599,
         quarterly: 1617,
         annual: 5750,
+        monthly_price_mxn: 599,
+        quarterly_price_mxn: 1617,
+        annual_price_mxn: 5750,
+        duration_days_monthly: 30,
+        features: [
+            '1 visita al día al gym',
+            '1 rutina gratis generada en la app',
+            'Panel del atleta + progreso',
+        ],
+        popular: false,
     },
     {
         code: 'PRO',
+        id: 'PRO',
         name: 'Pro',
+        tagline: 'Atleta regular',
         monthly: 999,
         quarterly: 2697,
         annual: 9590,
+        monthly_price_mxn: 999,
+        quarterly_price_mxn: 2697,
+        annual_price_mxn: 9590,
+        duration_days_monthly: 30,
+        features: [
+            'Entradas ilimitadas al día (AM + PM)',
+            'Genera rutinas ilimitadas desde la app',
+            'Plan de comidas básico en la app',
+            'Precio de socio en tienda',
+            '2 congelamientos al año',
+            '1 pase de invitado al mes',
+        ],
+        popular: true,
     },
     {
         code: 'ELITE',
+        id: 'ELITE',
         name: 'Élite',
+        tagline: 'Preparación deportiva',
         monthly: 1590,
         quarterly: 4293,
         annual: 15264,
+        monthly_price_mxn: 1590,
+        quarterly_price_mxn: 4293,
+        annual_price_mxn: 15264,
+        duration_days_monthly: 30,
+        features: [
+            'Todo lo del plan Pro',
+            'Rutina específica por deporte (football, powerlifting, HYROX, etc.)',
+            'Nutrición personalizada con bioimpedancia cada 2 meses',
+            'Feedback de video cada 2 semanas',
+            'WhatsApp directo (1 consulta por semana)',
+            'Precio de socio preferente en tienda',
+        ],
+        popular: false,
     },
 ];
+
+// Public-contract shape for GET /memberships/plans — strips the
+// internal `monthly`/`quarterly`/`annual` aliases so the external
+// API is clean, and projects only the fields the landing/portal
+// actually need.
+export function getPublicPlanCatalog() {
+    return PLAN_CATALOG.map((p) => ({
+        id: p.id,
+        name: p.name,
+        tagline: p.tagline,
+        monthly_price_mxn: p.monthly_price_mxn,
+        quarterly_price_mxn: p.quarterly_price_mxn,
+        annual_price_mxn: p.annual_price_mxn,
+        duration_days_monthly: p.duration_days_monthly,
+        features: [...p.features],
+        popular: p.popular,
+    }));
+}
 
 export const VALID_PLANS = PLAN_CATALOG.map((p) => p.code);
 export const VALID_CYCLES = ['MONTHLY', 'QUARTERLY', 'ANNUAL'];
@@ -158,6 +229,7 @@ export default {
     PLAN_RANK,
     getPlanPrice,
     getPlanByCode,
+    getPublicPlanCatalog,
     computeExpiresAt,
     daysRemaining,
     earlyRenewalDiscount,

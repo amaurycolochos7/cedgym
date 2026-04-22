@@ -226,8 +226,13 @@ async function processPaymentEvent(fastify, mpPaymentId) {
 
 // ─────────────────────────────────────────────────────────────────
 // Membership activation / renewal.
+//
+// Exported so /memberships/subscribe-card (synchronous card-token
+// flow) can reuse the exact same activation path instead of forking
+// the logic. Idempotent: calling it twice on the same payment just
+// updates the existing membership to the same state.
 // ─────────────────────────────────────────────────────────────────
-async function activateMembershipFromPayment(fastify, payment) {
+export async function activateMembershipFromPayment(fastify, payment) {
     const { prisma } = fastify;
     const meta = payment.metadata || {};
     const plan = meta.plan;

@@ -152,6 +152,63 @@ export async function getPayment(paymentId) {
 }
 
 // ────────────────────────────────────────────────────────────────
+// createCardPayment — Payment Bricks flow (embedded checkout).
+//
+// The frontend tokenizes the card via MP's Payment Brick SDK and
+// sends us the one-time `token` + `payment_method_id`. We charge
+// straight to MP without leaving our site (no init_point redirect).
+//
+// Params:
+//   transaction_amount — total in MXN (integer pesos)
+//   token              — one-time card token from the Brick
+//   payment_method_id  — 'visa', 'master', 'amex', etc.
+//   installments       — 1..12
+//   payer_email        — required by MP for card payments
+//   description        — shows on the cardholder statement / MP receipt
+//   external_reference — local Payment.id so the webhook can reconcile
+//   metadata           — echoed back on the webhook payload
+//
+// Returns the raw MP Payment resource (has .id, .status, .status_detail,
+// .date_approved, .payment_method_id, .installments, etc.).
+// ────────────────────────────────────────────────────────────────
+export async function createCardPayment({
+    transaction_amount,
+    token,
+    payment_method_id,
+    installments = 1,
+    payer_email,
+    description,
+    external_reference,
+    metadata,
+}) {
+    const client = getClient();
+    const payment = new Payment(client);
+
+    const body = {
+        transaction_amount: Number(transaction_amount),
+        token,
+        description,
+        installments: Number(installments),
+        payment_method_id,
+        payer: payer_email ? { email: payer_email } : undefined,
+        external_reference: String(external_reference),
+        statement_descriptor: 'CED-GYM',
+        metadata: metadata || undefined,
+    };
+
+    // requestOptions.idempotencyKey prevents duplicate charges on
+    // retries. MP recommends a UUID per logical attempt; we use the
+    // external_reference + token so a retried POST with the same
+    // body never double-charges.
+    return payment.create({
+        body,
+        requestOptions: {
+            idempotencyKey: `${external_reference}:${String(token).slice(0, 12)}`,
+        },
+    });
+}
+
+// ────────────────────────────────────────────────────────────────
 // cancelSubscription — used when a user clicks "cancel auto-renew".
 // ────────────────────────────────────────────────────────────────
 export async function cancelSubscription(subscriptionId) {
@@ -191,6 +248,7 @@ export function mapPaymentStatus(mpStatus) {
 export default {
     createPreference,
     createSubscription,
+    createCardPayment,
     getPayment,
     cancelSubscription,
     mapPaymentStatus,

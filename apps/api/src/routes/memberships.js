@@ -6,15 +6,18 @@
 //
 // Authenticated (JWT):
 //   GET  /memberships/me
-//   POST /memberships/subscribe
+//   POST /memberships/subscribe       — Checkout Pro (redirect flow)
+//   POST /memberships/subscribe-card  — Payment Bricks (embedded flow)
 //   POST /memberships/renew
 //   GET  /memberships/history
 //   POST /memberships/freeze
 //   POST /memberships/cancel
 //
 // Admin (ADMIN / SUPERADMIN):
-//   GET   /admin/memberships
-//   PATCH /admin/memberships/:id
+//   GET    /admin/memberships
+//   POST   /admin/memberships/assign  — manual (cash / transfer / etc.)
+//   PATCH  /admin/memberships/:id
+//   DELETE /admin/memberships/:id
 // ─────────────────────────────────────────────────────────────────
 
 import { z } from 'zod';
@@ -29,6 +32,7 @@ import {
     PLAN_RANK,
     getPlanPrice,
     getPlanByCode,
+    getPublicPlanCatalog,
     computeExpiresAt,
     daysRemaining,
     earlyRenewalDiscount,
@@ -37,7 +41,10 @@ import {
 import {
     createPreference,
     cancelSubscription,
+    createCardPayment,
+    mapPaymentStatus,
 } from '../lib/mercadopago.js';
+import { activateMembershipFromPayment } from './webhooks.js';
 
 // ─────────────────────────────────────────────────────────────────
 // Validation schemas
@@ -47,6 +54,48 @@ const subscribeBody = z.object({
     billing_cycle: z.enum(['MONTHLY', 'QUARTERLY', 'ANNUAL']),
     promo_code: z.string().trim().min(1).max(64).optional(),
     sport: z.string().optional(),
+});
+
+// ────────────────────────────────────────────────────────────────
+// POST /memberships/subscribe-card — embedded Payment Bricks flow.
+//
+// The frontend uses the MP Payment Brick SDK to tokenize the card
+// (PCI scope stays with MP) and hands us the one-time `token`.
+// We charge synchronously and activate the membership in-request
+// when MP returns `approved`. `cycle` is lowercase here because
+// that's what the Brick emits; we normalize to the uppercase
+// BillingCycle enum internally.
+// ────────────────────────────────────────────────────────────────
+const subscribeCardBody = z.object({
+    plan: z.enum(['STARTER', 'PRO', 'ELITE']),
+    cycle: z.enum(['monthly', 'quarterly', 'annual']),
+    token: z.string().min(8),
+    payment_method_id: z.string().min(1).max(32),
+    installments: z.number().int().min(1).max(12).default(1),
+    payer_email: z.string().email().optional(),
+    promo_code: z.string().trim().min(1).max(64).optional(),
+});
+
+// Map Brick `cycle` → internal BillingCycle enum.
+const CYCLE_MAP = {
+    monthly: 'MONTHLY',
+    quarterly: 'QUARTERLY',
+    annual: 'ANNUAL',
+};
+
+// ────────────────────────────────────────────────────────────────
+// POST /admin/memberships/assign — manual assignment (cash /
+// transfer / terminal / complimentary). No MP involved.
+// ────────────────────────────────────────────────────────────────
+const adminAssignBody = z.object({
+    user_id: z.string().min(1),
+    plan: z.enum(['STARTER', 'PRO', 'ELITE']),
+    cycle: z.enum(['monthly', 'quarterly', 'annual']),
+    starts_at: z.string().datetime().optional(),
+    note: z.string().trim().max(500).optional(),
+    method: z
+        .enum(['CASH', 'TRANSFER', 'TERMINAL', 'COMPLIMENTARY'])
+        .default('CASH'),
 });
 
 const renewBody = z.object({
@@ -93,6 +142,40 @@ function webappPublicUrl() {
     return process.env.WEBAPP_PUBLIC_URL || 'http://localhost:3000';
 }
 
+// Resolve a promo code against a base amount. Throws the standard
+// `err()` envelope on failure so callers can `await` without extra
+// validation. Returns { amount, discount, promo } — promo may be null
+// when no code was supplied. Shared between /subscribe, /renew and
+// /subscribe-card so the discount math never drifts.
+async function resolvePromo(prisma, promoCode, basePrice, appliesTo) {
+    if (!promoCode) {
+        return { amount: basePrice, discount: 0, promo: null };
+    }
+    const found = await prisma.promoCode.findUnique({
+        where: { code: promoCode },
+    });
+    const res = applyPromoToAmount(found, basePrice, appliesTo);
+    if (!res.valid) {
+        throw err('PROMO_INVALID', `Promo inválido: ${res.reason}`, 400);
+    }
+    return {
+        amount: res.final_amount,
+        discount: res.discount_mxn,
+        promo: res.promo,
+    };
+}
+
+// Copy shown in the welcome response for /subscribe-card. Kept in
+// sync with the landing features; the frontend renders it as a
+// post-payment celebration card.
+function welcomeCopyFor(plan) {
+    const meta = getPlanByCode(plan);
+    return {
+        title: `¡Bienvenid@ al plan ${meta?.name || plan}!`,
+        benefits: meta?.features ? [...meta.features] : [],
+    };
+}
+
 // Build MP Checkout Pro arguments for a membership payment.
 function buildMembershipPreferenceArgs({ user, plan, billingCycle, amount, paymentId }) {
     const planMeta = getPlanByCode(plan);
@@ -129,8 +212,12 @@ export default async function membershipsRoutes(fastify) {
     const { prisma } = fastify;
 
     // ─── GET /memberships/plans (public) ───────────────────────────
+    //
+    // Canonical catalog: landing page + portal fetch this so copy,
+    // prices and features come from ONE place (apps/api/src/lib/memberships.js).
+    // Public = no auth; responses are cacheable by shape.
     fastify.get('/memberships/plans', async () => ({
-        plans: PLAN_CATALOG,
+        plans: getPublicPlanCatalog(),
         currency: 'MXN',
     }));
 
@@ -247,6 +334,238 @@ export default async function membershipsRoutes(fastify) {
                 init_point: mpPref.init_point,
                 sandbox_init_point: mpPref.sandbox_init_point,
             };
+        }
+    );
+
+    // ─── POST /memberships/subscribe-card ─────────────────────────
+    //
+    // Embedded MP Payment Bricks flow — no init_point redirect.
+    // The frontend has already tokenized the card; we charge
+    // synchronously and activate the membership in-request if MP
+    // approves. Rejected / in_process responses return 402 so the
+    // Brick can show the MP status_detail and let the user retry.
+    //
+    fastify.post(
+        '/memberships/subscribe-card',
+        {
+            preHandler: [
+                fastify.authenticate,
+                fastify.requireRole('ATHLETE', 'TRAINER', 'RECEPTIONIST', 'ADMIN', 'SUPERADMIN'),
+            ],
+        },
+        async (req, reply) => {
+            const parsed = subscribeCardBody.safeParse(req.body);
+            if (!parsed.success) {
+                throw err('BAD_BODY', parsed.error.message, 400);
+            }
+            const {
+                plan,
+                cycle,
+                token,
+                payment_method_id,
+                installments,
+                payer_email,
+                promo_code,
+            } = parsed.data;
+            const billingCycle = CYCLE_MAP[cycle];
+
+            const basePrice = getPlanPrice(plan, billingCycle);
+            if (basePrice == null) {
+                throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
+            }
+
+            const userId = req.user.sub || req.user.id;
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
+
+            // Selfie gate — same rule as /subscribe. Staff identifies
+            // the member at check-in by the selfie.
+            if (!user.selfie_url) {
+                throw err(
+                    'SELFIE_REQUIRED',
+                    'Debes subir una selfie antes de comprar tu membresía.',
+                    400
+                );
+            }
+
+            const { amount, discount, promo } = await resolvePromo(
+                prisma,
+                promo_code,
+                basePrice,
+                'MEMBERSHIP'
+            );
+
+            const planMeta = getPlanByCode(plan);
+            const description = `Membresía ${planMeta?.name || plan} — ${billingCycle}`;
+            const effectivePayerEmail = payer_email || user.email || undefined;
+
+            // 1) Create the local PENDING Payment first so we have a
+            // stable id to hand MP as external_reference.
+            const payment = await prisma.payment.create({
+                data: {
+                    workspace_id: user.workspace_id,
+                    user_id: user.id,
+                    amount,
+                    type: 'MEMBERSHIP',
+                    reference: `${plan}:${billingCycle}`,
+                    description,
+                    status: 'PENDING',
+                    metadata: {
+                        plan,
+                        billing_cycle: billingCycle,
+                        base_price: basePrice,
+                        discount_mxn: discount,
+                        promo_code: promo?.code || null,
+                        promo_id: promo?.id || null,
+                        flow: 'card_brick',
+                        payment_method_id,
+                        installments,
+                    },
+                },
+            });
+
+            // 2) Charge MP via the Brick token.
+            let mpResp;
+            try {
+                mpResp = await createCardPayment({
+                    transaction_amount: amount,
+                    token,
+                    payment_method_id,
+                    installments,
+                    payer_email: effectivePayerEmail,
+                    description,
+                    external_reference: payment.id,
+                    metadata: {
+                        plan,
+                        billing_cycle: billingCycle,
+                        workspace_id: user.workspace_id,
+                        user_id: user.id,
+                    },
+                });
+            } catch (e) {
+                // Network / auth / validation error from MP — mark the
+                // Payment as REJECTED so admin dashboards don't show a
+                // permanent PENDING ghost, and surface a generic 502.
+                req.log.error(
+                    { err: e, paymentId: payment.id },
+                    '[memberships/subscribe-card] MP createCardPayment failed'
+                );
+                await prisma.payment.update({
+                    where: { id: payment.id },
+                    data: {
+                        status: 'REJECTED',
+                        mp_status_detail: 'mp_sdk_error',
+                        metadata: {
+                            ...(payment.metadata || {}),
+                            mp_error: e?.message || 'unknown',
+                        },
+                    },
+                });
+                throw err(
+                    'MP_ERROR',
+                    'No se pudo procesar el pago con Mercado Pago. Intenta de nuevo.',
+                    502
+                );
+            }
+
+            const mpStatus = mpResp?.status || 'rejected';
+            const newStatus = mapPaymentStatus(mpStatus);
+
+            // 3) Update the local Payment row with the MP result.
+            const updatedPayment = await prisma.payment.update({
+                where: { id: payment.id },
+                data: {
+                    mp_payment_id: mpResp?.id ? String(mpResp.id) : null,
+                    status: newStatus,
+                    mp_status_detail: mpResp?.status_detail || null,
+                    paid_at:
+                        newStatus === 'APPROVED'
+                            ? new Date(mpResp?.date_approved || Date.now())
+                            : null,
+                    metadata: {
+                        ...(payment.metadata || {}),
+                        mp_status: mpStatus,
+                        mp_status_detail: mpResp?.status_detail || null,
+                        mp_payment_method: mpResp?.payment_method_id || payment_method_id,
+                        mp_payment_type: mpResp?.payment_type_id || null,
+                        mp_installments: mpResp?.installments || installments,
+                    },
+                },
+            });
+
+            // 4) Approved → activate synchronously using the same helper
+            // the webhook uses. The webhook will later idempotently re-run
+            // on MP's own retry; activating here just removes the race.
+            if (newStatus === 'APPROVED') {
+                try {
+                    await activateMembershipFromPayment(fastify, updatedPayment);
+                } catch (e) {
+                    // If activation blows up we still keep the Payment
+                    // APPROVED; the webhook will retry. Log loud.
+                    req.log.error(
+                        { err: e, paymentId: updatedPayment.id },
+                        '[memberships/subscribe-card] activateMembershipFromPayment failed'
+                    );
+                }
+
+                // Bump promo used_count once the charge landed.
+                if (promo?.id) {
+                    try {
+                        await prisma.promoCode.update({
+                            where: { id: promo.id },
+                            data: { used_count: { increment: 1 } },
+                        });
+                    } catch (e) {
+                        req.log.warn(
+                            { err: e, promoId: promo.id },
+                            '[memberships/subscribe-card] promo used_count bump failed'
+                        );
+                    }
+                }
+
+                const membership = await prisma.membership.findUnique({
+                    where: { user_id: user.id },
+                });
+
+                return {
+                    success: true,
+                    payment: {
+                        id: updatedPayment.id,
+                        amount: updatedPayment.amount,
+                        status: updatedPayment.status,
+                        mp_payment_id: updatedPayment.mp_payment_id,
+                        discount_mxn: discount,
+                    },
+                    membership,
+                    welcome: welcomeCopyFor(plan),
+                };
+            }
+
+            // 5) Rejected / in-process → 402 so the Brick retries.
+            if (mpStatus === 'rejected' || mpStatus === 'cancelled') {
+                return reply.code(402).send({
+                    error: {
+                        code: 'PAYMENT_DECLINED',
+                        message:
+                            mpResp?.status_detail ||
+                            'El pago fue rechazado por el emisor. Verifica los datos o usa otra tarjeta.',
+                        retry_allowed: true,
+                    },
+                    statusCode: 402,
+                });
+            }
+
+            // in_process / pending / authorized-without-capture
+            return reply.code(402).send({
+                error: {
+                    code: 'PAYMENT_DECLINED',
+                    message:
+                        mpResp?.status_detail ||
+                        'Tu pago quedó en revisión. Recibirás confirmación en minutos.',
+                    retry_allowed: true,
+                },
+                statusCode: 402,
+            });
         }
     );
 
@@ -541,6 +860,174 @@ export default async function membershipsRoutes(fastify) {
                 limit,
                 pages: Math.max(1, Math.ceil(total / limit)),
                 memberships: rows,
+            };
+        }
+    );
+
+    // ─── POST /admin/memberships/assign ───────────────────────────
+    //
+    // Manual assignment (cash / transfer / terminal / complimentary).
+    // Skips MP entirely: we write an APPROVED Payment + ACTIVE
+    // Membership in one shot, leave an AuditLog row, and fire the
+    // `membership.assigned_manually` event so WhatsApp welcome +
+    // other automations kick in.
+    //
+    // Refuses if the user already has an ACTIVE membership — the
+    // admin is expected to renew via PATCH (or use this flow after
+    // the current one expires).
+    //
+    fastify.post(
+        '/admin/memberships/assign',
+        {
+            preHandler: [
+                fastify.authenticate,
+                fastify.requireRole('ADMIN', 'SUPERADMIN'),
+            ],
+        },
+        async (req) => {
+            const parsed = adminAssignBody.safeParse(req.body);
+            if (!parsed.success) {
+                throw err('BAD_BODY', parsed.error.message, 400);
+            }
+            const { user_id, plan, cycle, starts_at, note, method } = parsed.data;
+            const billingCycle = CYCLE_MAP[cycle];
+
+            const user = await prisma.user.findUnique({ where: { id: user_id } });
+            if (!user) throw err('USER_NOT_FOUND', 'Socio no encontrado', 404);
+
+            // Workspace tenant guard — admin can only assign inside
+            // their own workspace.
+            if (req.user.workspace_id && user.workspace_id !== req.user.workspace_id) {
+                throw err('FORBIDDEN', 'El socio pertenece a otro workspace', 403);
+            }
+
+            // Active membership → refuse with a clear hint.
+            const existing = await prisma.membership.findUnique({
+                where: { user_id: user.id },
+            });
+            if (existing && existing.status === 'ACTIVE') {
+                throw err(
+                    'MEMBERSHIP_ACTIVE',
+                    'El socio ya tiene una membresía ACTIVA. Usa PATCH /admin/memberships/:id para renovar o editar.',
+                    409
+                );
+            }
+
+            const basePrice = getPlanPrice(plan, billingCycle);
+            if (basePrice == null) {
+                throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
+            }
+
+            const startsAt = starts_at ? new Date(starts_at) : new Date();
+            const expiresAt = computeExpiresAt(billingCycle, startsAt);
+
+            // For COMPLIMENTARY (courtesy), record the price as 0 in
+            // the Payment row — useful for revenue reports.
+            const paymentAmount = method === 'COMPLIMENTARY' ? 0 : basePrice;
+
+            // 1) Write Payment (APPROVED, method-specific metadata).
+            const payment = await prisma.payment.create({
+                data: {
+                    workspace_id: user.workspace_id,
+                    user_id: user.id,
+                    amount: paymentAmount,
+                    type: 'MEMBERSHIP',
+                    reference: `${plan}:${billingCycle}:ADMIN_ASSIGN`,
+                    description: `Asignación manual ${plan} ${billingCycle} (${method})`,
+                    status: 'APPROVED',
+                    paid_at: new Date(),
+                    metadata: {
+                        plan,
+                        billing_cycle: billingCycle,
+                        admin_assigned: true,
+                        method,
+                        note: note || null,
+                        base_price: basePrice,
+                        assigned_by: req.user.sub || req.user.id,
+                        assigned_by_role: req.user.role,
+                    },
+                },
+            });
+
+            // 2) Upsert Membership — update if the user had an old
+            // EXPIRED/CANCELED row, otherwise create fresh.
+            let membership;
+            if (existing) {
+                membership = await prisma.membership.update({
+                    where: { id: existing.id },
+                    data: {
+                        plan,
+                        billing_cycle: billingCycle,
+                        starts_at: startsAt,
+                        expires_at: expiresAt,
+                        status: 'ACTIVE',
+                        price_mxn: basePrice,
+                        // Manual assignment defaults to NO auto-renew —
+                        // the gym will re-charge manually next cycle.
+                        auto_renew: false,
+                    },
+                });
+            } else {
+                membership = await prisma.membership.create({
+                    data: {
+                        workspace_id: user.workspace_id,
+                        user_id: user.id,
+                        plan,
+                        billing_cycle: billingCycle,
+                        starts_at: startsAt,
+                        expires_at: expiresAt,
+                        status: 'ACTIVE',
+                        price_mxn: basePrice,
+                        auto_renew: false,
+                    },
+                });
+            }
+
+            // 3) AuditLog — LFPDPPP trail for "who granted what".
+            await audit(fastify, {
+                workspace_id: user.workspace_id,
+                actor_id: req.user?.sub || req.user?.id || null,
+                action: 'membership.assigned_manually',
+                target_type: 'membership',
+                target_id: membership.id,
+                metadata: {
+                    user_id: user.id,
+                    user_name: user.full_name || user.name,
+                    plan,
+                    billing_cycle: billingCycle,
+                    method,
+                    note: note || null,
+                    amount_mxn: paymentAmount,
+                    payment_id: payment.id,
+                    actor_role: req.user?.role || null,
+                },
+                ...auditCtx(req),
+            });
+
+            // 4) Fire the event (welcome drip, WhatsApp greet, etc.).
+            await fireEvent('membership.assigned_manually', {
+                workspaceId: user.workspace_id,
+                userId: user.id,
+                membershipId: membership.id,
+                plan,
+                billingCycle,
+                method,
+            });
+
+            // Also fire member.verified so the existing welcome pipeline
+            // (mirrors what the walk-in + webhook flows do) runs.
+            await fireEvent('member.verified', {
+                workspaceId: user.workspace_id,
+                userId: user.id,
+                membershipId: membership.id,
+                plan,
+                billingCycle,
+            });
+
+            return {
+                membership,
+                payment,
+                welcome: welcomeCopyFor(plan),
             };
         }
     );
