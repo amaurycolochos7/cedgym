@@ -40,6 +40,27 @@ import {
   LayoutDashboard,
   Tag,
 } from 'lucide-react';
+
+function reasonLabel(reason?: string | null) {
+  switch (reason) {
+    case 'NOT_FOUND':
+      return 'Ese código no existe.';
+    case 'DISABLED':
+      return 'Ese código está pausado.';
+    case 'EXPIRED':
+      return 'Ese código ya expiró.';
+    case 'EXHAUSTED':
+      return 'Ese código llegó a su límite de usos.';
+    case 'MIN_AMOUNT':
+      return 'El monto de compra no alcanza para este código.';
+    case 'NOT_APPLICABLE':
+      return 'Ese código no aplica para membresías.';
+    case 'ERROR':
+      return 'No pudimos validar el código. Intenta de nuevo.';
+    default:
+      return 'Código inválido.';
+  }
+}
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -221,10 +242,6 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
               profileReady={profileReady}
               hasSelfie={hasSelfie}
               hasFullName={hasFullName}
-              promoOpen={promoOpen}
-              setPromoOpen={setPromoOpen}
-              promoCode={promoCode}
-              setPromoCode={setPromoCode}
               onContinue={() => {
                 if (!selectedPlan) {
                   toast.error('Elige un plan para continuar');
@@ -244,7 +261,8 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
               plan={selectedPlanDTO}
               cycle={cycle}
               amount={selectedAmount}
-              promoCode={promoCode.trim() || undefined}
+              promoCode={promoCode}
+              setPromoCode={setPromoCode}
               payerEmail={user?.email}
               onSuccess={(welcome, planName) => {
                 setWelcomePayload({ ...welcome, planName });
@@ -282,10 +300,6 @@ function StepPlans({
   profileReady,
   hasSelfie,
   hasFullName,
-  promoOpen,
-  setPromoOpen,
-  promoCode,
-  setPromoCode,
   onContinue,
 }: {
   loading: boolean;
@@ -297,10 +311,6 @@ function StepPlans({
   profileReady: boolean;
   hasSelfie: boolean;
   hasFullName: boolean;
-  promoOpen: boolean;
-  setPromoOpen: (v: boolean) => void;
-  promoCode: string;
-  setPromoCode: (v: string) => void;
   onContinue: () => void;
 }) {
   return (
@@ -374,41 +384,6 @@ function StepPlans({
           ))}
         </div>
       )}
-
-      {/* Promo code (toggleable) */}
-      <div className="rounded-2xl border border-dashed border-slate-300 p-3">
-        {!promoOpen ? (
-          <button
-            type="button"
-            onClick={() => setPromoOpen(true)}
-            className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
-          >
-            <Tag className="h-4 w-4" />
-            Tengo un código de descuento
-          </button>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <Tag className="h-4 w-4 text-slate-500" />
-            <input
-              type="text"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="CÓDIGO"
-              className="flex-1 min-w-[120px] rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setPromoCode('');
-                setPromoOpen(false);
-              }}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-700"
-            >
-              Quitar
-            </button>
-          </div>
-        )}
-      </div>
 
       <div className="flex flex-col-reverse items-stretch gap-2 pt-1 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
@@ -592,6 +567,7 @@ function StepPay({
   cycle,
   amount,
   promoCode,
+  setPromoCode,
   payerEmail,
   onSuccess,
   onBack,
@@ -599,7 +575,8 @@ function StepPay({
   plan: PlanDTO;
   cycle: Cycle;
   amount: number;
-  promoCode?: string;
+  promoCode: string;
+  setPromoCode: (v: string) => void;
   payerEmail?: string;
   onSuccess: (
     welcome: { title?: string; benefits?: string[] },
@@ -615,6 +592,19 @@ function StepPay({
   const [mpModules, setMpModules] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+
+  // Promo-code preview state. We call /promocodes/validate every time
+  // the user taps "Aplicar" and render the discount/total. On success
+  // the preview amount flows into the Card Brick init (or triggers the
+  // 100%-bypass button when the final amount is 0).
+  const [promoDraft, setPromoDraft] = useState(promoCode);
+  const [promoPreview, setPromoPreview] = useState<{
+    valid: boolean;
+    reason?: string | null;
+    discount_mxn: number;
+    final_amount: number;
+  } | null>(null);
+  const [promoChecking, setPromoChecking] = useState(false);
 
   // Lazy-load the MP SDK so it's code-split into its own chunk (the SDK is
   // heavy and only needed at the pay step). Client-only — we depend on
@@ -646,6 +636,91 @@ function StepPay({
     };
   }, [publicKey]);
 
+  const effectiveAmount = promoPreview?.valid
+    ? promoPreview.final_amount
+    : amount;
+  const is100Off = promoPreview?.valid && promoPreview.final_amount === 0;
+
+  const applyPromo = async () => {
+    const code = promoDraft.trim().toUpperCase();
+    if (!code) {
+      setPromoPreview(null);
+      setPromoCode('');
+      return;
+    }
+    setPromoChecking(true);
+    try {
+      const { data } = await api.post('/promocodes/validate', {
+        code,
+        amount_mxn: amount,
+        applies_to: 'MEMBERSHIP',
+      });
+      setPromoPreview({
+        valid: !!data.valid,
+        reason: data.reason,
+        discount_mxn: data.discount_mxn ?? 0,
+        final_amount: data.final_amount_mxn_preview ?? data.final_amount ?? amount,
+      });
+      if (data.valid) {
+        setPromoCode(code);
+        toast.success(
+          data.final_amount === 0
+            ? 'Código 100% aplicado. Puedes activar sin pago.'
+            : `Descuento aplicado: -$${(data.discount_mxn ?? 0).toLocaleString('es-MX')} MXN`,
+        );
+      } else {
+        setPromoCode('');
+        toast.error(reasonLabel(data.reason));
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'No pudimos validar el código.');
+      setPromoPreview({ valid: false, reason: 'ERROR', discount_mxn: 0, final_amount: amount });
+      setPromoCode('');
+    } finally {
+      setPromoChecking(false);
+    }
+  };
+
+  const clearPromo = () => {
+    setPromoDraft('');
+    setPromoCode('');
+    setPromoPreview(null);
+  };
+
+  const submitFree = async () => {
+    // 100%-off bypass: no card token. Backend detects amount === 0
+    // and activates the membership directly via the promo_100 branch.
+    setSubmitting(true);
+    setLastError(null);
+    try {
+      const { data } = await api.post('/memberships/subscribe-card', {
+        plan: plan.id,
+        cycle,
+        // No token/payment_method when amount is 0 — backend short-circuits.
+        token: 'courtesy',
+        payment_method_id: 'courtesy',
+        installments: 1,
+        payer_email: payerEmail,
+        promo_code: promoCode,
+      });
+      if (data?.success) {
+        toast.success('¡Membresía activada!');
+        onSuccess(data.welcome ?? {}, plan.name);
+      } else {
+        setLastError('Respuesta inesperada del servidor.');
+      }
+    } catch (err: any) {
+      const message =
+        err?.message ??
+        err?.response?.data?.error?.message ??
+        'No pudimos activar la membresía.';
+      setLastError(message);
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (formData: any) => {
     setSubmitting(true);
     setLastError(null);
@@ -657,7 +732,7 @@ function StepPay({
         payment_method_id: formData.payment_method_id,
         installments: formData.installments ?? 1,
         payer_email: formData.payer?.email || payerEmail,
-        promo_code: promoCode,
+        promo_code: promoCode || undefined,
       });
       const data = res.data;
       if (data?.success) {
@@ -694,25 +769,84 @@ function StepPay({
 
   return (
     <div className="space-y-4">
-      {/* Summary pill */}
+      {/* Summary pill — shows total with discount applied if any */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-4 text-white">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
             {cycle === 'monthly' ? 'Mensual' : cycle === 'quarterly' ? 'Trimestral' : 'Anual'}
           </div>
           <div className="font-display text-xl font-bold">{plan.name}</div>
-          {promoCode && (
-            <div className="mt-0.5 text-[11px] text-white/80">
-              Cupón aplicado: <span className="font-semibold">{promoCode}</span>
+          {promoPreview?.valid && (
+            <div className="mt-0.5 text-[11px] text-white/90">
+              Código <span className="font-semibold">{promoCode}</span> · ahorras ${promoPreview.discount_mxn.toLocaleString('es-MX')}
             </div>
           )}
         </div>
         <div className="text-right">
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Total</div>
+          {promoPreview?.valid && promoPreview.discount_mxn > 0 && (
+            <div className="text-xs text-white/70 line-through tabular-nums">
+              ${amount.toLocaleString('es-MX')}
+            </div>
+          )}
           <div className="font-display text-2xl font-bold tabular-nums">
-            ${amount.toLocaleString('es-MX')} <span className="text-xs">MXN</span>
+            ${effectiveAmount.toLocaleString('es-MX')} <span className="text-xs">MXN</span>
           </div>
         </div>
+      </div>
+
+      {/* Promo code input */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-600">
+          <Tag className="h-4 w-4 text-blue-600" />
+          Código de descuento
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={promoDraft}
+            onChange={(e) => setPromoDraft(e.target.value.toUpperCase())}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyPromo();
+              }
+            }}
+            placeholder="CÓDIGO (opcional)"
+            disabled={promoChecking || is100Off}
+            className="flex-1 min-w-[140px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono uppercase text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+          />
+          {promoPreview?.valid ? (
+            <button
+              type="button"
+              onClick={clearPromo}
+              className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+            >
+              Quitar
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={applyPromo}
+              disabled={promoChecking || !promoDraft.trim()}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {promoChecking ? 'Validando…' : 'Aplicar'}
+            </button>
+          )}
+        </div>
+        {promoPreview?.valid === false && (
+          <p className="mt-1.5 text-xs text-rose-600">
+            {reasonLabel(promoPreview.reason)}
+          </p>
+        )}
+        {promoPreview?.valid && (
+          <p className="mt-1.5 text-xs text-emerald-700">
+            {is100Off
+              ? '100% de descuento. Puedes activar tu membresía sin pago.'
+              : `Descuento aplicado: -$${promoPreview.discount_mxn.toLocaleString('es-MX')} MXN`}
+          </p>
+        )}
       </div>
 
       {lastError && (
@@ -721,8 +855,18 @@ function StepPay({
         </div>
       )}
 
-      {/* Brick / fallbacks */}
-      {sdkAvailable === false || !publicKey ? (
+      {/* 100%-off: skip Brick, show direct activation CTA */}
+      {is100Off ? (
+        <button
+          type="button"
+          onClick={submitFree}
+          disabled={submitting}
+          className="w-full rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 py-4 font-display text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-60"
+        >
+          {submitting ? 'Activando…' : '✓ Activar membresía sin costo'}
+        </button>
+      ) : /* Brick / fallbacks */
+      sdkAvailable === false || !publicKey ? (
         <MpFallback publicKeyMissing={!publicKey} />
       ) : sdkAvailable === null ? (
         <div className="h-72 animate-pulse rounded-2xl bg-slate-100" />
@@ -736,8 +880,11 @@ function StepPay({
             if (!CardPayment) return null;
             return (
               <CardPayment
+                // key forces remount when amount changes so the brick
+                // re-initializes with the new transaction_amount.
+                key={`brick-${effectiveAmount}`}
                 initialization={{
-                  amount,
+                  amount: effectiveAmount,
                   payer: payerEmail ? { email: payerEmail } : undefined,
                 }}
                 customization={{
@@ -749,7 +896,6 @@ function StepPay({
                 }}
                 onReady={() => setBrickReady(true)}
                 onSubmit={async (data: any) => {
-                  // data shape from MP SDK: { formData: {...} }
                   const formData = data?.formData ?? data;
                   await handleSubmit(formData);
                 }}
