@@ -6,10 +6,6 @@ import { Search, SlidersHorizontal } from 'lucide-react';
 import { productsApi } from '@/lib/api';
 import type { Product } from '@/lib/schemas';
 import { ProductCard } from '@/components/marketplace/product-card';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const SPORTS = [
   { v: '', l: 'Todos los deportes' },
@@ -81,6 +77,12 @@ const FALLBACK: Product[] = [
   },
 ];
 
+const inputCls =
+  'flex h-11 w-full rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60';
+
+const selectCls =
+  'flex h-11 w-full appearance-none rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60';
+
 export default function TiendaPage() {
   const [q, setQ] = useState('');
   const [sport, setSport] = useState('');
@@ -122,80 +124,88 @@ export default function TiendaPage() {
   return (
     <>
       <section className="mb-10">
-        <h1 className="text-4xl font-black uppercase leading-tight sm:text-5xl">
-          Tienda <span className="text-gradient">CED·GYM</span>
+        <h1 className="font-display text-4xl font-black leading-tight tracking-tight text-slate-900 sm:text-5xl">
+          Tienda{' '}
+          <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
+            CED·GYM
+          </span>
         </h1>
-        <p className="mt-3 max-w-2xl text-sm text-white/60 sm:text-base">
+        <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
           Rutinas, planes de nutrición y cursos diseñados por los entrenadores de
           la casa. Compra una vez, descarga para siempre.
         </p>
       </section>
 
       {/* Filters */}
-      <section className="mb-8 rounded-2xl border border-white/5 bg-brand-gray p-4 sm:p-6">
+      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex items-center justify-between gap-4 pb-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/60">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600">
             <SlidersHorizontal size={14} />
             Filtros{' '}
             {activeFilters > 0 && (
-              <Badge variant="brand">{activeFilters}</Badge>
+              <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-bold text-blue-700">
+                {activeFilters}
+              </span>
             )}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div className="relative lg:col-span-2">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-            <Input
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
               placeholder="Buscar..."
               value={q}
               onChange={(e) => {
                 setQ(e.target.value);
                 setPage(1);
               }}
-              className="pl-9"
+              className={`${inputCls} pl-9`}
             />
           </div>
-          <Select
+          <select
             value={sport}
             onChange={(e) => {
               setSport(e.target.value);
               setPage(1);
             }}
+            className={selectCls}
           >
             {SPORTS.map((s) => (
               <option key={s.v} value={s.v}>
                 {s.l}
               </option>
             ))}
-          </Select>
-          <Select
+          </select>
+          <select
             value={level}
             onChange={(e) => {
               setLevel(e.target.value);
               setPage(1);
             }}
+            className={selectCls}
           >
             {LEVELS.map((s) => (
               <option key={s.v} value={s.v}>
                 {s.l}
               </option>
             ))}
-          </Select>
-          <Select
+          </select>
+          <select
             value={kind}
             onChange={(e) => {
               setKind(e.target.value);
               setPage(1);
             }}
+            className={selectCls}
           >
             {KINDS.map((s) => (
               <option key={s.v} value={s.v}>
                 {s.l}
               </option>
             ))}
-          </Select>
+          </select>
           <div className="flex gap-2">
-            <Input
+            <input
               type="number"
               placeholder="Min $"
               value={minPrice}
@@ -203,8 +213,9 @@ export default function TiendaPage() {
               onChange={(e) =>
                 setMinPrice(e.target.value === '' ? '' : Number(e.target.value))
               }
+              className={inputCls}
             />
-            <Input
+            <input
               type="number"
               placeholder="Max $"
               value={maxPrice}
@@ -212,6 +223,7 @@ export default function TiendaPage() {
               onChange={(e) =>
                 setMaxPrice(e.target.value === '' ? '' : Number(e.target.value))
               }
+              className={inputCls}
             />
           </div>
         </div>
@@ -219,7 +231,7 @@ export default function TiendaPage() {
 
       {/* Results */}
       <section>
-        <div className="mb-4 flex items-center justify-between text-sm text-white/60">
+        <div className="mb-4 flex items-center justify-between text-sm text-slate-600">
           <span>
             {isLoading
               ? 'Cargando…'
@@ -228,35 +240,38 @@ export default function TiendaPage() {
         </div>
 
         {isError && (
-          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">
+          <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
             No pudimos cargar el catálogo. Mostrando ejemplos mientras tanto.
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
           {isLoading
             ? Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-80 rounded-3xl" />
+                <div
+                  key={i}
+                  className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-slate-100"
+                />
               ))
             : items.map((p) => <ProductCard key={p.id} product={p} />)}
         </div>
 
         {pages > 1 && (
-          <div className="mt-10 flex items-center justify-center gap-2">
+          <div className="mt-10 flex items-center justify-center gap-3">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/70 transition hover:border-brand-orange/40 hover:text-white disabled:opacity-40"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
             >
               Anterior
             </button>
-            <span className="text-xs text-white/60">
+            <span className="text-xs text-slate-500">
               Página {page} de {pages}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
               disabled={page === pages}
-              className="rounded-full border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white/70 transition hover:border-brand-orange/40 hover:text-white disabled:opacity-40"
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
             >
               Siguiente
             </button>

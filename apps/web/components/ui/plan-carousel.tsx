@@ -41,7 +41,9 @@ export function PlanCarousel({ children, className }: PlanCarouselProps) {
     <>
       {/* Mobile: carousel */}
       <div className={cn('md:hidden', className)}>
-        <div className="overflow-hidden" ref={emblaRef}>
+        {/* pt-5 gives the floating "El más popular" badge (-top-3) room so overflow-hidden
+            doesn't clip it. pb-2 matches so the shadow isn't chopped either. */}
+        <div className="overflow-hidden py-5" ref={emblaRef}>
           <div className="flex touch-pan-y">
             {React.Children.map(children, (child, i) => (
               <div key={i} className="min-w-0 flex-[0_0_85%] pl-4 first:pl-6 last:pr-6">
@@ -55,7 +57,7 @@ export function PlanCarousel({ children, className }: PlanCarouselProps) {
           <button
             type="button"
             onClick={() => emblaApi?.scrollPrev()}
-            className="rounded-full border border-zinc-700 p-1.5 text-zinc-400 hover:text-white disabled:opacity-30"
+            className="rounded-full border border-slate-300 bg-white p-1.5 text-slate-500 transition hover:border-blue-600 hover:text-blue-600 disabled:opacity-40"
             aria-label="Anterior"
             disabled={selectedIndex === 0}
           >
@@ -70,7 +72,7 @@ export function PlanCarousel({ children, className }: PlanCarouselProps) {
                 aria-label={`Ir al plan ${i + 1}`}
                 className={cn(
                   'h-2 rounded-full transition-all',
-                  i === selectedIndex ? 'w-6 bg-brand-orange' : 'w-2 bg-zinc-700'
+                  i === selectedIndex ? 'w-6 bg-blue-600' : 'w-2 bg-slate-300'
                 )}
               />
             ))}
@@ -78,7 +80,7 @@ export function PlanCarousel({ children, className }: PlanCarouselProps) {
           <button
             type="button"
             onClick={() => emblaApi?.scrollNext()}
-            className="rounded-full border border-zinc-700 p-1.5 text-zinc-400 hover:text-white disabled:opacity-30"
+            className="rounded-full border border-slate-300 bg-white p-1.5 text-slate-500 transition hover:border-blue-600 hover:text-blue-600 disabled:opacity-40"
             aria-label="Siguiente"
             disabled={selectedIndex === React.Children.count(children) - 1}
           >

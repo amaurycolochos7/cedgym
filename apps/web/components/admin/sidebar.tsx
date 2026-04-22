@@ -22,7 +22,6 @@ import {
   ShieldCheck,
   AlarmClock,
   X,
-  ChevronLeft,
   type LucideIcon,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
@@ -103,29 +102,29 @@ export function Sidebar({ variant = 'admin', open, onClose }: SidebarProps) {
       {/* Mobile overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-white/5 bg-neutral-950/95 backdrop-blur transition-transform',
+          'fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white transition-transform',
           'lg:sticky lg:top-0 lg:h-screen lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-white/5 px-5">
+        <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
           <Link
             href={variant === 'admin' ? '/admin/dashboard' : '/staff/scan'}
             className="flex items-center gap-2.5"
           >
             <Logo size="sm" href={null} imageOnly />
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-bold tracking-wider text-white">
+              <span className="text-sm font-bold tracking-wider text-slate-900">
                 CED·GYM
               </span>
-              <span className="text-[10px] uppercase tracking-widest text-brand-orange">
+              <span className="text-[10px] uppercase tracking-widest text-blue-600">
                 {variant === 'admin' ? 'Panel Admin' : 'Staff'}
               </span>
             </div>
@@ -133,7 +132,7 @@ export function Sidebar({ variant = 'admin', open, onClose }: SidebarProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-white/60 hover:bg-white/5 hover:text-white lg:hidden"
+            className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden"
             aria-label="Cerrar menú"
           >
             <X className="h-4 w-4" />
@@ -144,7 +143,7 @@ export function Sidebar({ variant = 'admin', open, onClose }: SidebarProps) {
           {groups.map(([group, its]) => (
             <div key={group} className="mb-2">
               {group !== '—' && (
-                <div className="px-5 py-2 text-[10px] font-semibold uppercase tracking-widest text-white/30">
+                <div className="px-5 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                   {group}
                 </div>
               )}
@@ -160,13 +159,18 @@ export function Sidebar({ variant = 'admin', open, onClose }: SidebarProps) {
                         href={item.href}
                         onClick={onClose}
                         className={cn(
-                          'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition',
                           active
-                            ? 'bg-brand-orange/10 text-brand-orange ring-1 ring-inset ring-brand-orange/20'
-                            : 'text-white/70 hover:bg-white/5 hover:text-white',
+                            ? 'bg-blue-50 font-semibold text-blue-700'
+                            : 'font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900',
                         )}
                       >
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon
+                          className={cn(
+                            'h-4 w-4 shrink-0',
+                            active ? 'text-blue-600' : 'text-slate-400',
+                          )}
+                        />
                         <span>{item.label}</span>
                       </Link>
                     </li>
@@ -177,15 +181,6 @@ export function Sidebar({ variant = 'admin', open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="border-t border-white/5 p-3">
-          <Link
-            href="/portal/dashboard"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/50 hover:bg-white/5 hover:text-white"
-          >
-            <ChevronLeft className="h-3 w-3" />
-            Volver al portal atleta
-          </Link>
-        </div>
       </aside>
     </>
   );

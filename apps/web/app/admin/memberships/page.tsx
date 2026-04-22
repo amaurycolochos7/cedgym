@@ -3,10 +3,7 @@
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Send, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Plus, Send, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +14,13 @@ import {
 } from '@/components/ui/dialog';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { DataTable } from '@/components/admin/data-table';
-import { adminApi, type AdminMember, type AdminMembershipPlan } from '@/lib/admin-api';
+import { MemberSearch } from '@/components/admin/member-search';
+import { AssignPlanModal } from '@/components/admin/assign-plan-modal';
+import {
+  adminApi,
+  type AdminMember,
+  type AdminMembershipPlan,
+} from '@/lib/admin-api';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useAuth } from '@/lib/auth';
 
@@ -26,6 +29,15 @@ const MXN = new Intl.NumberFormat('es-MX', {
   currency: 'MXN',
   maximumFractionDigits: 0,
 });
+
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_DANGER =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60 disabled:pointer-events-none';
 
 export default function AdminMembershipsPage() {
   const qc = useQueryClient();
@@ -53,6 +65,8 @@ export default function AdminMembershipsPage() {
 
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [toDelete, setToDelete] = React.useState<AdminMember | null>(null);
+  const [assignPicker, setAssignPicker] = React.useState(false);
+  const [assignFor, setAssignFor] = React.useState<AdminMember | null>(null);
 
   const broadcast = useMutation({
     mutationFn: () => adminApi.broadcastMembershipReminder([...selected]),
@@ -97,7 +111,7 @@ export default function AdminMembershipsPage() {
                 setSelected(new Set());
               }
             }}
-            className="accent-brand-orange"
+            className="accent-blue-600"
           />
         ),
         cell: ({ row }) => (
@@ -111,7 +125,7 @@ export default function AdminMembershipsPage() {
               else next.delete(row.original.id);
               setSelected(next);
             }}
-            className="accent-brand-orange"
+            className="accent-blue-600"
           />
         ),
       },
@@ -132,18 +146,17 @@ export default function AdminMembershipsPage() {
               id: 'actions',
               header: () => <span className="sr-only">Acciones</span>,
               cell: ({ row }: { row: { original: AdminMember } }) => (
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setToDelete(row.original);
                   }}
                   aria-label="Eliminar membresía"
-                  className="text-red-400 hover:text-red-300"
+                  className="inline-flex items-center rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                </button>
               ),
             } as ColumnDef<AdminMember>,
           ]
@@ -155,18 +168,26 @@ export default function AdminMembershipsPage() {
   return (
     <div className="space-y-6">
       <section>
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
               Planes
             </h2>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-slate-500">
               Precios por ciclo. Editar guarda inmediatamente.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setAssignPicker(true)}
+            className={BTN_PRIMARY}
+          >
+            <Plus className="h-4 w-4" />
+            Asignar plan a miembro
+          </button>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {plans?.map((p) => (
+          {plans?.map((p: AdminMembershipPlan) => (
             <PlanEditor
               key={p.id}
               plan={p}
@@ -180,35 +201,36 @@ export default function AdminMembershipsPage() {
 
       <section>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
             Membresías activas
           </h2>
-          <Input
+          <input
             placeholder="Buscar socio"
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            className="ml-4 h-9 max-w-xs"
+            className={`${INPUT_CLS} ml-4 max-w-xs`}
           />
-          <Select
+          <select
             value={filters.plan}
             onChange={(e) => setFilters({ ...filters, plan: e.target.value })}
-            className="h-9 max-w-[160px]"
+            className={`${INPUT_CLS} max-w-[160px]`}
           >
             <option value="">Todos los planes</option>
             <option value="starter">Básico</option>
             <option value="pro">Pro</option>
             <option value="elite">Élite</option>
-          </Select>
+          </select>
 
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              variant="ghost"
+            <button
+              type="button"
               disabled={selected.size === 0 || broadcast.isPending}
               onClick={() => broadcast.mutate()}
+              className={BTN_SECONDARY}
             >
-              <Send className="h-3 w-3" />
+              <Send className="h-3.5 w-3.5" />
               Recordatorio ({selected.size})
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -226,11 +248,59 @@ export default function AdminMembershipsPage() {
         }
         loading={del.isPending}
       />
+
+      {/* Picker para elegir el miembro al que asignar plan */}
+      <Dialog
+        open={assignPicker}
+        onOpenChange={(v) => !v && setAssignPicker(false)}
+      >
+        <DialogContent className="bg-white border-slate-200 text-slate-900">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900">
+              Asignar plan a miembro
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Busca al socio por nombre, teléfono o email. Si ya tiene una
+              membresía activa, recibirás un aviso.
+            </DialogDescription>
+          </DialogHeader>
+          <MemberSearch
+            onSelect={(m) => {
+              setAssignPicker(false);
+              setAssignFor(m);
+            }}
+          />
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setAssignPicker(false)}
+              className={BTN_SECONDARY}
+            >
+              Cancelar
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {assignFor && (
+        <AssignPlanModal
+          open={!!assignFor}
+          onClose={() => setAssignFor(null)}
+          member={{
+            id: assignFor.id,
+            name: assignFor.name,
+            phone: assignFor.phone,
+          }}
+          onAssigned={() => {
+            qc.invalidateQueries({ queryKey: ['admin', 'memberships-active'] });
+            qc.invalidateQueries({ queryKey: ['admin', 'members'] });
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// Modal de eliminación: motivo obligatorio (10-500 chars).
 function DeleteMembershipDialog({
   member,
   onClose,
@@ -249,47 +319,54 @@ function DeleteMembershipDialog({
 
   return (
     <Dialog open={!!member} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
+      <DialogContent className="bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>Eliminar membresía</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-slate-900">
+            Eliminar membresía
+          </DialogTitle>
+          <DialogDescription className="text-slate-600">
             Se borrará de la base de datos permanentemente.
           </DialogDescription>
         </DialogHeader>
 
         {member && (
-          <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 text-sm">
-            <div className="font-semibold text-white">{member.name}</div>
-            <div className="text-white/50">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+            <div className="font-semibold text-slate-900">{member.name}</div>
+            <div className="text-slate-500">
               {member.plan_name ?? 'Sin plan'} · {member.phone}
             </div>
           </div>
         )}
 
-        <label className="block text-xs uppercase tracking-wider text-white/50">
+        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
           Motivo (opcional)
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={2}
             placeholder="Ej. Socio pidió baja"
-            className="mt-2 w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:border-brand-orange/60 focus:outline-none"
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none"
             maxLength={500}
           />
         </label>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => onConfirm(reason.trim())}
-            loading={loading}
+          <button
+            type="button"
+            onClick={onClose}
             disabled={loading}
+            className={BTN_SECONDARY}
           >
-            Eliminar membresía
-          </Button>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(reason.trim())}
+            disabled={loading}
+            className={BTN_DANGER}
+          >
+            {loading ? 'Eliminando…' : 'Eliminar membresía'}
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -314,40 +391,43 @@ function PlanEditor({
   });
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-brand-orange">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
             {form.code}
           </div>
-          <h3 className="text-base font-bold text-white">{form.name}</h3>
+          <h3 className="text-base font-bold text-slate-900">{form.name}</h3>
         </div>
-        <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-white/70">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-700">
           <input
             type="checkbox"
             checked={form.enabled}
             onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-            className="accent-brand-orange"
+            className="accent-blue-600"
           />
           Activo
         </label>
       </div>
 
       <div className="space-y-2">
-        <label className="block text-[11px] uppercase tracking-wider text-white/50">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
           Mensual (MXN)
-          <Input
+          <input
             type="number"
             value={form.monthly_price_mxn}
             onChange={(e) =>
-              setForm({ ...form, monthly_price_mxn: Number(e.target.value) })
+              setForm({
+                ...form,
+                monthly_price_mxn: Number(e.target.value),
+              })
             }
-            className="mt-1"
+            className={`${INPUT_CLS} mt-1`}
           />
         </label>
-        <label className="block text-[11px] uppercase tracking-wider text-white/50">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
           Trimestral (MXN)
-          <Input
+          <input
             type="number"
             value={form.quarterly_price_mxn}
             onChange={(e) =>
@@ -356,27 +436,35 @@ function PlanEditor({
                 quarterly_price_mxn: Number(e.target.value),
               })
             }
-            className="mt-1"
+            className={`${INPUT_CLS} mt-1`}
           />
         </label>
-        <label className="block text-[11px] uppercase tracking-wider text-white/50">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
           Anual (MXN)
-          <Input
+          <input
             type="number"
             value={form.yearly_price_mxn}
             onChange={(e) =>
-              setForm({ ...form, yearly_price_mxn: Number(e.target.value) })
+              setForm({
+                ...form,
+                yearly_price_mxn: Number(e.target.value),
+              })
             }
-            className="mt-1"
+            className={`${INPUT_CLS} mt-1`}
           />
         </label>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-white/40">
+      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
         <span>Mensual: {MXN.format(form.monthly_price_mxn)}</span>
-        <Button size="sm" onClick={() => mut.mutate()} loading={mut.isPending}>
-          Guardar
-        </Button>
+        <button
+          type="button"
+          onClick={() => mut.mutate()}
+          disabled={mut.isPending}
+          className={BTN_PRIMARY}
+        >
+          {mut.isPending ? 'Guardando…' : 'Guardar'}
+        </button>
       </div>
     </div>
   );

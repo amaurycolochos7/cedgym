@@ -5,7 +5,6 @@ import { useMutation } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Camera, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
 
 declare global { interface Window { Html5Qrcode: any } }
 
@@ -109,27 +108,39 @@ export default function StaffScanPage() {
   useEffect(() => () => { stopCamera(); }, []);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8">
       <div>
-        <h1 className="text-3xl font-bold">Check-in por QR</h1>
-        <p className="text-zinc-400 mt-1">
+        <h1 className="text-3xl font-bold text-slate-900">Escanear QR</h1>
+        <p className="mt-1 text-sm text-slate-600">
           Escanea el QR del atleta. {history.length} check-ins este turno.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-4">
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <div
             id="qr-reader"
-            className="w-full aspect-square bg-zinc-950 rounded-lg overflow-hidden flex items-center justify-center text-zinc-600"
+            className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-slate-500"
           >
-            {!active && <Camera className="w-12 h-12" />}
+            {!active && <Camera className="h-12 w-12" />}
           </div>
           <div className="mt-3 flex gap-2">
             {!active ? (
-              <Button onClick={startCamera}>Iniciar cámara</Button>
+              <button
+                type="button"
+                onClick={startCamera}
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700"
+              >
+                Iniciar cámara
+              </button>
             ) : (
-              <Button variant="ghost" onClick={stopCamera}>Detener</Button>
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Detener
+              </button>
             )}
           </div>
         </div>
@@ -138,40 +149,45 @@ export default function StaffScanPage() {
           className={
             result
               ? result.ok
-                ? 'bg-emerald-600/20 border border-emerald-500 rounded-2xl p-6'
-                : 'bg-red-600/20 border border-red-500 rounded-2xl p-6'
-              : 'bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6'
+                ? 'rounded-2xl border border-emerald-200 bg-emerald-50 p-6'
+                : 'rounded-2xl border border-rose-200 bg-rose-50 p-6'
+              : 'rounded-2xl border border-slate-200 bg-white p-6'
           }
         >
           {!result && (
-            <div className="text-zinc-500 text-center py-16">
+            <div className="py-16 text-center text-slate-500">
               Esperando escaneo…
             </div>
           )}
           {result?.ok && (
             <div className="space-y-3">
-              <CheckCircle2 className="w-16 h-16 text-emerald-400 mx-auto" />
+              <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-600" />
               <div className="text-center">
-                <div className="text-2xl font-bold">{result.member?.name}</div>
-                <div className="text-sm text-zinc-300 mt-1">
-                  {result.member?.plan} · Vence {result.member?.expires_at?.slice(0, 10)}
+                <div className="text-2xl font-bold text-slate-900">
+                  {result.member?.name}
                 </div>
-                <div className="text-xs text-zinc-400 mt-2">
-                  🔥 Racha: {result.member?.current_streak_days ?? 0} días
+                <div className="mt-1 text-sm text-slate-700">
+                  {result.member?.plan} · Vence{' '}
+                  {result.member?.expires_at?.slice(0, 10)}
+                </div>
+                <div className="mt-2 text-xs text-slate-500">
+                  Racha: {result.member?.current_streak_days ?? 0} días
                 </div>
               </div>
             </div>
           )}
           {result && !result.ok && (
             <div className="space-y-3">
-              <XCircle className="w-16 h-16 text-red-400 mx-auto" />
+              <XCircle className="mx-auto h-16 w-16 text-rose-600" />
               <div className="text-center">
-                <div className="text-lg font-semibold">{result.error.code}</div>
-                <div className="text-sm text-zinc-300 mt-1">
+                <div className="text-lg font-semibold text-slate-900">
+                  {result.error.code}
+                </div>
+                <div className="mt-1 text-sm text-slate-700">
                   {result.error.message}
                 </div>
                 {result.error.code === 'DUPLICATE' && result.error.user_name && (
-                  <div className="mt-2 text-xs text-zinc-400">
+                  <div className="mt-2 text-xs text-slate-500">
                     {result.error.user_name}
                     {typeof result.error.retry_after_sec === 'number' &&
                       ` — espera ${Math.ceil(result.error.retry_after_sec / 60)} min`}
@@ -181,7 +197,8 @@ export default function StaffScanPage() {
               {/* Override: permitir reingreso cuando es legítimo. */}
               {result.error.code === 'DUPLICATE' && result.error.user_id && (
                 <div className="space-y-2 pt-2">
-                  <Button
+                  <button
+                    type="button"
                     onClick={() => {
                       const reason = window.prompt(
                         'Motivo del reingreso (opcional): p.ej. "salió al auto"',
@@ -194,13 +211,13 @@ export default function StaffScanPage() {
                         reason: reason.trim() || undefined,
                       });
                     }}
-                    className="w-full gap-2"
-                    loading={override.isPending}
+                    disabled={override.isPending}
+                    className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60"
                   >
-                    <ShieldCheck className="w-4 h-4" />
-                    Permitir reingreso
-                  </Button>
-                  <p className="text-center text-[11px] text-zinc-500">
+                    <ShieldCheck className="h-4 w-4" />
+                    {override.isPending ? 'Autorizando…' : 'Permitir reingreso'}
+                  </button>
+                  <p className="text-center text-[11px] text-slate-500">
                     Queda registrado en auditoría con tu usuario.
                   </p>
                 </div>
@@ -210,16 +227,19 @@ export default function StaffScanPage() {
         </div>
       </div>
 
-      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5">
-        <h3 className="font-semibold mb-3">Historial del turno</h3>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <h3 className="mb-3 font-semibold text-slate-900">Historial del turno</h3>
         {history.length === 0 ? (
-          <p className="text-zinc-500 text-sm">Aún no hay check-ins.</p>
+          <p className="text-sm text-slate-500">Aún no hay check-ins.</p>
         ) : (
-          <div className="space-y-1 text-sm max-h-60 overflow-y-auto">
+          <div className="max-h-60 space-y-1 overflow-y-auto text-sm">
             {history.map((h, i) => (
-              <div key={i} className="flex justify-between py-1 border-b border-zinc-800 last:border-0">
-                <span>{h.member?.name}</span>
-                <span className="text-zinc-500">
+              <div
+                key={i}
+                className="flex justify-between border-b border-slate-200 py-1 last:border-0"
+              >
+                <span className="text-slate-900">{h.member?.name}</span>
+                <span className="text-slate-500">
                   {new Date(h.at).toLocaleTimeString('es-MX')}
                 </span>
               </div>

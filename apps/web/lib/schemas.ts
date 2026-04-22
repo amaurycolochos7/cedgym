@@ -36,7 +36,13 @@ export const otpSchema = z
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Nombre demasiado corto').max(80),
-  email: emailSchema,
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email('Correo electrónico inválido')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
   phone: mxPhoneSchema,
   password: passwordSchema,
 });

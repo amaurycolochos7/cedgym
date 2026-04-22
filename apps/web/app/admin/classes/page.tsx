@@ -20,9 +20,6 @@ import {
   CalendarDays,
   List as ListIcon,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -30,7 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import {
   Tabs,
   TabsContent,
@@ -58,6 +54,15 @@ const SPORTS = [
   { value: 'NUTRITION', label: 'Nutrición' },
   { value: 'OTHER', label: 'Otro' },
 ];
+
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_DANGER =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60 disabled:pointer-events-none';
 
 export default function AdminClassesPage() {
   const qc = useQueryClient();
@@ -108,41 +113,45 @@ export default function AdminClassesPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+          <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Clases
           </h2>
-          <p className="text-xs text-white/50">
+          <p className="text-sm text-slate-600 mt-1">
             {format(weekStart, 'dd MMM')} – {format(weekEnd, 'dd MMM yyyy')}
           </p>
         </div>
         <div className="ml-2 flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setAnchor(subWeeks(anchor, 1))}
+            className="inline-flex items-center rounded-lg p-2 text-slate-600 hover:bg-slate-100"
           >
-            <ChevronLeft className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => setAnchor(new Date())}
+            className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
           >
             Hoy
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
+          </button>
+          <button
+            type="button"
             onClick={() => setAnchor(addWeeks(anchor, 1))}
+            className="inline-flex items-center rounded-lg p-2 text-slate-600 hover:bg-slate-100"
           >
-            <ChevronRight className="h-3 w-3" />
-          </Button>
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
         <div className="ml-auto">
-          <Button onClick={() => setNewOpen(true)}>
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            className={BTN_PRIMARY}
+          >
             <Plus className="h-4 w-4" />
             Nueva clase
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -170,49 +179,51 @@ export default function AdminClassesPage() {
                   key={key}
                   className={`rounded-2xl border p-3 ${
                     today
-                      ? 'border-brand-orange/40 bg-brand-orange/5'
-                      : 'border-white/10 bg-white/[0.02]'
+                      ? 'border-blue-300 bg-blue-50'
+                      : 'border-slate-200 bg-white'
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between">
                     <div>
-                      <div className="text-[10px] uppercase tracking-wider text-white/40">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                         {DAYS[i]}
                       </div>
-                      <div className="text-lg font-bold text-white">
+                      <div className="text-lg font-bold text-slate-900">
                         {format(d, 'd')}
                       </div>
                     </div>
                     {today && (
-                      <Badge variant="brand" className="text-[9px]">
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold bg-blue-600 text-white">
                         Hoy
-                      </Badge>
+                      </span>
                     )}
                   </div>
                   <div className="space-y-1.5">
                     {items.length === 0 && (
-                      <div className="text-[11px] text-white/30">—</div>
+                      <div className="text-[11px] text-slate-400">—</div>
                     )}
                     {items.map((c) => (
                       <button
                         key={c.id}
                         type="button"
                         onClick={() => setDetail(c)}
-                        className="block w-full rounded-md border border-white/10 bg-white/[0.02] p-2 text-left text-[11px] hover:border-brand-orange/30 hover:bg-brand-orange/5"
+                        className="block w-full rounded-lg border border-slate-200 bg-white p-2 text-left text-[11px] hover:border-blue-300 hover:bg-blue-50"
                       >
-                        <div className="font-semibold text-white">{c.name}</div>
-                        <div className="text-white/50">
+                        <div className="font-semibold text-slate-900">
+                          {c.name}
+                        </div>
+                        <div className="text-slate-500">
                           {format(parseISO(c.starts_at), 'HH:mm')} ·{' '}
                           {c.coach_name ?? '—'}
                         </div>
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="text-white/60">
+                          <span className="text-slate-600">
                             {c.booked}/{c.capacity}
                           </span>
                           {c.status === 'cancelled' && (
-                            <Badge variant="danger" className="text-[9px]">
+                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">
                               Cancelada
-                            </Badge>
+                            </span>
                           )}
                         </div>
                       </button>
@@ -235,52 +246,59 @@ export default function AdminClassesPage() {
 
       {/* Detail */}
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg bg-white border-slate-200 text-slate-900">
           {detail && (
             <>
               <DialogHeader>
-                <DialogTitle>{detail.name}</DialogTitle>
+                <DialogTitle className="text-slate-900">
+                  {detail.name}
+                </DialogTitle>
               </DialogHeader>
-              <div className="space-y-2 text-sm text-white/80">
+              <div className="space-y-2 text-sm text-slate-700">
                 <div>
-                  <span className="text-white/50">Coach:</span>{' '}
+                  <span className="text-slate-500">Coach:</span>{' '}
                   {detail.coach_name ?? '—'}
                 </div>
                 <div>
-                  <span className="text-white/50">Inicia:</span>{' '}
+                  <span className="text-slate-500">Inicia:</span>{' '}
                   {format(parseISO(detail.starts_at), 'PPpp')}
                 </div>
                 <div>
-                  <span className="text-white/50">Reservados:</span>{' '}
+                  <span className="text-slate-500">Reservados:</span>{' '}
                   {detail.booked}/{detail.capacity}
                 </div>
                 {detail.location && (
                   <div>
-                    <span className="text-white/50">Ubicación:</span>{' '}
+                    <span className="text-slate-500">Ubicación:</span>{' '}
                     {detail.location}
                   </div>
                 )}
                 {detail.min_plan && (
                   <div>
-                    <span className="text-white/50">Plan mínimo:</span>{' '}
+                    <span className="text-slate-500">Plan mínimo:</span>{' '}
                     {detail.min_plan}
                   </div>
                 )}
               </div>
               <DialogFooter>
-                <Button variant="ghost" onClick={() => setDetail(null)}>
+                <button
+                  type="button"
+                  onClick={() => setDetail(null)}
+                  className={BTN_SECONDARY}
+                >
                   Cerrar
-                </Button>
-                <Button
-                  variant="destructive"
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setCancel(detail);
                     setDetail(null);
                   }}
                   disabled={detail.status === 'cancelled'}
+                  className={BTN_DANGER}
                 >
                   Cancelar clase
-                </Button>
+                </button>
               </DialogFooter>
             </>
           )}
@@ -344,105 +362,129 @@ function ClassListTable({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Input
+        <input
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
             setPage(0);
           }}
           placeholder="Buscar clase o coach…"
-          className="max-w-xs"
+          className={`${INPUT_CLS} max-w-xs`}
         />
-        <div className="ml-auto text-xs text-white/50">
+        <div className="ml-auto text-xs text-slate-500">
           {total} resultados
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-        <table className="w-full text-sm">
-          <thead className="text-left text-[11px] uppercase tracking-wider text-white/40">
-            <tr>
-              <th className="px-3 py-2">Clase</th>
-              <th className="px-3 py-2">Coach</th>
-              <th className="px-3 py-2">Inicia</th>
-              <th className="px-3 py-2">Capacidad</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((c) => (
-              <tr
-                key={c.id}
-                className="border-t border-white/5 text-white/80 hover:bg-white/[0.02]"
-              >
-                <td className="px-3 py-2 font-semibold text-white">
-                  {c.name}
-                </td>
-                <td className="px-3 py-2">{c.coach_name ?? '—'}</td>
-                <td className="px-3 py-2">
-                  {format(parseISO(c.starts_at), 'dd/MM HH:mm')}
-                </td>
-                <td className="px-3 py-2">
-                  {c.booked}/{c.capacity}
-                </td>
-                <td className="px-3 py-2">
-                  {c.status === 'cancelled' ? (
-                    <Badge variant="danger">Cancelada</Badge>
-                  ) : (
-                    <Badge variant="muted">Programada</Badge>
-                  )}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <Button variant="ghost" size="sm" onClick={() => onOpen(c)}>
-                    Ver
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onCancel(c)}
-                    disabled={c.status === 'cancelled'}
-                  >
-                    Cancelar
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-slate-700">
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-3 py-6 text-center text-xs text-white/40"
-                >
-                  Sin clases para esta semana.
-                </td>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Clase
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Coach
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Inicia
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Capacidad
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">
+                  Acciones
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((c) => (
+                <tr
+                  key={c.id}
+                  className="border-t border-slate-200 text-slate-700 hover:bg-slate-50"
+                >
+                  <td className="px-4 py-3.5 font-semibold text-slate-900">
+                    {c.name}
+                  </td>
+                  <td className="px-4 py-3.5">{c.coach_name ?? '—'}</td>
+                  <td className="px-4 py-3.5">
+                    {format(parseISO(c.starts_at), 'dd/MM HH:mm')}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    {c.booked}/{c.capacity}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    {c.status === 'cancelled' ? (
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+                        Cancelada
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        Programada
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
+                    <div className="inline-flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onOpen(c)}
+                        className={BTN_SECONDARY}
+                      >
+                        Ver
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onCancel(c)}
+                        disabled={c.status === 'cancelled'}
+                        className={BTN_SECONDARY}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-6 text-center text-xs text-slate-500"
+                  >
+                    Sin clases para esta semana.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {pages > 1 && (
-        <div className="flex items-center justify-end gap-2 text-xs text-white/50">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="flex items-center justify-end gap-2 text-xs text-slate-500">
+          <button
+            type="button"
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
+            className="inline-flex items-center rounded-lg p-1.5 hover:bg-slate-100 disabled:opacity-40"
           >
-            <ChevronLeft className="h-3 w-3" />
-          </Button>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
           <span>
             {page + 1} / {pages}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setPage((p) => Math.min(pages - 1, p + 1))}
             disabled={page >= pages - 1}
+            className="inline-flex items-center rounded-lg p-1.5 hover:bg-slate-100 disabled:opacity-40"
           >
-            <ChevronRight className="h-3 w-3" />
-          </Button>
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>
@@ -450,8 +492,7 @@ function ClassListTable({
 }
 
 /* =========================================================================
- * New class dialog — uses the admin POST /admin/classes endpoint with
- * optional weekly repetition (0 = only this date, 1-52 = repeat N weeks).
+ * New class dialog
  * =========================================================================*/
 
 function NewClassDialog({
@@ -477,7 +518,6 @@ function NewClassDialog({
     repeat_weeks: 0,
   });
 
-  // Reset when opening.
   React.useEffect(() => {
     if (open) {
       setForm({
@@ -521,42 +561,50 @@ function NewClassDialog({
   });
 
   const disabled =
-    !form.name || !form.trainer_id || !form.location || !form.date || !form.time;
+    !form.name ||
+    !form.trainer_id ||
+    !form.location ||
+    !form.date ||
+    !form.time;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>Nueva clase</DialogTitle>
+          <DialogTitle className="text-slate-900">Nueva clase</DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
           <div>
-            <label className="mb-1 block text-xs text-white/60">Nombre</label>
-            <Input
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              Nombre
+            </label>
+            <input
               placeholder="Ej. Boxeo intermedio"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className={INPUT_CLS}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Deporte
               </label>
-              <Select
+              <select
                 value={form.sport}
                 onChange={(e) => setForm({ ...form, sport: e.target.value })}
+                className={INPUT_CLS}
               >
                 {SPORTS.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Trainer
               </label>
               <TrainerAutocomplete
@@ -575,31 +623,35 @@ function NewClassDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Fecha inicio
               </label>
-              <Input
+              <input
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
+                className={INPUT_CLS}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">Hora</label>
-              <Input
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
+                Hora
+              </label>
+              <input
                 type="time"
                 value={form.time}
                 onChange={(e) => setForm({ ...form, time: e.target.value })}
+                className={INPUT_CLS}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Duración (min)
               </label>
-              <Input
+              <input
                 type="number"
                 min={10}
                 max={300}
@@ -610,26 +662,28 @@ function NewClassDialog({
                     duration_min: Number(e.target.value) || 0,
                   })
                 }
+                className={INPUT_CLS}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Capacidad
               </label>
-              <Input
+              <input
                 type="number"
                 min={1}
                 value={form.capacity}
                 onChange={(e) =>
                   setForm({ ...form, capacity: Number(e.target.value) || 0 })
                 }
+                className={INPUT_CLS}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Plan mínimo
               </label>
-              <Select
+              <select
                 value={form.min_plan}
                 onChange={(e) =>
                   setForm({
@@ -637,31 +691,33 @@ function NewClassDialog({
                     min_plan: e.target.value as typeof form.min_plan,
                   })
                 }
+                className={INPUT_CLS}
               >
                 <option value="">—</option>
                 <option value="STARTER">Básico</option>
                 <option value="PRO">Pro</option>
                 <option value="ELITE">Élite</option>
-              </Select>
+              </select>
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-white/60">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
               Ubicación
             </label>
-            <Input
+            <input
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
               placeholder="Ej. Sala 1"
+              className={INPUT_CLS}
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-white/60">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
               Repetir semanalmente (0 = solo esta fecha; máx. 52)
             </label>
-            <Input
+            <input
               type="number"
               min={0}
               max={52}
@@ -675,20 +731,26 @@ function NewClassDialog({
                   ),
                 })
               }
+              className={INPUT_CLS}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => mut.mutate()}
-            loading={mut.isPending}
-            disabled={disabled}
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className={BTN_SECONDARY}
           >
-            Crear
-          </Button>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => mut.mutate()}
+            disabled={mut.isPending || disabled}
+            className={BTN_PRIMARY}
+          >
+            {mut.isPending ? 'Creando…' : 'Crear'}
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

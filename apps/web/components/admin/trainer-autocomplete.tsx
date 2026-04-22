@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { Search, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -84,12 +83,12 @@ export function TrainerAutocomplete({
     return (
       <div
         className={cn(
-          'flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm',
+          'flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm',
           disabled && 'opacity-50',
           className,
         )}
       >
-        <div className="truncate text-white">{valueLabel}</div>
+        <div className="truncate text-slate-900">{valueLabel}</div>
         {!disabled && (
           <button
             type="button"
@@ -97,7 +96,7 @@ export function TrainerAutocomplete({
               onSelect(null);
               setOpen(true);
             }}
-            className="rounded-full p-1 text-white/50 hover:bg-white/10 hover:text-white"
+            className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             aria-label="Cambiar trainer"
           >
             <X className="h-3 w-3" />
@@ -110,8 +109,8 @@ export function TrainerAutocomplete({
   return (
     <div className={cn('relative', className)}>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-        <Input
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -129,18 +128,18 @@ export function TrainerAutocomplete({
             }, 150);
           }}
           placeholder={placeholder}
-          className="pl-9"
+          className="flex h-10 w-full rounded-xl border border-slate-300 bg-slate-50 pl-9 pr-4 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={disabled}
         />
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-72 overflow-auto rounded-lg border border-white/10 bg-neutral-950 shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-40 mt-2 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg">
           {isFetching && filtered.length === 0 && (
-            <div className="p-3 text-xs text-white/50">Cargando…</div>
+            <div className="px-4 py-3 text-xs text-slate-500">Cargando…</div>
           )}
           {!isFetching && filtered.length === 0 && (
-            <div className="p-3 text-xs text-white/50">Sin resultados</div>
+            <div className="px-4 py-3 text-xs text-slate-500">Sin resultados</div>
           )}
           {filtered.map((u) => (
             <button
@@ -153,17 +152,17 @@ export function TrainerAutocomplete({
                 setOpen(false);
                 setFocused(false);
               }}
-              className="flex w-full items-center justify-between border-b border-white/5 px-3 py-2 text-left text-sm last:border-0 hover:bg-white/5"
+              className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-2.5 text-left text-sm last:border-0 hover:bg-slate-50"
             >
               <div className="min-w-0">
-                <div className="truncate font-semibold text-white">{u.name}</div>
+                <div className="truncate font-semibold text-slate-900">{u.name}</div>
                 {u.email && (
-                  <div className="truncate text-[11px] text-white/50">
+                  <div className="truncate text-[11px] text-slate-500">
                     {u.email}
                   </div>
                 )}
               </div>
-              <span className="ml-2 shrink-0 rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white/50">
+              <span className="ml-2 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
                 {u.role}
               </span>
             </button>

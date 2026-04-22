@@ -9,20 +9,117 @@ import {
   Download,
   ShieldAlert,
   CheckCircle2,
-  Sparkles,
-  ChevronDown,
   Camera,
+  User as UserIcon,
+  Dumbbell,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { PhoneInput } from '@/components/ui/phone-input';
-import { Field, FormError } from '@/components/ui/form';
 import type { ApiError, Relationship } from '@/lib/schemas';
+import { COUNTRIES, DEFAULT_COUNTRY, parseE164, toE164 } from '@/lib/countries';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
+import { ProfileRequirements } from '@/components/portal/profile-requirements';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
+import { cn } from '@/lib/utils';
+
+/* Light-theme primitives — local so we don't pull the dark shared <Button>/<Input>/<Field>. */
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
+const BTN_GHOST =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const LABEL_CLS =
+  'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600';
+
+function LightField({
+  id,
+  label,
+  hint,
+  error,
+  children,
+}: {
+  id?: string;
+  label?: React.ReactNode;
+  hint?: React.ReactNode;
+  error?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col">
+      {label && (
+        <label htmlFor={id} className={LABEL_CLS}>
+          {label}
+        </label>
+      )}
+      {children}
+      {error ? (
+        <p className="mt-1 text-xs text-rose-600" role="alert">
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="mt-1 text-xs text-slate-500">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function LightFormError({ children }: { children?: React.ReactNode }) {
+  if (!children) return null;
+  return (
+    <div
+      role="alert"
+      className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+    >
+      {children}
+    </div>
+  );
+}
+
+function LightPhoneInput({
+  id,
+  value,
+  onChange,
+}: {
+  id?: string;
+  value: string;
+  onChange: (e164: string) => void;
+}) {
+  const { country, national } = parseE164(value);
+  return (
+    <div className="flex h-12 w-full items-stretch overflow-hidden rounded-xl border border-slate-300 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
+      <select
+        aria-label="Código de país"
+        value={country.code}
+        onChange={(e) => {
+          const next = COUNTRIES.find((c) => c.code === e.target.value) ?? DEFAULT_COUNTRY;
+          onChange(toE164(next, national));
+        }}
+        className="h-full border-r border-slate-200 bg-slate-50 px-2 text-sm text-slate-700 focus:outline-none"
+      >
+        {COUNTRIES.map((c) => (
+          <option key={`${c.code}-${c.dial}`} value={c.code}>
+            {c.flag} {c.dial}
+          </option>
+        ))}
+      </select>
+      <input
+        id={id}
+        type="tel"
+        inputMode="numeric"
+        autoComplete="tel-national"
+        placeholder={country.code === 'MX' ? '55 1234 5678' : 'Número'}
+        value={national}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, '').slice(0, 15);
+          onChange(toE164(country, digits));
+        }}
+        className="flex-1 bg-transparent px-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none"
+      />
+    </div>
+  );
+}
 
 const RELATIONSHIP_OPTIONS: { value: Relationship; label: string }[] = [
   { value: 'padre', label: 'Padre' },
@@ -33,6 +130,8 @@ const RELATIONSHIP_OPTIONS: { value: Relationship; label: string }[] = [
   { value: 'tutor', label: 'Tutor/a' },
   { value: 'otro', label: 'Otro' },
 ];
+
+type Tab = 'cuenta' | 'fitness';
 
 export default function PortalPerfilPage() {
   const qc = useQueryClient();
@@ -49,25 +148,18 @@ export default function PortalPerfilPage() {
     retry: false,
   });
 
+  const [tab, setTab] = useState<Tab>('cuenta');
+
   // Datos personales
   const [fullName, setFullName] = useState('');
   const [nameError, setNameError] = useState<string | null>(null);
   const [profileApiError, setProfileApiError] = useState<string | null>(null);
 
-  // Fitness wizard: collapsed by default if the user already has a saved
-  // fitness_profile, expanded otherwise (nudge to fill it in).
-  const hasFitnessProfile = !!me?.user?.fitness_profile;
-  const [fitnessOpen, setFitnessOpen] = useState(false);
-  useEffect(() => {
-    // Once /auth/me resolves, auto-expand for users who haven't set it up.
-    if (me && !hasFitnessProfile) setFitnessOpen(true);
-  }, [me, hasFitnessProfile]);
-
   // Selfie — used by staff at check-in.
   const selfieUrl: string | null = me?.user?.selfie_url ?? null;
   const [selfieOpen, setSelfieOpen] = useState(false);
 
-  // Contacto de emergencia (10 dígitos, sin prefijo +52)
+  // Contacto de emergencia
   const [ecName, setEcName] = useState('');
   const [ecRel, setEcRel] = useState<Relationship>('padre');
   const [ecPhone, setEcPhone] = useState('');
@@ -75,7 +167,6 @@ export default function PortalPerfilPage() {
   const [ecError, setEcError] = useState<string | null>(null);
   const [ecApiError, setEcApiError] = useState<string | null>(null);
 
-  // Hydrate form once /auth/me resolves.
   useEffect(() => {
     if (me?.user) {
       setFullName(me.user.full_name ?? me.user.name ?? '');
@@ -89,6 +180,9 @@ export default function PortalPerfilPage() {
       }
     }
   }, [me]);
+
+  const hasFitnessProfile = !!me?.user?.fitness_profile;
+  const hasEc = !!me?.user?.emergency_contact;
 
   const saveProfile = useMutation({
     mutationFn: async () => {
@@ -110,15 +204,11 @@ export default function PortalPerfilPage() {
 
   const saveEc = useMutation({
     mutationFn: async () => {
-      // NOTE: the current backend zod schema (completeProfileSchema in
-      // apps/api/src/routes/auth.js) strips unknown keys, so `medical_notes`
-      // is silently ignored server-side until the API adds the column.
-      // We still send it so the day the API is extended it "just works".
       const res = await api.patch('/auth/complete-profile', {
         emergency_contact: {
           name: ecName.trim(),
           relationship: ecRel,
-          phone: ecPhone, // ya viene en E.164 desde PhoneInput
+          phone: ecPhone,
           ...(ecNotes.trim() ? { medical_notes: ecNotes.trim() } : {}),
         },
       });
@@ -178,270 +268,265 @@ export default function PortalPerfilPage() {
     window.open(`https://wa.me/?text=${msg}`, '_blank');
   };
 
-  const hasEc = !!me?.user?.emergency_contact;
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-slate-900">Mi perfil</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Mi perfil
+        </h1>
         <p className="text-slate-500 mt-1 text-sm">
-          Datos personales, contacto de emergencia y privacidad.
+          Tus datos, identificación y preferencias de entrenamiento.
         </p>
       </div>
 
-      {/* Perfil fitness — wizard para IA de rutinas y meal plans */}
-      {fitnessOpen ? (
-        <FitnessProfileWizard
-          initial={
-            (me?.user?.fitness_profile as Record<string, unknown> | undefined) ??
-            null
-          }
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setFitnessOpen(true)}
-          className="group w-full flex items-center gap-3 rounded-2xl ring-1 ring-slate-200 bg-white shadow-sm p-5 text-left transition-colors hover:ring-blue-300 hover:bg-slate-50"
-        >
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-            <Sparkles size={18} />
-          </span>
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-slate-900">Perfil fitness</h2>
-              {hasFitnessProfile && (
-                <span className="inline-flex items-center gap-1 rounded-full ring-1 ring-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
-                  <CheckCircle2 size={10} /> Guardado
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              {hasFitnessProfile
-                ? 'Edita tus datos para regenerar rutinas y planes de comida.'
-                : 'Completa 5 pasos rápidos para desbloquear rutinas con IA.'}
-            </p>
-          </div>
-          <ChevronDown
-            size={18}
-            className="shrink-0 text-slate-400 transition-transform group-hover:text-slate-700"
+      {/* Tabs — separan claramente el perfil básico (para comprar membresía)
+          del perfil fitness (para rutinas y plan alimenticio). */}
+      <div className="sticky top-14 z-20 -mx-4 sm:mx-0 bg-slate-50/95 backdrop-blur px-4 sm:px-0 pt-2 pb-3 sm:py-0 sm:static sm:bg-transparent sm:backdrop-blur-none">
+        <div className="inline-flex w-full rounded-xl bg-white border border-slate-200 p-1 sm:w-auto">
+          <TabButton
+            active={tab === 'cuenta'}
+            onClick={() => setTab('cuenta')}
+            icon={<UserIcon className="h-4 w-4" />}
+            label="Mi cuenta"
+            hint="Datos, selfie y emergencia"
           />
-        </button>
+          <TabButton
+            active={tab === 'fitness'}
+            onClick={() => setTab('fitness')}
+            icon={<Dumbbell className="h-4 w-4" />}
+            label="Perfil fitness"
+            hint="Rutinas y plan alim."
+            badge={hasFitnessProfile}
+          />
+        </div>
+      </div>
+
+      {/* ── Tab: Mi cuenta ───────────────────────────────────── */}
+      {tab === 'cuenta' && (
+        <div className="space-y-4 sm:space-y-5">
+          {/* Checklist de requisitos para comprar membresía. */}
+          <ProfileRequirements />
+
+          {/* Datos personales */}
+          <section
+            id="datos-personales"
+            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4 scroll-mt-28"
+          >
+            <SectionHeader
+              title="Datos personales"
+              description="Nombre con el que te identificamos en el gym."
+            />
+            <LightFormError>{profileApiError}</LightFormError>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <LightField id="full_name" label="Nombre completo" error={nameError ?? undefined}>
+                <input
+                  id="full_name"
+                  className={INPUT_CLS}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder={me?.user?.name ?? 'Como aparece en tu INE'}
+                />
+              </LightField>
+              <LightField label="Correo">
+                <div className="flex h-12 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
+                  {me?.user?.email ?? '—'}
+                </div>
+              </LightField>
+              <LightField label="WhatsApp">
+                <div className="flex h-12 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
+                  {me?.user?.phone ?? '—'}
+                </div>
+              </LightField>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                onClick={onSaveProfile}
+                disabled={saveProfile.isPending}
+              >
+                {saveProfile.isPending ? 'Guardando…' : 'Guardar datos'}
+              </button>
+            </div>
+          </section>
+
+          {/* Selfie */}
+          <section
+            id="selfie"
+            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4 scroll-mt-28"
+          >
+            <SectionHeader
+              icon={<Camera size={18} />}
+              title="Selfie de identificación"
+              description="El staff la usa para reconocerte en recepción. Obligatoria antes de comprar membresía."
+              badge={selfieUrl ? 'Guardada' : undefined}
+            />
+
+            <div className="flex flex-wrap items-center gap-4">
+              {selfieUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={selfieUrl}
+                  alt="Tu selfie"
+                  className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover ring-2 ring-blue-500/30"
+                />
+              ) : (
+                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-slate-100 ring-2 ring-dashed ring-slate-300 flex items-center justify-center text-slate-400">
+                  <Camera size={24} />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelfieOpen(true)}
+                className={BTN_PRIMARY}
+              >
+                <Camera className="w-4 h-4" />
+                {selfieUrl ? 'Cambiar selfie' : 'Subir selfie'}
+              </button>
+            </div>
+          </section>
+
+          {/* Contacto de emergencia */}
+          <section
+            id="emergencia"
+            className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4 scroll-mt-28"
+          >
+            <SectionHeader
+              icon={<ShieldAlert size={18} />}
+              title="Contacto de emergencia"
+              description="Opcional. Solo lo usamos si necesitamos contactar a alguien en tu nombre."
+              badge={hasEc ? 'Guardado' : undefined}
+            />
+
+            <LightFormError>{ecError ?? ecApiError ?? undefined}</LightFormError>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <LightField id="ec_name" label="Nombre">
+                <input
+                  id="ec_name"
+                  className={INPUT_CLS}
+                  value={ecName}
+                  onChange={(e) => setEcName(e.target.value)}
+                  placeholder="Nombre completo"
+                />
+              </LightField>
+
+              <LightField id="ec_rel" label="Parentesco">
+                <select
+                  id="ec_rel"
+                  value={ecRel}
+                  onChange={(e) => setEcRel(e.target.value as Relationship)}
+                  className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                >
+                  {RELATIONSHIP_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </LightField>
+
+              <LightField id="ec_phone" label="Teléfono">
+                <LightPhoneInput id="ec_phone" value={ecPhone} onChange={setEcPhone} />
+              </LightField>
+
+              <LightField
+                id="ec_notes"
+                label="Notas médicas"
+                hint="Alergias, padecimientos… (opcional)"
+              >
+                <textarea
+                  id="ec_notes"
+                  value={ecNotes}
+                  onChange={(e) => setEcNotes(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ej. alergia a la penicilina"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+                />
+              </LightField>
+            </div>
+
+            <div className="pt-1">
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                onClick={onSaveEc}
+                disabled={saveEc.isPending}
+              >
+                {saveEc.isPending ? 'Guardando…' : 'Guardar contacto'}
+              </button>
+            </div>
+          </section>
+
+          {/* Referidos */}
+          <section className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-200 rounded-2xl p-4 sm:p-6 space-y-3">
+            <SectionHeader
+              title="Mi código de referidos"
+              description="$200 MXN de crédito por cada referido que se registre y pague."
+            />
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase text-slate-500 font-semibold tracking-widest">Tu código</div>
+                <div className="text-xl sm:text-2xl font-mono text-blue-600 mt-1 break-all font-bold tabular-nums">
+                  {code ?? '—'}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] uppercase text-slate-500 font-semibold tracking-widest">Crédito</div>
+                <div className="text-xl sm:text-2xl font-bold mt-1 text-slate-900 tabular-nums">
+                  ${(referrals?.credit_mxn ?? 0).toLocaleString('es-MX')}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={BTN_GHOST} onClick={copyCode} disabled={!code}>
+                <Copy className="w-4 h-4" /> Copiar link
+              </button>
+              <button type="button" className={BTN_GHOST} onClick={shareWhatsapp} disabled={!code}>
+                <Share2 className="w-4 h-4" /> WhatsApp
+              </button>
+            </div>
+          </section>
+
+          {/* Privacidad */}
+          <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-3">
+            <SectionHeader
+              title="Privacidad"
+              description="Exporta o elimina tu información personal."
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={BTN_GHOST}
+                onClick={() => (window.location.href = `${api.defaults.baseURL}/users/me/export`)}
+              >
+                <Download className="w-4 h-4" /> Exportar mis datos
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-rose-300 px-5 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 min-h-[44px]"
+              >
+                <Trash2 className="w-4 h-4" /> Eliminar cuenta
+              </button>
+            </div>
+          </section>
+        </div>
       )}
 
-      {/* Datos personales */}
-      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Datos personales</h2>
-
-        <FormError>{profileApiError}</FormError>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="full_name" label="Nombre completo" error={nameError ?? undefined}>
-            <Input variant="light"
-              id="full_name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder={me?.user?.name ?? 'Como aparece en tu INE'}
-            />
-          </Field>
-          <Field label="Correo">
-            <div className="flex h-11 items-center rounded-xl ring-1 ring-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
-              {me?.user?.email ?? '—'}
-            </div>
-          </Field>
-          <Field label="WhatsApp">
-            <div className="flex h-11 items-center rounded-xl ring-1 ring-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
-              {me?.user?.phone ?? '—'}
-            </div>
-          </Field>
-          <Field label="Rol">
-            <div className="flex h-11 items-center rounded-xl ring-1 ring-slate-200 bg-slate-50 px-4 text-sm text-slate-600">
-              {me?.user?.role ?? user?.role ?? 'ATHLETE'}
-            </div>
-          </Field>
-        </div>
-
-        <div className="pt-1">
-          <Button onClick={onSaveProfile} loading={saveProfile.isPending}>
-            Guardar datos
-          </Button>
-        </div>
-      </section>
-
-      {/* Selfie — usada por el staff para identificar al miembro en recepción */}
-      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-            <Camera size={18} />
-          </span>
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-slate-900">Selfie de identificación</h2>
-              {selfieUrl && (
-                <span className="inline-flex items-center gap-1 rounded-full ring-1 ring-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
-                  <CheckCircle2 size={10} /> Guardada
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              La usamos únicamente para que el staff te reconozca en la recepción.
-              Es obligatoria antes de comprar una membresía.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4">
-          {selfieUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={selfieUrl}
-              alt="Tu selfie"
-              className="h-24 w-24 rounded-full object-cover ring-2 ring-blue-500/30"
-            />
-          ) : (
-            <div className="h-24 w-24 rounded-full bg-slate-100 ring-2 ring-dashed ring-slate-300 flex items-center justify-center text-slate-400">
-              <Camera size={28} />
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => setSelfieOpen(true)}
-            className="inline-flex items-center h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition"
-          >
-            <Camera className="w-4 h-4 mr-2" />
-            {selfieUrl ? 'Cambiar selfie' : 'Subir selfie'}
-          </button>
-        </div>
-      </section>
-
-      {/* Contacto de emergencia — single compact card */}
-      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-4">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-            <ShieldAlert size={18} />
-          </span>
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-lg font-semibold text-slate-900">Contacto de emergencia</h2>
-              {hasEc && (
-                <span className="inline-flex items-center gap-1 rounded-full ring-1 ring-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-emerald-700">
-                  <CheckCircle2 size={10} /> Guardado
-                </span>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-slate-500">
-              Opcional, pero muy útil en caso de una emergencia en el gym. Lo
-              usamos únicamente si necesitamos contactarte en tu nombre.
-            </p>
-          </div>
-        </div>
-
-        <FormError>{ecError ?? ecApiError ?? undefined}</FormError>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="ec_name" label="Nombre">
-            <Input variant="light"
-              id="ec_name"
-              value={ecName}
-              onChange={(e) => setEcName(e.target.value)}
-              placeholder="Nombre completo"
-            />
-          </Field>
-
-          <Field id="ec_rel" label="Parentesco">
-            <select
-              id="ec_rel"
-              value={ecRel}
-              onChange={(e) => setEcRel(e.target.value as Relationship)}
-              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              {RELATIONSHIP_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field id="ec_phone" label="Teléfono">
-            <PhoneInput
-              id="ec_phone"
-              value={ecPhone}
-              onChange={setEcPhone}
-            />
-          </Field>
-
-          <Field
-            id="ec_notes"
-            label="Notas médicas"
-            hint="Alergias, padecimientos, medicamentos… (opcional)"
-          >
-            <textarea
-              id="ec_notes"
-              value={ecNotes}
-              onChange={(e) => setEcNotes(e.target.value)}
-              rows={3}
-              maxLength={500}
-              placeholder="Ej. alergia a la penicilina"
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-          </Field>
-        </div>
-
-        <div className="pt-1">
-          <Button onClick={onSaveEc} loading={saveEc.isPending}>
-            Guardar contacto
-          </Button>
-        </div>
-      </section>
-
-      {/* Referidos */}
-      <section className="bg-gradient-to-br from-blue-50 to-sky-50 ring-1 ring-blue-200 rounded-2xl p-5 sm:p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Mi código de referidos</h2>
-        <p className="text-sm text-slate-700">
-          Comparte y gana $200 MXN de crédito por cada referido que se registre
-          y pague.
-        </p>
-        <div className="bg-white ring-1 ring-slate-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xs uppercase text-slate-500 font-semibold">Tu código</div>
-            <div className="text-2xl font-mono text-blue-600 mt-1 break-all font-bold tabular-nums">
-              {code ?? '—'}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs uppercase text-slate-500 font-semibold">Crédito</div>
-            <div className="text-2xl font-bold mt-1 text-slate-900 tabular-nums">
-              ${(referrals?.credit_mxn ?? 0).toLocaleString('es-MX')}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="ghost" onClick={copyCode} disabled={!code}>
-            <Copy className="w-4 h-4 mr-2" /> Copiar link
-          </Button>
-          <Button variant="ghost" onClick={shareWhatsapp} disabled={!code}>
-            <Share2 className="w-4 h-4 mr-2" /> WhatsApp
-          </Button>
-        </div>
-      </section>
-
-      {/* Privacidad */}
-      <section className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5 sm:p-6 space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Privacidad</h2>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="ghost"
-            onClick={() =>
-              (window.location.href = `${api.defaults.baseURL}/users/me/export`)
+      {/* ── Tab: Perfil fitness ──────────────────────────────── */}
+      {tab === 'fitness' && (
+        <div>
+          <FitnessProfileWizard
+            initial={
+              (me?.user?.fitness_profile as Record<string, unknown> | undefined) ?? null
             }
-          >
-            <Download className="w-4 h-4 mr-2" /> Exportar mis datos
-          </Button>
-          <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-            <Trash2 className="w-4 h-4 mr-2" /> Eliminar cuenta
-          </Button>
+          />
         </div>
-      </section>
+      )}
 
       {selfieOpen && (
         <div
@@ -463,6 +548,93 @@ export default function PortalPerfilPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon,
+  label,
+  hint,
+  badge,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  badge?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'relative flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition',
+        active
+          ? 'bg-blue-600 text-white shadow-sm'
+          : 'text-slate-600 hover:bg-slate-50',
+      )}
+    >
+      <span className={cn(active ? 'text-white' : 'text-blue-600')}>{icon}</span>
+      <span className="flex flex-col leading-tight items-start">
+        <span>{label}</span>
+        {hint && (
+          <span
+            className={cn(
+              'text-[10px] font-normal',
+              active ? 'text-blue-100' : 'text-slate-400',
+            )}
+          >
+            {hint}
+          </span>
+        )}
+      </span>
+      {badge && (
+        <span
+          className={cn(
+            'absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold',
+            active ? 'bg-white text-blue-600' : 'bg-emerald-500 text-white',
+          )}
+        >
+          ✓
+        </span>
+      )}
+    </button>
+  );
+}
+
+function SectionHeader({
+  icon,
+  title,
+  description,
+  badge,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  description?: string;
+  badge?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      {icon && (
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+          {icon}
+        </span>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-display text-lg font-bold text-slate-900 sm:text-xl">{title}</h2>
+          {badge && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+              <CheckCircle2 size={10} /> {badge}
+            </span>
+          )}
+        </div>
+        {description && <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">{description}</p>}
+      </div>
     </div>
   );
 }

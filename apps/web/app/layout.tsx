@@ -1,26 +1,12 @@
 import type { Metadata, Viewport } from 'next';
-import { Outfit, Bebas_Neue, Inter } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
-const outfit = Outfit({
+const poppins = Poppins({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700', '800', '900'],
-  variable: '--font-outfit',
-  display: 'swap',
-});
-
-const bebas = Bebas_Neue({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-bebas',
-  display: 'swap',
-});
-
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
-  variable: '--font-inter',
+  variable: '--font-poppins',
   display: 'swap',
 });
 
@@ -60,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${outfit.variable} ${bebas.variable} ${inter.variable} dark`}>
+    <html lang="es" className={`${poppins.variable} dark`}>
       <body className="min-h-screen overflow-x-hidden bg-background text-foreground antialiased">
         <Providers>{children}</Providers>
       </body>

@@ -18,8 +18,8 @@ export default function CompleteProfileRedirectPage() {
     router.replace('/portal/perfil');
   }, [router]);
   return (
-    <div className="flex flex-col items-center gap-3 py-8 text-center text-sm text-white/70">
-      <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-brand-orange/30 border-t-brand-orange" />
+    <div className="flex flex-col items-center gap-3 py-8 text-center text-sm text-slate-600">
+      <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
       <p>Redirigiendo a tu perfil…</p>
     </div>
   );

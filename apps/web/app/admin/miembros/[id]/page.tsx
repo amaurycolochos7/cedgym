@@ -20,7 +20,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +31,11 @@ import {
 import { StatusBadge } from '@/components/admin/status-badge';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminApi } from '@/lib/admin-api';
+
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
 
 export default function AdminMemberDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,14 +83,16 @@ export default function AdminMemberDetailPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-md p-2 text-white/60 hover:bg-white/5 hover:text-white"
+          className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
           aria-label="Volver"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-white">{m?.name ?? '…'}</h1>
-          <div className="flex items-center gap-2 text-xs text-white/50">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            {m?.name ?? '…'}
+          </h1>
+          <div className="flex items-center gap-2 text-xs text-slate-500">
             {m?.status && <StatusBadge status={m.status} />}
             <span>{m?.phone}</span>
             {m?.email && <span>· {m.email}</span>}
@@ -94,36 +100,52 @@ export default function AdminMemberDetailPage() {
         </div>
         <div className="hidden flex-wrap items-center gap-2 md:flex">
           {m?.status === 'active' ? (
-            <Button variant="ghost" onClick={() => setSuspend(true)}>
-              <Pause className="h-3 w-3" />
+            <button
+              type="button"
+              onClick={() => setSuspend(true)}
+              className={BTN_SECONDARY}
+            >
+              <Pause className="h-3.5 w-3.5" />
               Suspender
-            </Button>
+            </button>
           ) : (
-            <Button variant="ghost" onClick={() => setReactivate(true)}>
-              <Play className="h-3 w-3" />
+            <button
+              type="button"
+              onClick={() => setReactivate(true)}
+              className={BTN_SECONDARY}
+            >
+              <Play className="h-3.5 w-3.5" />
               Reactivar
-            </Button>
+            </button>
           )}
-          <Button variant="ghost" onClick={() => setResetPw(true)}>
-            <KeyRound className="h-3 w-3" />
-            Reset password
-          </Button>
-          <Button variant="ghost" onClick={() => setWaOpen(true)}>
-            <Send className="h-3 w-3" />
-            WhatsApp
-          </Button>
-          <Button variant="ghost" onClick={openQr}>
-            <QrCode className="h-3 w-3" />
-            Ver QR
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setDel(true)}
-            className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          <button
+            type="button"
+            onClick={() => setResetPw(true)}
+            className={BTN_SECONDARY}
           >
-            <Trash2 className="h-3 w-3" />
+            <KeyRound className="h-3.5 w-3.5" />
+            Reset password
+          </button>
+          <button
+            type="button"
+            onClick={() => setWaOpen(true)}
+            className={BTN_SECONDARY}
+          >
+            <Send className="h-3.5 w-3.5" />
+            WhatsApp
+          </button>
+          <button type="button" onClick={openQr} className={BTN_SECONDARY}>
+            <QrCode className="h-3.5 w-3.5" />
+            Ver QR
+          </button>
+          <button
+            type="button"
+            onClick={() => setDel(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
             Eliminar
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -236,8 +258,6 @@ export default function AdminMemberDetailPage() {
           try {
             await adminApi.deleteMember(id);
             toast.success('Miembro eliminado');
-            // Forzamos refetch de las vistas afectadas para que al volver
-            // a la lista NO aparezca el socio recién borrado.
             qc.removeQueries({ queryKey: ['admin', 'member', id] });
             await qc.invalidateQueries({ queryKey: ['admin', 'members'] });
             await qc.invalidateQueries({ queryKey: ['admin', 'memberships-active'] });
@@ -250,10 +270,12 @@ export default function AdminMemberDetailPage() {
       />
 
       <Dialog open={waOpen} onOpenChange={setWaOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white border-slate-200 text-slate-900">
           <DialogHeader>
-            <DialogTitle>Enviar WhatsApp manual</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-slate-900">
+              Enviar WhatsApp manual
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
               Texto libre, sin plantilla. Se registrará en audit log.
             </DialogDescription>
           </DialogHeader>
@@ -262,19 +284,24 @@ export default function AdminMemberDetailPage() {
             value={waBody}
             onChange={(e) => setWaBody(e.target.value)}
             placeholder="Hola, te escribimos de CED·GYM…"
-            className="w-full rounded-lg border border-white/10 bg-input/60 p-3 text-sm text-white"
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none"
           />
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setWaOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => waMut.mutate()}
-              loading={waMut.isPending}
-              disabled={waBody.trim().length < 4}
+            <button
+              type="button"
+              onClick={() => setWaOpen(false)}
+              className={BTN_SECONDARY}
             >
-              Enviar
-            </Button>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => waMut.mutate()}
+              disabled={waMut.isPending || waBody.trim().length < 4}
+              className={BTN_PRIMARY}
+            >
+              {waMut.isPending ? 'Enviando…' : 'Enviar'}
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -290,8 +317,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-      <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-900">
         {title}
       </h3>
       {children}
@@ -303,11 +330,11 @@ function DetailGrid({ items }: { items: [string, React.ReactNode][] }) {
   return (
     <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {items.map(([k, v]) => (
-        <div key={k} className="rounded-lg bg-white/[0.02] p-3">
-          <dt className="text-[11px] uppercase tracking-wider text-white/40">
+        <div key={k} className="rounded-lg bg-slate-50 p-3 border border-slate-200">
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
             {k}
           </dt>
-          <dd className="mt-1 text-sm text-white">{v || '—'}</dd>
+          <dd className="mt-1 text-sm text-slate-900">{v || '—'}</dd>
         </div>
       ))}
     </dl>
@@ -316,7 +343,7 @@ function DetailGrid({ items }: { items: [string, React.ReactNode][] }) {
 
 function Placeholder({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-sm text-white/50">
+    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
       <ChevronsLeftRight className="h-4 w-4" />
       {label}
     </div>

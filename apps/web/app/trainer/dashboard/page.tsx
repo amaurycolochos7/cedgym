@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { KpiCard } from '@/components/admin/kpi-card';
 import { ChartBar } from '@/components/admin/chart-bar';
-import { Button } from '@/components/ui/button';
 import { trainerApi } from '@/lib/trainer-api';
 
 const MXN = new Intl.NumberFormat('es-MX', {
@@ -57,18 +56,17 @@ export default function TrainerDashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold uppercase tracking-widest text-white">
-            Mi dashboard
-          </h1>
-          <p className="text-sm text-white/50">
+          <h1 className="text-3xl font-bold text-slate-900">Mi dashboard</h1>
+          <p className="text-sm text-slate-600">
             Resumen de tus rutinas, ventas y clases.
           </p>
         </div>
-        <Link href="/trainer/products/new">
-          <Button size="sm">
-            <Plus className="h-4 w-4" />
-            Publicar rutina
-          </Button>
+        <Link
+          href="/trainer/products/new"
+          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" />
+          Publicar rutina
         </Link>
       </div>
 
@@ -108,12 +106,12 @@ export default function TrainerDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 xl:col-span-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 xl:col-span-2">
           <div className="mb-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
               Ventas últimos 30 días
             </h3>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-slate-500">
               Monto bruto cobrado por día (MXN)
             </p>
           </div>
@@ -125,17 +123,19 @@ export default function TrainerDashboardPage() {
           />
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 Próximas clases
               </h3>
-              <p className="text-xs text-white/50">Las que impartes esta semana</p>
+              <p className="text-xs text-slate-500">
+                Las que impartes esta semana
+              </p>
             </div>
             <Link
               href="/trainer/classes"
-              className="text-xs font-semibold text-brand-orange hover:underline"
+              className="text-xs font-semibold text-blue-600 hover:underline"
             >
               Ver todas
             </Link>
@@ -144,32 +144,32 @@ export default function TrainerDashboardPage() {
             {(d?.upcoming_classes ?? []).slice(0, 5).map((c) => (
               <li
                 key={c.id}
-                className="rounded-lg border border-white/5 bg-white/[0.02] p-3"
+                className="rounded-lg border border-slate-200 bg-slate-50 p-3"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-white">
+                    <div className="truncate text-sm font-semibold text-slate-900">
                       {c.name}
                     </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-white/50">
+                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
                       <CalendarClock className="h-3 w-3" />
                       {DATETIME_FMT.format(new Date(c.starts_at))}
                     </div>
                     {c.location && (
-                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-white/50">
+                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
                         <MapPin className="h-3 w-3" />
                         {c.location}
                       </div>
                     )}
                   </div>
-                  <div className="shrink-0 rounded-full bg-brand-orange/15 px-2 py-0.5 text-[10px] font-semibold text-brand-orange">
+                  <div className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                     {c.booked}/{c.capacity}
                   </div>
                 </div>
               </li>
             ))}
             {d?.upcoming_classes && d.upcoming_classes.length === 0 && (
-              <li className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-white/40">
+              <li className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">
                 Sin clases próximas.
               </li>
             )}

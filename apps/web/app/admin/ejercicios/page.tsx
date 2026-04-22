@@ -14,10 +14,6 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -70,23 +66,30 @@ const EQUIPMENT: string[] = [
   'functional',
 ];
 
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
+
 // ─── Helpers ─────────────────────────────────────────────────────
 function slugify(s: string): string {
   return String(s || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
 }
 
-function levelBadgeVariant(
-  level: ExerciseLevel,
-): 'success' | 'warning' | 'danger' {
-  if (level === 'BEGINNER') return 'success';
-  if (level === 'INTERMEDIATE') return 'warning';
-  return 'danger';
+function levelBadgeCls(level: ExerciseLevel) {
+  if (level === 'BEGINNER')
+    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  if (level === 'INTERMEDIATE')
+    return 'bg-amber-100 text-amber-700 border-amber-200';
+  return 'bg-rose-100 text-rose-700 border-rose-200';
 }
 
 function muscleLabel(v: ExerciseMuscleGroup): string {
@@ -156,8 +159,12 @@ export default function AdminEjerciciosPage() {
         accessorKey: 'name',
         cell: ({ row }) => (
           <div>
-            <div className="font-semibold text-white">{row.original.name}</div>
-            <div className="text-[11px] text-white/40">{row.original.slug}</div>
+            <div className="font-semibold text-slate-900">
+              {row.original.name}
+            </div>
+            <div className="text-[11px] text-slate-500">
+              {row.original.slug}
+            </div>
           </div>
         ),
       },
@@ -165,7 +172,7 @@ export default function AdminEjerciciosPage() {
         header: 'Grupo',
         accessorKey: 'muscle_group',
         cell: ({ row }) => (
-          <span className="text-white/80">
+          <span className="text-slate-700">
             {muscleLabel(row.original.muscle_group)}
           </span>
         ),
@@ -175,19 +182,19 @@ export default function AdminEjerciciosPage() {
         accessorKey: 'equipment',
         cell: ({ row }) => {
           const eq = row.original.equipment ?? [];
-          if (eq.length === 0) return <span className="text-white/30">—</span>;
+          if (eq.length === 0) return <span className="text-slate-400">—</span>;
           return (
             <div className="flex flex-wrap gap-1">
               {eq.slice(0, 3).map((e) => (
                 <span
                   key={e}
-                  className="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-white/70 ring-1 ring-inset ring-white/10"
+                  className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-700"
                 >
                   {e}
                 </span>
               ))}
               {eq.length > 3 && (
-                <span className="text-[10px] text-white/40">
+                <span className="text-[10px] text-slate-500">
                   +{eq.length - 3}
                 </span>
               )}
@@ -200,16 +207,21 @@ export default function AdminEjerciciosPage() {
         header: 'Nivel',
         accessorKey: 'level',
         cell: ({ row }) => (
-          <Badge variant={levelBadgeVariant(row.original.level)}>
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+              levelBadgeCls(row.original.level),
+            )}
+          >
             {levelLabel(row.original.level)}
-          </Badge>
+          </span>
         ),
       },
       {
         header: 'Default',
         accessorKey: 'default_sets',
         cell: ({ row }) => (
-          <span className="text-[11px] text-white/60">
+          <span className="text-[11px] text-slate-600">
             {row.original.default_sets}×{row.original.default_reps} ·{' '}
             {row.original.default_rest_sec}s
           </span>
@@ -228,7 +240,7 @@ export default function AdminEjerciciosPage() {
                 setEditing(row.original);
                 setModalOpen(true);
               }}
-              className="rounded-md p-1.5 text-white/60 hover:bg-white/5 hover:text-white"
+              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
               aria-label="Editar"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -239,7 +251,7 @@ export default function AdminEjerciciosPage() {
                 e.stopPropagation();
                 setDeleteTarget(row.original);
               }}
-              className="rounded-md p-1.5 text-white/60 hover:bg-red-500/10 hover:text-red-300"
+              className="rounded-md p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600"
               aria-label="Eliminar"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -261,56 +273,60 @@ export default function AdminEjerciciosPage() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
-          <h1 className="font-display text-2xl uppercase tracking-tight text-white sm:text-3xl">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Biblioteca de Ejercicios
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="brand">
+            <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
               Total: {statsQuery.data?.total ?? total}
-            </Badge>
+            </span>
             {statsQuery.data?.by_level &&
               LEVELS.map((l) => (
-                <Badge key={l.value} variant="default">
+                <span
+                  key={l.value}
+                  className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700"
+                >
                   {l.label}: {statsQuery.data?.by_level[l.value] ?? 0}
-                </Badge>
+                </span>
               ))}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
+          <button
+            type="button"
             onClick={() => setImportOpen(true)}
-            size="sm"
+            className={BTN_SECONDARY}
           >
             <Upload className="h-3.5 w-3.5" />
             Importar Excel
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setEditing(null);
               setModalOpen(true);
             }}
-            size="sm"
+            className={BTN_PRIMARY}
           >
             <Plus className="h-4 w-4" />
             Nuevo ejercicio
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+      <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          <Input
+          <input
             placeholder="Buscar por nombre o slug"
             value={filters.q}
             onChange={(e) => {
               setFilters({ ...filters, q: e.target.value });
               setPage(1);
             }}
-            className="h-9"
+            className={INPUT_CLS}
           />
-          <Select
+          <select
             value={filters.muscle_group}
             onChange={(e) => {
               setFilters({
@@ -319,7 +335,7 @@ export default function AdminEjerciciosPage() {
               });
               setPage(1);
             }}
-            className="h-9"
+            className={INPUT_CLS}
           >
             <option value="">Grupo muscular</option>
             {MUSCLE_GROUPS.map((m) => (
@@ -327,8 +343,8 @@ export default function AdminEjerciciosPage() {
                 {m.label}
               </option>
             ))}
-          </Select>
-          <Select
+          </select>
+          <select
             value={filters.level}
             onChange={(e) => {
               setFilters({
@@ -337,7 +353,7 @@ export default function AdminEjerciciosPage() {
               });
               setPage(1);
             }}
-            className="h-9"
+            className={INPUT_CLS}
           >
             <option value="">Nivel</option>
             {LEVELS.map((l) => (
@@ -345,7 +361,7 @@ export default function AdminEjerciciosPage() {
                 {l.label}
               </option>
             ))}
-          </Select>
+          </select>
           <EquipmentMultiSelect
             value={filters.equipment}
             onChange={(v) => {
@@ -370,26 +386,26 @@ export default function AdminEjerciciosPage() {
 
       {/* Server-side pagination */}
       {total > limit && (
-        <div className="flex items-center justify-end gap-2 text-xs text-white/50">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="flex items-center justify-end gap-2 text-xs text-slate-500">
+          <button
+            type="button"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
+            className={BTN_SECONDARY}
           >
             Anterior
-          </Button>
+          </button>
           <span>
             Página {page} de {totalPages}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
+            type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
+            className={BTN_SECONDARY}
           >
             Siguiente
-          </Button>
+          </button>
         </div>
       )}
 
@@ -471,18 +487,18 @@ function EquipmentMultiSelect({
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex w-full items-center justify-between rounded-lg border border-white/10 bg-input/60 px-3 text-left text-sm text-white focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30',
-          compact ? 'h-9' : 'h-10',
+          'flex w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-4 text-left text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100',
+          compact ? 'py-2.5' : 'py-3',
         )}
       >
-        <span className={value.length ? 'text-white' : 'text-white/40'}>
+        <span className={value.length ? 'text-slate-900' : 'text-slate-400'}>
           {value.length
             ? `${value.length} equipo${value.length > 1 ? 's' : ''}`
             : 'Equipo'}
         </span>
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-white/10 bg-neutral-950 p-2 shadow-xl">
+        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
           {EQUIPMENT.map((e) => {
             const selected = value.includes(e);
             return (
@@ -493,8 +509,8 @@ function EquipmentMultiSelect({
                 className={cn(
                   'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs',
                   selected
-                    ? 'bg-brand-orange/10 text-brand-orange'
-                    : 'text-white/70 hover:bg-white/5',
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-slate-700 hover:bg-slate-50',
                 )}
               >
                 <span>{e}</span>
@@ -506,7 +522,7 @@ function EquipmentMultiSelect({
             <button
               type="button"
               onClick={() => onChange([])}
-              className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-[11px] text-white/40 hover:bg-white/5 hover:text-white/70"
+              className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-[11px] text-slate-500 hover:bg-slate-50 hover:text-slate-700"
             >
               Limpiar
             </button>
@@ -564,7 +580,6 @@ function ExerciseFormDialog({
   const [form, setForm] = React.useState<ExerciseFormState>(BLANK_FORM);
   const [slugTouched, setSlugTouched] = React.useState(false);
 
-  // Hydrate form when editing changes (or resets to blank on new).
   React.useEffect(() => {
     if (!open) return;
     if (editing) {
@@ -589,7 +604,6 @@ function ExerciseFormDialog({
     }
   }, [editing, open]);
 
-  // Auto-slug from name until the user manually edits it.
   React.useEffect(() => {
     if (slugTouched) return;
     setForm((f) => ({ ...f, slug: slugify(f.name) }));
@@ -635,12 +649,12 @@ function ExerciseFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-slate-900">
             {editing ? 'Editar ejercicio' : 'Nuevo ejercicio'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-slate-600">
             Los ejercicios se comparten con el generador de rutinas IA.
           </DialogDescription>
         </DialogHeader>
@@ -648,34 +662,38 @@ function ExerciseFormDialog({
         <div className="grid max-h-[65vh] gap-3 overflow-y-auto pr-1">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Nombre *
               </label>
-              <Input
+              <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Press de banca"
+                className={INPUT_CLS}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">Slug</label>
-              <Input
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
+                Slug
+              </label>
+              <input
                 value={form.slug}
                 onChange={(e) => {
                   setSlugTouched(true);
                   setForm({ ...form, slug: e.target.value });
                 }}
                 placeholder="press-de-banca"
+                className={INPUT_CLS}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Grupo muscular *
               </label>
-              <Select
+              <select
                 value={form.muscle_group}
                 onChange={(e) =>
                   setForm({
@@ -683,16 +701,17 @@ function ExerciseFormDialog({
                     muscle_group: e.target.value as ExerciseMuscleGroup,
                   })
                 }
+                className={INPUT_CLS}
               >
                 {MUSCLE_GROUPS.map((m) => (
                   <option key={m.value} value={m.value}>
                     {m.label}
                   </option>
                 ))}
-              </Select>
+              </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Nivel *
               </label>
               <div className="flex gap-2">
@@ -700,10 +719,10 @@ function ExerciseFormDialog({
                   <label
                     key={l.value}
                     className={cn(
-                      'flex flex-1 cursor-pointer items-center justify-center rounded-lg border px-2 py-2 text-xs font-semibold uppercase tracking-wider transition',
+                      'flex flex-1 cursor-pointer items-center justify-center rounded-lg border px-2 py-2.5 text-xs font-semibold uppercase tracking-wider transition',
                       form.level === l.value
-                        ? 'border-brand-orange/60 bg-brand-orange/10 text-brand-orange'
-                        : 'border-white/10 bg-white/[0.02] text-white/60 hover:bg-white/5',
+                        ? 'border-blue-300 bg-blue-50 text-blue-700'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
                     )}
                   >
                     <input
@@ -722,7 +741,9 @@ function ExerciseFormDialog({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-white/60">Equipo</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              Equipo
+            </label>
             <div className="flex flex-wrap gap-1.5">
               {EQUIPMENT.map((e) => {
                 const selected = form.equipment.includes(e);
@@ -739,10 +760,10 @@ function ExerciseFormDialog({
                       }))
                     }
                     className={cn(
-                      'rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition',
+                      'rounded-full border px-2.5 py-1 text-[11px] font-semibold transition',
                       selected
-                        ? 'bg-brand-orange/15 text-brand-orange ring-brand-orange/40'
-                        : 'bg-white/5 text-white/60 ring-white/10 hover:bg-white/10',
+                        ? 'bg-blue-100 text-blue-700 border-blue-200'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50',
                     )}
                   >
                     {e}
@@ -754,35 +775,37 @@ function ExerciseFormDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Video URL
               </label>
-              <Input
+              <input
                 type="url"
                 value={form.video_url}
                 onChange={(e) =>
                   setForm({ ...form, video_url: e.target.value })
                 }
                 placeholder="https://…"
+                className={INPUT_CLS}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Miniatura URL
               </label>
-              <Input
+              <input
                 type="url"
                 value={form.thumbnail_url}
                 onChange={(e) =>
                   setForm({ ...form, thumbnail_url: e.target.value })
                 }
                 placeholder="https://…"
+                className={INPUT_CLS}
               />
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs text-white/60">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
               Descripción
             </label>
             <textarea
@@ -791,15 +814,17 @@ function ExerciseFormDialog({
                 setForm({ ...form, description: e.target.value })
               }
               rows={3}
-              className="w-full rounded-xl border border-white/10 bg-input/60 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+              className={INPUT_CLS}
               placeholder="Pasos, tips técnicos, seguridad…"
             />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-white/60">Sets</label>
-              <Input
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
+                Sets
+              </label>
+              <input
                 type="number"
                 min={1}
                 value={form.default_sets}
@@ -809,23 +834,27 @@ function ExerciseFormDialog({
                     default_sets: Number(e.target.value) || 0,
                   })
                 }
+                className={INPUT_CLS}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">Reps</label>
-              <Input
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
+                Reps
+              </label>
+              <input
                 value={form.default_reps}
                 onChange={(e) =>
                   setForm({ ...form, default_reps: e.target.value })
                 }
                 placeholder="8-12"
+                className={INPUT_CLS}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-white/60">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Descanso (s)
               </label>
-              <Input
+              <input
                 type="number"
                 min={0}
                 value={form.default_rest_sec}
@@ -835,30 +864,44 @@ function ExerciseFormDialog({
                     default_rest_sec: Number(e.target.value) || 0,
                   })
                 }
+                className={INPUT_CLS}
               />
             </div>
           </div>
 
-          <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-white/80">
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={form.is_active}
               onChange={(e) =>
                 setForm({ ...form, is_active: e.target.checked })
               }
-              className="h-4 w-4 accent-brand-orange"
+              className="h-4 w-4 accent-blue-600"
             />
             Activo (visible para rutinas)
           </label>
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className={BTN_SECONDARY}
+          >
             Cancelar
-          </Button>
-          <Button onClick={submit} loading={saveMut.isPending}>
-            {editing ? 'Guardar cambios' : 'Crear ejercicio'}
-          </Button>
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={saveMut.isPending}
+            className={BTN_PRIMARY}
+          >
+            {saveMut.isPending
+              ? 'Guardando…'
+              : editing
+              ? 'Guardar cambios'
+              : 'Crear ejercicio'}
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -866,7 +909,7 @@ function ExerciseFormDialog({
 }
 
 // =================================================================
-// Bulk import dialog (template-based, no mapping UI)
+// Bulk import dialog
 // =================================================================
 const TEMPLATE_HEADERS = [
   'name',
@@ -884,7 +927,7 @@ const TEMPLATE_HEADERS = [
 ];
 
 interface ParsedRow {
-  index: number; // 1-based row # for user messages
+  index: number;
   raw: Record<string, unknown>;
   parsed: AdminExerciseInput | null;
   error: string | null;
@@ -972,7 +1015,6 @@ function BulkImportDialog({
     null,
   );
 
-  // Reset state on close
   React.useEffect(() => {
     if (!open) {
       setRows([]);
@@ -1010,7 +1052,7 @@ function BulkImportDialog({
       const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
         defval: '',
       });
-      const parsed = json.map((r, i) => parseRow(r, i + 2)); // +2 for 1-based + header row
+      const parsed = json.map((r, i) => parseRow(r, i + 2));
       setRows(parsed);
       if (parsed.length === 0) {
         toast.error('El archivo no tiene filas');
@@ -1063,10 +1105,12 @@ function BulkImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>Importar ejercicios desde Excel</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-slate-900">
+            Importar ejercicios desde Excel
+          </DialogTitle>
+          <DialogDescription className="text-slate-600">
             Usa la plantilla oficial: columnas <code>name</code>,{' '}
             <code>muscle_group</code> y <code>level</code> son obligatorias. El
             upsert se hace por <code>slug</code>.
@@ -1078,7 +1122,7 @@ function BulkImportDialog({
             <button
               type="button"
               onClick={downloadTemplate}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-brand-orange underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 underline-offset-4 hover:underline"
             >
               <Download className="h-3 w-3" />
               Descargar plantilla (.xlsx)
@@ -1097,17 +1141,17 @@ function BulkImportDialog({
                 if (f) void handleFile(f);
               }}
               className={cn(
-                'relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition',
+                'relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center transition',
                 dragOver
-                  ? 'border-brand-orange/60 bg-brand-orange/5'
-                  : 'border-white/15 bg-white/[0.02] hover:border-white/25',
+                  ? 'border-blue-300 bg-blue-50'
+                  : 'border-slate-300 bg-white hover:border-slate-400',
               )}
             >
-              <Upload className="h-6 w-6 text-white/40" />
-              <div className="text-sm text-white/80">
+              <Upload className="h-6 w-6 text-slate-400" />
+              <div className="text-sm text-slate-700">
                 Arrastra un archivo <code>.xlsx</code> o <code>.csv</code>
               </div>
-              <div className="text-[11px] text-white/40">
+              <div className="text-[11px] text-slate-500">
                 o haz click para seleccionar
               </div>
               <input
@@ -1126,25 +1170,31 @@ function BulkImportDialog({
         {rows.length > 0 && !result && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-white/60">{fileName}</span>
-              <Badge variant="success">{valid} válidas</Badge>
-              {invalid > 0 && <Badge variant="danger">{invalid} errores</Badge>}
+              <span className="text-slate-600">{fileName}</span>
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                {valid} válidas
+              </span>
+              {invalid > 0 && (
+                <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
+                  {invalid} errores
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   setRows([]);
                   setFileName(null);
                 }}
-                className="ml-auto inline-flex items-center gap-1 text-[11px] text-white/50 hover:text-white"
+                className="ml-auto inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-700"
               >
                 <XIcon className="h-3 w-3" />
                 Limpiar
               </button>
             </div>
 
-            <div className="max-h-72 overflow-auto rounded-lg border border-white/10">
+            <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
               <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-neutral-900 text-white/60">
+                <thead className="sticky top-0 bg-slate-50 text-slate-700">
                   <tr>
                     <th className="px-2 py-1.5 text-left">Fila</th>
                     <th className="px-2 py-1.5 text-left">Nombre</th>
@@ -1158,25 +1208,25 @@ function BulkImportDialog({
                     <tr
                       key={r.index}
                       className={cn(
-                        'border-t border-white/5',
-                        r.error && 'bg-red-500/5',
+                        'border-t border-slate-200',
+                        r.error && 'bg-rose-50',
                       )}
                     >
-                      <td className="px-2 py-1 text-white/40">{r.index}</td>
-                      <td className="px-2 py-1 text-white/90">
+                      <td className="px-2 py-1 text-slate-500">{r.index}</td>
+                      <td className="px-2 py-1 text-slate-900">
                         {String(r.raw.name ?? '—')}
                       </td>
-                      <td className="px-2 py-1 text-white/60">
+                      <td className="px-2 py-1 text-slate-600">
                         {String(r.raw.muscle_group ?? '')}
                       </td>
-                      <td className="px-2 py-1 text-white/60">
+                      <td className="px-2 py-1 text-slate-600">
                         {String(r.raw.level ?? '')}
                       </td>
                       <td className="px-2 py-1">
                         {r.error ? (
-                          <span className="text-red-300">{r.error}</span>
+                          <span className="text-rose-600">{r.error}</span>
                         ) : (
-                          <span className="text-emerald-300">OK</span>
+                          <span className="text-emerald-600">OK</span>
                         )}
                       </td>
                     </tr>
@@ -1184,8 +1234,9 @@ function BulkImportDialog({
                 </tbody>
               </table>
               {rows.length > 50 && (
-                <div className="px-2 py-1.5 text-[11px] text-white/40">
-                  + {rows.length - 50} filas más (se enviarán todas las válidas)
+                <div className="px-2 py-1.5 text-[11px] text-slate-500">
+                  + {rows.length - 50} filas más (se enviarán todas las
+                  válidas)
                 </div>
               )}
             </div>
@@ -1193,21 +1244,21 @@ function BulkImportDialog({
         )}
 
         {result && (
-          <div className="space-y-2 rounded-lg border border-white/10 bg-white/[0.02] p-3 text-sm">
-            <div className="font-semibold text-white">Resultado</div>
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+            <div className="font-semibold text-slate-900">Resultado</div>
             <div className="flex gap-4 text-xs">
-              <span className="text-emerald-300">
+              <span className="text-emerald-700">
                 Creados: {result.created}
               </span>
-              <span className="text-sky-300">
+              <span className="text-sky-700">
                 Actualizados: {result.updated}
               </span>
-              <span className="text-red-300">
+              <span className="text-rose-700">
                 Errores: {result.errors?.length ?? 0}
               </span>
             </div>
             {result.errors?.length > 0 && (
-              <div className="max-h-40 overflow-auto text-[11px] text-white/60">
+              <div className="max-h-40 overflow-auto text-[11px] text-slate-600">
                 {result.errors.map((e, i) => (
                   <div key={i}>
                     #{e.index}: {e.error}
@@ -1219,17 +1270,24 @@ function BulkImportDialog({
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className={BTN_SECONDARY}
+          >
             {result ? 'Cerrar' : 'Cancelar'}
-          </Button>
+          </button>
           {rows.length > 0 && !result && (
-            <Button
+            <button
+              type="button"
               onClick={() => importMut.mutate()}
-              loading={importMut.isPending}
-              disabled={valid === 0}
+              disabled={importMut.isPending || valid === 0}
+              className={BTN_PRIMARY}
             >
-              Confirmar import ({valid})
-            </Button>
+              {importMut.isPending
+                ? 'Importando…'
+                : `Confirmar import (${valid})`}
+            </button>
           )}
         </DialogFooter>
       </DialogContent>

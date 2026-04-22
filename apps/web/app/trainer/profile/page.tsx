@@ -4,9 +4,6 @@ import * as React from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CheckCircle2, Plus, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { portalApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
@@ -22,6 +19,9 @@ const SPECIALTIES = [
   'Nutrición',
   'Otro',
 ];
+
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100';
 
 export default function TrainerProfilePage() {
   const { user, refreshMe } = useAuth();
@@ -100,25 +100,28 @@ export default function TrainerProfilePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold uppercase tracking-widest text-white">
-          Perfil
-        </h1>
-        <p className="text-sm text-white/50">
+        <h1 className="text-3xl font-bold text-slate-900">Perfil</h1>
+        <p className="text-sm text-slate-600">
           Actualiza tus datos públicos, pago de payouts y credenciales.
         </p>
       </div>
 
       {/* ─── Basic info ──────────────────────────────────────────── */}
-      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
           Datos básicos
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label="Nombre">
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <input
+              className={INPUT_CLS}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </Field>
           <Field label="Foto (URL)">
-            <Input
+            <input
+              className={INPUT_CLS}
               value={avatarUrl}
               onChange={(e) => setAvatarUrl(e.target.value)}
               placeholder="https://…/foto.jpg"
@@ -130,39 +133,42 @@ export default function TrainerProfilePage() {
               onChange={(e) => setBio(e.target.value)}
               rows={3}
               placeholder="Breve descripción visible en tu perfil público."
-              className="flex w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+              className="flex w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
             />
           </Field>
         </div>
       </section>
 
       {/* ─── Banking ─────────────────────────────────────────────── */}
-      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
             Datos bancarios
           </h2>
-          <p className="text-[11px] text-white/50">
+          <p className="text-[11px] text-slate-500">
             Usados para liquidar tus payouts. Tu información se guarda cifrada.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Field label="RFC">
-            <Input
+            <input
+              className={INPUT_CLS}
               value={rfc}
               onChange={(e) => setRfc(e.target.value.toUpperCase())}
               placeholder="XAXX010101000"
             />
           </Field>
           <Field label="Banco">
-            <Input
+            <input
+              className={INPUT_CLS}
               value={bank}
               onChange={(e) => setBank(e.target.value)}
               placeholder="BBVA"
             />
           </Field>
           <Field label="CLABE (18 dígitos)">
-            <Input
+            <input
+              className={INPUT_CLS}
               value={clabe}
               onChange={(e) => setClabe(e.target.value.replace(/\D/g, ''))}
               placeholder="012345678901234567"
@@ -173,8 +179,8 @@ export default function TrainerProfilePage() {
       </section>
 
       {/* ─── Specialties ─────────────────────────────────────────── */}
-      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
           Especialidades
         </h2>
         <div className="flex flex-wrap gap-2">
@@ -187,8 +193,8 @@ export default function TrainerProfilePage() {
                 onClick={() => toggleTag(t)}
                 className={
                   on
-                    ? 'rounded-full border border-brand-orange/40 bg-brand-orange/10 px-3 py-1 text-xs font-semibold text-brand-orange'
-                    : 'rounded-full border border-white/10 bg-white/[0.02] px-3 py-1 text-xs text-white/60 hover:border-white/20 hover:text-white'
+                    ? 'rounded-full border border-blue-300 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700'
+                    : 'rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 hover:border-slate-300 hover:text-slate-900'
                 }
               >
                 {on && <CheckCircle2 className="mr-1 inline h-3 w-3" />}
@@ -198,23 +204,30 @@ export default function TrainerProfilePage() {
           })}
         </div>
         <div className="flex items-center gap-2">
-          <Input
+          <input
+            className={`${INPUT_CLS} max-w-xs`}
             value={customTag}
             onChange={(e) => setCustomTag(e.target.value)}
             placeholder="Agregar especialidad custom…"
-            className="max-w-xs"
           />
-          <Button size="sm" variant="secondary" onClick={addCustom}>
+          <button
+            type="button"
+            onClick={addCustom}
+            className="inline-flex min-h-[40px] items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
             <Plus className="h-3 w-3" />
             Agregar
-          </Button>
+          </button>
         </div>
         {tags.filter((t) => !SPECIALTIES.includes(t)).length > 0 && (
           <div className="flex flex-wrap gap-2">
             {tags
               .filter((t) => !SPECIALTIES.includes(t))
               .map((t) => (
-                <Badge key={t} variant="brand">
+                <span
+                  key={t}
+                  className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-blue-700"
+                >
                   {t}
                   <button
                     type="button"
@@ -223,61 +236,69 @@ export default function TrainerProfilePage() {
                   >
                     <X className="h-3 w-3" />
                   </button>
-                </Badge>
+                </span>
               ))}
           </div>
         )}
       </section>
 
       <div className="flex items-center justify-end">
-        <Button onClick={() => saveProfile.mutate()} loading={saveProfile.isPending}>
-          Guardar cambios
-        </Button>
+        <button
+          type="button"
+          onClick={() => saveProfile.mutate()}
+          disabled={saveProfile.isPending}
+          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60"
+        >
+          {saveProfile.isPending ? 'Guardando…' : 'Guardar cambios'}
+        </button>
       </div>
 
       {/* ─── Password ────────────────────────────────────────────── */}
-      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
           Cambiar contraseña
         </h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Field label="Actual">
-            <Input
+            <input
               type="password"
+              className={INPUT_CLS}
               value={pwCurrent}
               onChange={(e) => setPwCurrent(e.target.value)}
             />
           </Field>
           <Field label="Nueva">
-            <Input
+            <input
               type="password"
+              className={INPUT_CLS}
               value={pwNext}
               onChange={(e) => setPwNext(e.target.value)}
             />
           </Field>
           <Field label="Confirmar">
-            <Input
+            <input
               type="password"
+              className={INPUT_CLS}
               value={pwConfirm}
               onChange={(e) => setPwConfirm(e.target.value)}
             />
           </Field>
         </div>
         <div className="flex items-center justify-end">
-          <Button
-            size="sm"
-            variant="secondary"
+          <button
+            type="button"
             onClick={() => {
               if (pwNext.length < 8)
                 return toast.error('La nueva contraseña debe tener 8+ caracteres');
-              if (pwNext !== pwConfirm) return toast.error('Las contraseñas no coinciden');
+              if (pwNext !== pwConfirm)
+                return toast.error('Las contraseñas no coinciden');
               changePw.mutate();
             }}
-            loading={changePw.isPending}
-            disabled={!pwCurrent || !pwNext}
+            disabled={!pwCurrent || !pwNext || changePw.isPending}
+            className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
           >
-            Actualizar contraseña
-          </Button>
+            {changePw.isPending ? 'Actualizando…' : 'Actualizar contraseña'}
+          </button>
         </div>
       </section>
     </div>
@@ -295,7 +316,7 @@ function Field({
 }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className ?? ''}`}>
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-white/60">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600">
         {label}
       </span>
       {children}

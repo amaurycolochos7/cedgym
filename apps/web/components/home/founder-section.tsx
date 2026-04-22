@@ -7,23 +7,23 @@ type Category = 'football' | 'power' | 'rec';
 
 const CATEGORY_META: Record<
   Category,
-  { label: string; pill: string; dot: string; Icon: typeof Trophy }
+  { label: string; label_color: string; dot: string; Icon: typeof Trophy }
 > = {
   football: {
     label: 'Football',
-    pill: 'text-blue-700 ring-blue-200 bg-blue-50',
+    label_color: 'text-blue-700',
     dot: 'text-blue-700 ring-blue-200 bg-blue-50',
     Icon: Shield,
   },
   power: {
     label: 'Powerlifting',
-    pill: 'text-rose-700 ring-rose-200 bg-rose-50',
+    label_color: 'text-rose-700',
     dot: 'text-rose-700 ring-rose-200 bg-rose-50',
     Icon: Dumbbell,
   },
   rec: {
     label: 'Reconocimiento',
-    pill: 'text-amber-700 ring-amber-200 bg-amber-50',
+    label_color: 'text-amber-700',
     dot: 'text-amber-700 ring-amber-200 bg-amber-50',
     Icon: Medal,
   },
@@ -81,38 +81,29 @@ export function FounderSection() {
     >
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
-              Detrás del método
-            </span>
-            <h2 className="font-display mt-3 text-3xl leading-[0.95] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
-              Conoce al coach.
-            </h2>
-            <p className="mt-2 max-w-xl text-sm text-slate-600 sm:text-base">
-              No teoría: el método que lo llevó a ganar a nivel mundial, ahora en tu rutina.
-            </p>
-          </div>
+        <div className="mb-12 max-w-2xl">
+          <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+            El coach detrás del método.
+          </h2>
+          <p className="mt-4 text-base text-slate-600 sm:text-lg">
+            M.A. Samuel Oswaldo Rodríguez Jeffery — tricampeón mundial de Powerlifting,
+            campeón nacional con las Águilas UACH y referente de preparación física
+            en Chihuahua.
+          </p>
+          <p className="mt-2 text-sm font-medium text-blue-600">
+            Football · Powerlifting · Prep Física
+          </p>
         </div>
 
-        {/* Photo + bio */}
+        {/* Photo + stats + timeline */}
         <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-14">
-          {/* Photo column — camera-frame treatment */}
+          {/* Photo column — clean framing, no viewfinder chrome */}
           <div className="relative">
-            {/* Viewfinder corners */}
-            <div className="absolute -inset-3 hidden sm:block pointer-events-none">
-              <span className="absolute left-0 top-0 h-6 w-6 border-l-2 border-t-2 border-blue-600 rounded-tl" />
-              <span className="absolute right-0 top-0 h-6 w-6 border-r-2 border-t-2 border-blue-600 rounded-tr" />
-              <span className="absolute left-0 bottom-0 h-6 w-6 border-l-2 border-b-2 border-blue-600 rounded-bl" />
-              <span className="absolute right-0 bottom-0 h-6 w-6 border-r-2 border-b-2 border-blue-600 rounded-br" />
-            </div>
-
-            {/* Photo with 4:5 portrait aspect */}
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-2xl ring-1 ring-slate-200 shadow-2xl">
+            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-slate-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/founder.jpg"
-                alt="M.A. Samuel Oswaldo Rodríguez Jeffery"
+                alt="Samuel Jeffery"
                 className="h-full w-full object-cover"
                 onError={(e) => {
                   const img = e.currentTarget;
@@ -120,52 +111,37 @@ export function FounderSection() {
                   img.removeAttribute('src');
                 }}
               />
-              {/* Bottom gradient for caption contrast */}
-              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent" />
-              {/* Caption inside the frame */}
-              <div className="absolute inset-x-5 bottom-5 text-white">
-                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-sky-300">
-                  Fundador · Coach
-                </div>
-                <div className="mt-0.5 font-display text-2xl font-bold leading-tight sm:text-3xl">
+            </div>
+            {/* Caption below the frame, editorial style */}
+            <div className="mt-4 flex items-baseline justify-between gap-4">
+              <div>
+                <p className="font-display text-xl font-semibold text-slate-900">
                   Samuel Jeffery
-                </div>
-                <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-white/75">
-                  3× Mundial Powerlifting · 20+ años
-                </div>
+                </p>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+                  Fundador · Coach
+                </p>
               </div>
+              <p className="text-[11px] font-medium uppercase tracking-widest text-blue-600">
+                3× Mundial · 20+ años
+              </p>
             </div>
           </div>
 
-          {/* Right column: bio + stats + timeline */}
-          <div className="space-y-5">
-            {/* Bio */}
-            <div>
-              <h3 className="font-display text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
-                M.A. Samuel Oswaldo Rodríguez Jeffery
-              </h3>
-              <p className="mt-1.5 text-sm font-semibold text-blue-700 sm:text-base">
-                Football · Powerlifting · Prep Física
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
-                Atleta multidisciplina con más de dos décadas en alto rendimiento:
-                campeón nacional con las Águilas UACH, tricampeón mundial de
-                Powerlifting y referente de la preparación física en Chihuahua.
-              </p>
-            </div>
-
-            {/* Stats grid */}
+          {/* Right column: stats + timeline */}
+          <div className="space-y-6">
+            {/* Stats grid — cleaner borders, no ring-shadow combo */}
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {STATS.map(({ value, label, Icon }) => (
                 <div
                   key={label}
-                  className="rounded-2xl bg-white p-4 ring-1 ring-slate-200 shadow-sm sm:p-5"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"
                 >
                   <Icon className="mb-2 h-5 w-5 text-blue-600 sm:h-6 sm:w-6" />
                   <div className="font-display text-2xl font-bold leading-none text-slate-900 sm:text-3xl">
                     {value}
                   </div>
-                  <div className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-slate-500">
                     {label}
                   </div>
                 </div>
@@ -173,18 +149,18 @@ export function FounderSection() {
             </div>
 
             {/* Timeline card */}
-            <div className="rounded-2xl bg-white p-5 ring-1 ring-slate-200 shadow-sm sm:p-6">
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-slate-900">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+              <div className="mb-5 flex items-center justify-between gap-2">
+                <h4 className="font-display text-lg font-semibold text-slate-900">
                   Logros deportivos
                 </h4>
-                <div className="hidden gap-1.5 sm:flex">
+                <div className="hidden gap-3 sm:flex">
                   {(Object.keys(CATEGORY_META) as Category[]).map((k) => {
                     const meta = CATEGORY_META[k];
                     return (
                       <span
                         key={k}
-                        className={`inline-flex items-center gap-1 rounded-full ring-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${meta.pill}`}
+                        className={`inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.15em] ${meta.label_color}`}
                       >
                         <meta.Icon className="h-3 w-3" />
                         {meta.label}

@@ -71,16 +71,13 @@ export function FeaturedProducts() {
   const items = data && data.length > 0 ? data : FALLBACK;
 
   return (
-    <section
-      id="marketplace"
-      className="bg-white px-4 py-16 sm:py-24"
-    >
-      <div className="mx-auto max-w-7xl">
+    <section id="marketplace" className="bg-white py-16 sm:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
             Marketplace
           </span>
-          <h2 className="font-display mt-4 text-4xl leading-[0.95] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+          <h2 className="font-display mt-4 text-4xl leading-[1.05] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
             Rutinas{' '}
             <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
               destacadas
@@ -90,17 +87,23 @@ export function FeaturedProducts() {
             Programas probados, escritos por entrenadores de la casa. Compra, descarga y entrena hoy.
           </p>
         </div>
+      </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Full-bleed horizontal carousel — same pattern as "Para ti" / "Instalaciones" */}
+      <div className="mt-10 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory scroll-pl-6 sm:scroll-pl-8 lg:scroll-pl-10">
+        <div className="mx-auto flex max-w-7xl gap-4 px-6 sm:gap-5 sm:px-8 lg:px-10">
           {isLoading
             ? Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-80 animate-pulse rounded-3xl bg-slate-100"
+                  className="snap-start shrink-0 w-[280px] sm:w-[320px] h-80 animate-pulse rounded-3xl bg-slate-100"
                 />
               ))
             : items.slice(0, 6).map((p) => (
-                <div key={p.id} className="relative">
+                <div
+                  key={p.id}
+                  className="snap-start shrink-0 w-[280px] sm:w-[320px] relative"
+                >
                   <ProductCard product={p} />
                   <div className="pointer-events-none absolute bottom-6 left-6 right-6 flex justify-center opacity-0 transition-opacity group-hover:opacity-100">
                     <Link
@@ -117,15 +120,15 @@ export function FeaturedProducts() {
                 </div>
               ))}
         </div>
+      </div>
 
-        <div className="mt-10 text-center">
-          <Link
-            href="/tienda"
-            className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-slate-300 px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-slate-800 transition hover:bg-slate-50"
-          >
-            Ver tienda completa
-          </Link>
-        </div>
+      <div className="mx-auto mt-10 max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+        <Link
+          href="/tienda"
+          className="inline-flex items-center gap-2 rounded-full bg-white ring-1 ring-slate-300 px-6 py-3 text-xs font-bold uppercase tracking-[0.15em] text-slate-800 transition hover:bg-slate-50"
+        >
+          Ver tienda completa
+        </Link>
       </div>
     </section>
   );

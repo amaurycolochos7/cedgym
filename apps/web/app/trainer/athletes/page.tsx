@@ -3,8 +3,6 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, ShoppingBag, Users as UsersIcon, Mail } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { trainerApi } from '@/lib/trainer-api';
 
 const MXN = new Intl.NumberFormat('es-MX', {
@@ -20,10 +18,34 @@ function Initials({ name }: { name: string }) {
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('');
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-orange/20 text-xs font-bold text-brand-orange">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
       {initials || '?'}
     </div>
   );
+}
+
+function SourceBadge({ source }: { source: string }) {
+  const base =
+    'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider';
+  if (source === 'product')
+    return (
+      <span className={`${base} bg-blue-100 text-blue-700`}>
+        <ShoppingBag className="h-3 w-3" /> Producto
+      </span>
+    );
+  if (source === 'class')
+    return (
+      <span className={`${base} bg-sky-100 text-sky-700`}>
+        <UsersIcon className="h-3 w-3" /> Clase
+      </span>
+    );
+  if (source === 'both')
+    return (
+      <span className={`${base} bg-emerald-100 text-emerald-700`}>
+        Producto + Clase
+      </span>
+    );
+  return null;
 }
 
 export default function TrainerAthletesPage() {
@@ -48,58 +70,44 @@ export default function TrainerAthletesPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold uppercase tracking-widest text-white">
-          Mis atletas
-        </h1>
-        <p className="text-sm text-white/50">
+        <h1 className="text-3xl font-bold text-slate-900">Mis atletas</h1>
+        <p className="text-sm text-slate-600">
           Atletas que compraron tus rutinas o asisten a tus clases.
         </p>
       </div>
 
       <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-        <Input
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar por nombre, correo o teléfono…"
-          className="pl-9"
+          className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
         />
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-white/50">Cargando…</div>
+        <div className="text-sm text-slate-500">Cargando…</div>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
+        <div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-500">
           {q ? 'Sin resultados para tu búsqueda.' : 'Aún no tienes atletas vinculados.'}
         </div>
       ) : (
-        <ul className="divide-y divide-white/5 rounded-2xl border border-white/10 bg-white/[0.02]">
+        <ul className="divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
           {items.map((a) => (
             <li
               key={a.id}
-              className="flex flex-wrap items-center gap-3 p-4 hover:bg-white/[0.02]"
+              className="flex flex-wrap items-center gap-3 p-4 hover:bg-slate-50"
             >
               <Initials name={a.full_name || a.name} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="truncate text-sm font-semibold text-white">
+                  <div className="truncate text-sm font-semibold text-slate-900">
                     {a.full_name || a.name}
                   </div>
-                  {a.source === 'product' && (
-                    <Badge variant="brand">
-                      <ShoppingBag className="h-3 w-3" /> Producto
-                    </Badge>
-                  )}
-                  {a.source === 'class' && (
-                    <Badge variant="info">
-                      <UsersIcon className="h-3 w-3" /> Clase
-                    </Badge>
-                  )}
-                  {a.source === 'both' && (
-                    <Badge variant="success">Producto + Clase</Badge>
-                  )}
+                  <SourceBadge source={a.source} />
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-3 text-[11px] text-white/50">
+                <div className="mt-0.5 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
                   <span className="flex items-center gap-1">
                     <Mail className="h-3 w-3" /> {a.email}
                   </span>
@@ -108,10 +116,10 @@ export default function TrainerAthletesPage() {
               </div>
               <div className="flex items-center gap-4 text-xs">
                 <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-white/40">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500">
                     Pagado
                   </div>
-                  <div className="text-sm font-semibold text-brand-orange">
+                  <div className="text-sm font-semibold text-blue-600">
                     {MXN.format(a.total_spent_mxn || 0)}
                   </div>
                 </div>
@@ -120,7 +128,7 @@ export default function TrainerAthletesPage() {
                     athlete view is a follow-up. */}
                 <a
                   href={`mailto:${a.email}`}
-                  className="text-[11px] font-semibold text-brand-orange hover:underline"
+                  className="text-[11px] font-semibold text-blue-600 hover:underline"
                 >
                   Contactar
                 </a>

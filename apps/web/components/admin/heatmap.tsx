@@ -11,8 +11,8 @@ interface HeatmapProps {
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 /**
- * 7x24 heatmap. Colors are interpolated between transparent and brand orange
- * based on the max value in `cells`.
+ * 7x24 heatmap. Colors are interpolated between a light slate base and
+ * brand blue based on the max value in `cells`.
  */
 export function Heatmap({ cells, className }: HeatmapProps) {
   const max = cells.reduce((m, c) => Math.max(m, c.count), 0) || 1;
@@ -24,7 +24,10 @@ export function Heatmap({ cells, className }: HeatmapProps) {
     <div className={cn('overflow-x-auto', className)}>
       <div className="min-w-[720px]">
         {/* hour header */}
-        <div className="ml-10 grid grid-cols-24 gap-[2px] text-[9px] text-white/40" style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}>
+        <div
+          className="ml-10 grid gap-[2px] text-[9px] font-medium text-slate-500"
+          style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
+        >
           {Array.from({ length: 24 }).map((_, h) => (
             <div key={h} className="text-center">
               {h % 3 === 0 ? `${h}h` : ''}
@@ -35,7 +38,9 @@ export function Heatmap({ cells, className }: HeatmapProps) {
         <div className="mt-1 space-y-[2px]">
           {DAY_LABELS.map((label, d) => (
             <div key={d} className="flex items-center gap-2">
-              <div className="w-8 text-[10px] text-white/50">{label}</div>
+              <div className="w-8 text-[10px] font-medium text-slate-600">
+                {label}
+              </div>
               <div
                 className="grid flex-1 gap-[2px]"
                 style={{ gridTemplateColumns: 'repeat(24, minmax(0, 1fr))' }}
@@ -45,13 +50,13 @@ export function Heatmap({ cells, className }: HeatmapProps) {
                   const intensity = v / max;
                   const bg =
                     v === 0
-                      ? 'rgba(255,255,255,0.04)'
-                      : `rgba(30,90,255,${0.15 + intensity * 0.75})`;
+                      ? 'rgb(241, 245, 249)' // slate-100
+                      : `rgba(37, 99, 235, ${0.15 + intensity * 0.8})`; // blue-600
                   return (
                     <div
                       key={h}
                       title={`${label} ${h}:00 — ${v}`}
-                      className="h-5 rounded-sm transition-colors hover:ring-1 hover:ring-white/30"
+                      className="h-5 rounded-sm transition-colors hover:ring-2 hover:ring-blue-400"
                       style={{ background: bg }}
                     />
                   );

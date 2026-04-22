@@ -2,22 +2,26 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Baby,
+  BatteryFull,
+  Bell,
   Check,
   ChevronRight,
   Clock,
-  Crown,
+  Dumbbell,
   Flame,
+  Home,
   Instagram,
   MapPin,
   MessageCircle,
   Navigation,
   Phone,
-  QrCode,
   ShieldCheck,
+  Signal,
   Trophy,
+  User,
   UserCheck,
   Users,
-  Zap,
+  Wifi,
 } from 'lucide-react';
 import { FeaturedProducts } from '@/components/home/featured-products';
 import { FounderSection } from '@/components/home/founder-section';
@@ -95,7 +99,7 @@ export default function HomePage() {
 
           <div className="relative mx-auto flex h-full min-h-[560px] sm:min-h-[640px] lg:min-h-[680px] max-w-7xl items-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
             <div className="max-w-2xl">
-              <h1 className="font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-6xl md:text-7xl">
+              <h1 className="font-display text-5xl font-bold leading-[1.02] tracking-tight text-white sm:text-6xl md:text-7xl">
                 Diseñado por un{' '}
                 <span className="bg-gradient-to-r from-sky-300 to-white bg-clip-text text-transparent">
                   campeón mundial.
@@ -111,7 +115,7 @@ export default function HomePage() {
               <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
                 <Link
                   href="/register"
-                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-8 py-4 text-sm font-bold uppercase tracking-[0.15em] text-white shadow-xl shadow-blue-600/30 transition hover:-translate-y-0.5 hover:bg-blue-500"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-bold uppercase tracking-[0.15em] text-blue-700 shadow-xl shadow-blue-900/30 transition hover:-translate-y-0.5 hover:bg-blue-50"
                 >
                   ¡Inscríbete ya!
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -132,48 +136,15 @@ export default function HomePage() {
       <section id="planes" className="bg-slate-50 px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-7xl">
           <div className="text-center">
-            <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
-              Membresías
-            </span>
-            <h2 className="font-display mt-4 text-3xl leading-[0.95] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+            <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
               Elige el mejor plan y{' '}
               <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
                 entrena ya.
               </span>
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 sm:text-base">
-              Todos los planes incluyen acceso al gym con QR. Cancela cuando quieras.
+              Precio mensual, sin contratos. Cancela cuando quieras.
             </p>
-          </div>
-
-          {/* Cycle switcher */}
-          <div className="mt-7 flex justify-center">
-            <div className="inline-flex gap-1 rounded-full bg-white p-1 ring-1 ring-slate-200 shadow-sm">
-              <button
-                className="cycle-btn is-active rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:px-5"
-                data-cycle="month"
-              >
-                Mensual
-              </button>
-              <button
-                className="cycle-btn flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:px-5"
-                data-cycle="q"
-              >
-                Trim.
-                <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
-                  −10%
-                </span>
-              </button>
-              <button
-                className="cycle-btn flex items-center gap-1.5 rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:px-5"
-                data-cycle="y"
-              >
-                Anual
-                <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
-                  −20%
-                </span>
-              </button>
-            </div>
           </div>
 
           <div className="mt-10">
@@ -181,11 +152,12 @@ export default function HomePage() {
               <PlanCard
                 href="/register?redirect=/checkout/starter&product=starter&type=membership"
                 tier="Básico" subtitle="Para empezar"
-                icon={<Zap className="h-5 w-5" />}
-                priceMonth="599" priceQ="1617" priceY="5750"
+                icon={<Dumbbell className="h-6 w-6" strokeWidth={2.25} />}
+                priceMonth="599"
+                subprice="+ $99 inscripción única"
                 features={[
-                  { t: 'Sala general' },
-                  { t: 'Rutina personalizada en la app' },
+                  { t: '1 visita al día al gym' },
+                  { t: '1 rutina gratis generada en la app' },
                   { t: 'Panel del atleta + progreso' },
                 ]}
                 cta="Elegir Básico"
@@ -193,28 +165,32 @@ export default function HomePage() {
               <PlanCard
                 href="/register?redirect=/checkout/pro&product=pro&type=membership"
                 tier="Pro" subtitle="Atleta regular" popular
-                icon={<Flame className="h-5 w-5" />}
-                priceMonth="999" priceQ="2697" priceY="9590"
+                icon={<Flame className="h-6 w-6" strokeWidth={2.25} />}
+                priceMonth="999"
+                subprice="Sin inscripción"
                 features={[
-                  { t: 'Acceso ilimitado 6 días' },
-                  { t: 'Clases grupales sin límite' },
-                  { t: 'Plan del coach personalizado' },
+                  { t: 'Entradas ilimitadas al día (AM + PM)' },
+                  { t: 'Genera rutinas ilimitadas desde la app' },
                   { t: 'Plan de comidas básico en la app' },
-                  { t: '1 curso incluido / trimestre' },
+                  { t: 'Precio de socio en tienda' },
+                  { t: '2 congelamientos al año' },
+                  { t: '1 pase de invitado al mes' },
                 ]}
                 cta="Elegir Pro"
               />
               <PlanCard
                 href="/register?redirect=/checkout/elite&product=elite&type=membership"
                 tier="Élite" subtitle="Preparación deportiva"
-                icon={<Crown className="h-5 w-5" />}
-                priceMonth="1,590" priceQ="4293" priceY="15264"
+                icon={<Trophy className="h-6 w-6" strokeWidth={2.25} />}
+                priceMonth="1,590"
+                subprice="Sin inscripción"
                 features={[
-                  { t: 'Programa individualizado' },
-                  { t: 'Prep física por deporte' },
-                  { t: '2 sesiones 1:1 / semana' },
-                  { t: 'Nutrición con bioimpedancia (cada 2 meses)' },
-                  { t: 'Análisis de video incluido' },
+                  { t: 'Todo lo del plan Pro' },
+                  { t: 'Rutina específica por deporte (football, powerlifting, HYROX, etc.)' },
+                  { t: 'Nutrición personalizada con bioimpedancia cada 2 meses' },
+                  { t: 'Feedback de video cada 2 semanas' },
+                  { t: 'WhatsApp directo (1 consulta por semana)' },
+                  { t: 'Precio de socio preferente en tienda' },
                 ]}
                 cta="Elegir Élite"
               />
@@ -234,10 +210,10 @@ export default function HomePage() {
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
             {/* Copy */}
             <div>
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
-                Método del coach
-              </span>
-              <h2 className="font-display mt-4 text-3xl leading-[0.95] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+              <p className="text-sm font-medium text-blue-600">
+                <span aria-hidden="true" className="mr-2">—</span>Método del coach
+              </p>
+              <h2 className="font-display mt-3 text-4xl leading-[1.05] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
                 Tu rutina en{' '}
                 <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">
                   30 segundos.
@@ -275,60 +251,136 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Mockup */}
-            <div className="relative">
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 p-6 text-white shadow-2xl sm:p-7">
-                <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
-                <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-sky-300/20 blur-2xl" />
+            {/* iPhone device mockup */}
+            <div className="relative mx-auto w-full max-w-[340px]">
+              {/* Soft glow behind the phone */}
+              <div aria-hidden className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-to-br from-blue-200/40 to-sky-100/40 blur-3xl" />
 
-                <div className="relative">
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                      Tu panel · vista previa
-                    </span>
-                    <div className="flex gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-white/30" />
-                      <span className="h-2 w-2 rounded-full bg-white/30" />
-                      <span className="h-2 w-2 rounded-full bg-white" />
+              {/* Device bezel */}
+              <div className="relative rounded-[2.75rem] bg-slate-900 p-2.5 shadow-2xl shadow-slate-900/30 ring-1 ring-slate-800">
+                {/* Screen */}
+                <div className="relative overflow-hidden rounded-[2.1rem] bg-slate-50">
+                  {/* Status bar */}
+                  <div className="flex items-center justify-between px-6 pt-3 pb-1 text-[10px] font-semibold text-slate-900">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <Signal className="h-3 w-3" />
+                      <Wifi className="h-3 w-3" />
+                      <BatteryFull className="h-3.5 w-3.5" />
                     </div>
                   </div>
 
-                  <div className="rounded-2xl bg-white/10 p-5 ring-1 ring-white/15 backdrop-blur-sm">
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-sky-200">
-                      Lunes · Empuje
-                    </p>
-                    <h4 className="mt-1.5 font-display text-2xl tracking-tight">
-                      Sesión de hoy
-                    </h4>
+                  {/* Dynamic island */}
+                  <div className="pointer-events-none absolute left-1/2 top-2 h-5 w-24 -translate-x-1/2 rounded-full bg-slate-900" />
 
+                  {/* App chrome */}
+                  <div className="px-5 pt-5">
+                    {/* App header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-[11px] font-bold text-white ring-2 ring-white shadow-sm">
+                          SJ
+                        </div>
+                        <div className="leading-tight">
+                          <p className="text-[10px] text-slate-500">Hola,</p>
+                          <p className="text-sm font-bold text-slate-900">Samuel</p>
+                        </div>
+                      </div>
+                      <button type="button" className="relative rounded-full border border-slate-200 bg-white p-2 shadow-sm" aria-label="Notificaciones">
+                        <Bell className="h-4 w-4 text-slate-600" />
+                        <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
+                      </button>
+                    </div>
+
+                    {/* Today hero card */}
+                    <div className="mt-4 overflow-hidden rounded-2xl bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 p-4 text-white shadow-lg shadow-blue-600/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-sky-200">
+                          Lunes · Empuje
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-bold backdrop-blur-sm">
+                          3/4 hechos
+                        </span>
+                      </div>
+                      <h4 className="mt-1.5 font-display text-xl font-bold leading-tight">
+                        Sesión de hoy
+                      </h4>
+                      <div className="mt-3 h-1 w-full rounded-full bg-white/20">
+                        <div className="h-full w-3/4 rounded-full bg-white" />
+                      </div>
+                      <div className="mt-2 flex items-center gap-3 text-[10px] text-white/85">
+                        <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />~45 min</span>
+                        <span className="inline-flex items-center gap-1"><Dumbbell className="h-3 w-3" />4 ejercicios</span>
+                      </div>
+                    </div>
+
+                    {/* Exercises list */}
                     <div className="mt-4 space-y-2">
                       {[
-                        { name: 'Press banca', sets: '4 × 6', rest: '2:30' },
-                        { name: 'Press inclinado mancuerna', sets: '3 × 10', rest: '1:30' },
-                        { name: 'Fondos en paralelas', sets: '3 × 8', rest: '2:00' },
-                        { name: 'Extensión tríceps cable', sets: '4 × 12', rest: '1:00' },
+                        { name: 'Press banca', sets: '4 × 6', weight: '80 kg', done: true },
+                        { name: 'Press inclinado', sets: '3 × 10', weight: '22 kg', done: true },
+                        { name: 'Fondos paralelas', sets: '3 × 8', weight: 'Peso libre', done: true },
+                        { name: 'Extensión tríceps', sets: '4 × 12', weight: '25 kg', done: false },
                       ].map((ex) => (
                         <div
                           key={ex.name}
-                          className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2.5 ring-1 ring-white/10"
+                          className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5"
                         >
-                          <div>
-                            <p className="text-sm font-semibold text-white">{ex.name}</p>
-                            <p className="text-[10px] uppercase tracking-widest text-white/70">
-                              {ex.sets} · descanso {ex.rest}
+                          <div
+                            className={
+                              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ' +
+                              (ex.done
+                                ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200'
+                                : 'bg-blue-50 text-blue-600 ring-1 ring-blue-200')
+                            }
+                          >
+                            {ex.done ? (
+                              <Check className="h-4 w-4" strokeWidth={3} />
+                            ) : (
+                              <Dumbbell className="h-4 w-4" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[13px] font-semibold text-slate-900">
+                              {ex.name}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">
+                              {ex.sets} · {ex.weight}
                             </p>
                           </div>
-                          <Check className="h-4 w-4 text-sky-200" />
+                          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300" />
                         </div>
                       ))}
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between border-t border-white/15 pt-3">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">
-                        Próximo
-                      </span>
-                      <span className="text-xs font-semibold text-white">Mar · Tirón</span>
+                    {/* Spacer to make room for bottom tab bar */}
+                    <div className="h-20" />
+                  </div>
+
+                  {/* Bottom tab bar */}
+                  <div className="absolute inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 backdrop-blur-sm">
+                    <div className="flex items-center justify-around px-2 pb-2 pt-2">
+                      {[
+                        { I: Home, label: 'Hoy', active: true },
+                        { I: Dumbbell, label: 'Rutinas', active: false },
+                        { I: Users, label: 'Clases', active: false },
+                        { I: User, label: 'Perfil', active: false },
+                      ].map(({ I, label, active }) => (
+                        <button
+                          key={label}
+                          type="button"
+                          className={
+                            'flex flex-col items-center gap-0.5 rounded-lg px-3 py-1 ' +
+                            (active ? 'text-blue-600' : 'text-slate-400')
+                          }
+                        >
+                          <I className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
+                          <span className="text-[9px] font-semibold">{label}</span>
+                        </button>
+                      ))}
                     </div>
+                    {/* Home indicator */}
+                    <div className="mx-auto mb-1.5 h-1 w-28 rounded-full bg-slate-900" />
                   </div>
                 </div>
               </div>
@@ -345,13 +397,10 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
-                Para ti
-              </span>
-              <h2 className="font-display mt-3 text-3xl leading-[0.95] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+              <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
                 El coach diseña para quien eres.
               </h2>
-              <p className="mt-2 text-sm text-slate-600 sm:text-base">
+              <p className="mt-3 text-sm text-slate-600 sm:text-base">
                 Adultos, mayores, juveniles y deportistas. Desliza →
               </p>
             </div>
@@ -359,8 +408,8 @@ export default function HomePage() {
         </div>
 
         {/* Full-bleed carousel */}
-        <div className="mt-8 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
-          <div className="mx-auto flex max-w-7xl gap-4 px-4 sm:gap-5 sm:px-6 lg:px-8">
+        <div className="mt-8 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory scroll-pl-6 sm:scroll-pl-8 lg:scroll-pl-10">
+          <div className="mx-auto flex max-w-7xl gap-4 px-6 sm:gap-5 sm:px-8 lg:px-10">
             {AUDIENCE.map((a) => (
               <div
                 key={a.title}
@@ -386,19 +435,38 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Discipline pills */}
-        <div className="mx-auto mt-6 flex max-w-7xl flex-wrap items-center justify-center gap-2 px-4 sm:px-6 lg:px-8">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 mr-1">
-            Y en tu deporte:
-          </span>
-          {['Fuerza', 'HYROX', 'Powerlifting', 'Funcional', 'Football', 'Soccer', 'Básquet', 'Tenis', 'Boxeo', 'CrossFit'].map((s) => (
-            <span
-              key={s}
-              className="rounded-full bg-white ring-1 ring-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
-            >
-              {s}
-            </span>
-          ))}
+        {/* Discipline marquee */}
+        <div className="mt-14">
+          <div className="mx-auto max-w-3xl px-6 text-center sm:px-8">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-600">
+              Y en tu deporte
+            </p>
+            <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Un coach. <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Todas las disciplinas.</span>
+            </h3>
+          </div>
+
+          {/* Infinite horizontal ticker, pauses on hover */}
+          <div className="group relative mt-8 overflow-hidden py-2">
+            {/* Fade masks */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-slate-50 to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-slate-50 to-transparent" />
+
+            <div className="marquee-track flex w-max items-center gap-3 sm:gap-4">
+              {/* Duplicate the list twice so the -50% translate loops seamlessly */}
+              {[...Array(2)].flatMap((_, dup) =>
+                ['Fuerza', 'HYROX', 'Powerlifting', 'Funcional', 'Football', 'Soccer', 'Básquet', 'Tenis', 'Boxeo', 'CrossFit'].map((s, i) => (
+                  <span
+                    key={`${dup}-${i}`}
+                    className="inline-flex items-center gap-4 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm"
+                  >
+                    {s}
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -407,21 +475,18 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
-                Instalaciones
-              </span>
-              <h2 className="font-display mt-3 text-3xl leading-[0.95] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
-                Todo lo que necesitas.
+              <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+                Instalaciones que tienen todo.
               </h2>
-              <p className="mt-2 text-sm text-slate-600 sm:text-base">
+              <p className="mt-3 text-sm text-slate-600 sm:text-base">
                 Máquinas, funcional y cardio completo. Desliza →
               </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory">
-          <div className="mx-auto flex max-w-7xl gap-4 px-4 sm:gap-5 sm:px-6 lg:px-8">
+        <div className="mt-8 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory scroll-pl-6 sm:scroll-pl-8 lg:scroll-pl-10">
+          <div className="mx-auto flex max-w-7xl gap-4 px-6 sm:gap-5 sm:px-8 lg:px-10">
             {FACILITIES.map((f) => (
               <div
                 key={f.title}
@@ -451,10 +516,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl">
           <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
             <div className="order-2 lg:order-1">
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">
-                Contacto directo
-              </span>
-              <h2 className="font-display mt-4 text-3xl leading-[0.95] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
+              <h2 className="font-display text-4xl leading-[1.05] tracking-tight text-slate-900 sm:text-5xl md:text-6xl">
                 Visítanos.
               </h2>
               <p className="mt-3 max-w-xl text-sm text-slate-600 sm:text-base">
@@ -587,17 +649,63 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 md:flex-row">
+          <div className="flex flex-col items-center justify-between gap-5 border-t border-white/10 pt-6 md:flex-row">
             <p className="text-xs text-slate-400">
               © {new Date().getFullYear()} CED·GYM. Todos los derechos reservados.
             </p>
-            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-              Pagos por{' '}
-              <span className="mp-badge" style={{ padding: '4px 8px' }}>
-                <span style={{ fontSize: '.55rem' }}>mercado</span>
-                <b style={{ fontSize: '.65rem' }}>pago</b>
-              </span>
-            </p>
+            <div className="flex items-center gap-1.5" aria-label="Tarjetas aceptadas">
+                {/* Visa */}
+                <span
+                  className="flex h-6 w-10 items-center justify-center rounded bg-white ring-1 ring-white/10"
+                  aria-label="Visa"
+                >
+                  <svg viewBox="0 0 40 14" className="h-2.5" aria-hidden="true">
+                    <text
+                      x="20"
+                      y="12"
+                      textAnchor="middle"
+                      fontFamily="Helvetica, Arial, sans-serif"
+                      fontSize="13"
+                      fontWeight="900"
+                      fontStyle="italic"
+                      fill="#1A1F71"
+                      letterSpacing="-0.4"
+                    >
+                      VISA
+                    </text>
+                  </svg>
+                </span>
+                {/* Mastercard */}
+                <span
+                  className="flex h-6 w-10 items-center justify-center rounded bg-white ring-1 ring-white/10"
+                  aria-label="Mastercard"
+                >
+                  <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: '#EB001B' }} />
+                  <span
+                    className="-ml-1.5 h-3.5 w-3.5 rounded-full"
+                    style={{ backgroundColor: '#F79E1B', mixBlendMode: 'multiply' }}
+                  />
+                </span>
+                {/* American Express */}
+                <span
+                  className="flex h-6 w-10 items-center justify-center rounded ring-1 ring-white/10"
+                  style={{ backgroundColor: '#2E77BB' }}
+                  aria-label="American Express"
+                >
+                  <span className="text-[7px] font-black uppercase tracking-tight text-white">
+                    AMEX
+                  </span>
+                </span>
+                {/* Carnet (común en MX) */}
+                <span
+                  className="flex h-6 w-10 items-center justify-center rounded bg-white ring-1 ring-white/10"
+                  aria-label="Carnet"
+                >
+                  <span className="text-[8px] font-black uppercase tracking-tight" style={{ color: '#D6291C' }}>
+                    CAR<span style={{ color: '#00A651' }}>N</span>ET
+                  </span>
+                </span>
+            </div>
           </div>
         </div>
       </footer>
@@ -672,12 +780,12 @@ const FACILITIES = [
 
 function PlanCard({
   href, tier, subtitle, icon, popular,
-  priceMonth, priceQ, priceY, features, cta,
+  priceMonth, subprice, features, cta,
 }: {
   href: string; tier: string; subtitle: string;
   icon: React.ReactNode; popular?: boolean;
-  priceMonth: string; priceQ: string; priceY: string;
-  features: { t: string; hi?: boolean }[]; cta: string;
+  priceMonth: string; subprice?: string;
+  features: { t: string }[]; cta: string;
 }) {
   return (
     <div
@@ -689,16 +797,18 @@ function PlanCard({
       }
     >
       {popular && (
-        <span className="absolute -top-3 right-6 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700 shadow-sm">
+        <span className="absolute -top-3 right-6 rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-700 ring-2 ring-slate-900 shadow-sm">
           El más popular
         </span>
       )}
 
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-5 flex items-center gap-3.5">
         <span
           className={
-            'inline-flex h-11 w-11 items-center justify-center rounded-xl ' +
-            (popular ? 'bg-white/15 text-white ring-1 ring-white/20' : 'bg-blue-100 text-blue-700')
+            'relative inline-flex h-14 w-14 items-center justify-center rounded-2xl ' +
+            (popular
+              ? 'bg-gradient-to-br from-white/25 to-white/5 text-white ring-1 ring-white/30 shadow-inner shadow-white/10'
+              : 'bg-gradient-to-br from-blue-50 to-sky-100 text-blue-700 ring-1 ring-blue-200/60 shadow-sm shadow-blue-600/5')
           }
         >
           {icon}
@@ -714,28 +824,26 @@ function PlanCard({
       <div className={'mb-5 border-b pb-5 ' + (popular ? 'border-white/15' : 'border-slate-100')}>
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-black leading-none">
-            $
-            <span className="plan-price" data-month={priceMonth} data-q={priceQ} data-y={priceY}>
-              {priceMonth}
-            </span>
+            ${priceMonth}
           </span>
           <span className={'text-sm ' + (popular ? 'text-white/80' : 'text-slate-500')}>
-            MXN <em className="cycle-label not-italic text-xs">/mes</em>
+            MXN <em className="not-italic text-xs">/mes</em>
           </span>
         </div>
+        {subprice && (
+          <p className={'mt-2 text-xs font-medium ' + (popular ? 'text-white/80' : 'text-slate-500')}>
+            {subprice}
+          </p>
+        )}
       </div>
 
       <ul className="mb-6 space-y-2.5 text-sm">
         {features.map((f) => (
           <li
             key={f.t}
-            className={'flex items-start gap-2 ' + (popular ? 'text-white/90' : f.hi ? 'font-semibold text-slate-900' : 'text-slate-700')}
+            className={'flex items-start gap-2 ' + (popular ? 'text-white/90' : 'text-slate-700')}
           >
-            {f.hi ? (
-              <QrCode className={'mt-0.5 h-4 w-4 shrink-0 ' + (popular ? 'text-white' : 'text-blue-600')} />
-            ) : (
-              <Check className={'mt-0.5 h-4 w-4 shrink-0 ' + (popular ? 'text-sky-200' : 'text-blue-600')} />
-            )}
+            <Check className={'mt-0.5 h-4 w-4 shrink-0 ' + (popular ? 'text-sky-200' : 'text-blue-600')} />
             <span>{f.t}</span>
           </li>
         ))}

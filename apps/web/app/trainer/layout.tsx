@@ -33,19 +33,19 @@ export default function TrainerLayout({
   }, [user, loading, router]);
 
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-white">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <TrainerSidebar open={open} onClose={() => setOpen(false)} />
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-white/5 bg-neutral-950/90 px-4 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:hidden">
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="rounded-md p-2 text-white/70 hover:bg-white/5 hover:text-white"
+            className="rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             aria-label="Abrir menú"
           >
             <Menu className="h-4 w-4" />
           </button>
-          <span className="text-sm font-semibold tracking-wider text-white/90">
+          <span className="text-sm font-semibold tracking-wider text-slate-900">
             Portal Trainer
           </span>
         </header>

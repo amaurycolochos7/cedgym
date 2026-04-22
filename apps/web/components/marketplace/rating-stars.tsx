@@ -33,16 +33,18 @@ export function RatingStars({
               className={cn(
                 'transition-colors',
                 filled
-                  ? 'fill-brand-orange text-brand-orange'
-                  : 'text-white/20',
+                  ? 'fill-amber-400 text-amber-400'
+                  : 'text-slate-300',
               )}
             />
           );
         })}
       </div>
       {(showValue || count !== undefined) && (
-        <span className="ml-1 text-[11px] text-white/60">
-          {showValue && <span className="font-bold text-white/80">{value.toFixed(1)}</span>}
+        <span className="ml-1 text-[11px] text-slate-600">
+          {showValue && (
+            <span className="font-bold text-slate-900">{value.toFixed(1)}</span>
+          )}
           {count !== undefined && <span> ({count})</span>}
         </span>
       )}

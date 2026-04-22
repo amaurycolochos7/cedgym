@@ -24,16 +24,16 @@ export default function TrainerProductEditPage() {
     <div className="space-y-4">
       <Link
         href="/trainer/products"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-white/50 hover:text-brand-orange"
+        className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-blue-600"
       >
         <ChevronLeft className="h-3 w-3" />
         Volver a mis rutinas
       </Link>
 
       {q.isLoading ? (
-        <div className="text-sm text-white/50">Cargando…</div>
+        <div className="text-sm text-slate-500">Cargando…</div>
       ) : !product ? (
-        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/50">
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
           No se encontró este producto.
         </div>
       ) : (

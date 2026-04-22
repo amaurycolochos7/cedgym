@@ -6,9 +6,6 @@ import { toast } from 'sonner';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +25,13 @@ const MXN = new Intl.NumberFormat('es-MX', {
   currency: 'MXN',
   maximumFractionDigits: 0,
 });
+
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_DANGER =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60 disabled:pointer-events-none';
 
 export default function AdminPaymentsPage() {
   const [filters, setFilters] = React.useState({
@@ -92,8 +96,8 @@ export default function AdminPaymentsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-        <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-900">
           Ingresos semanales
         </h3>
         <ChartLine
@@ -105,21 +109,21 @@ export default function AdminPaymentsPage() {
       </div>
 
       <div className="grid grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap">
-        <Select
+        <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className="h-9 w-full sm:max-w-[160px]"
+          className={`${INPUT_CLS} sm:max-w-[160px]`}
         >
           <option value="">Todos los tipos</option>
           <option value="MEMBERSHIP">Membresía</option>
           <option value="COURSE">Curso</option>
           <option value="POS">POS</option>
           <option value="PRODUCT">Producto</option>
-        </Select>
-        <Select
+        </select>
+        <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="h-9 w-full sm:max-w-[160px]"
+          className={`${INPUT_CLS} sm:max-w-[160px]`}
         >
           <option value="">Todos los estados</option>
           <option value="APPROVED">Aprobado</option>
@@ -127,30 +131,30 @@ export default function AdminPaymentsPage() {
           <option value="REJECTED">Rechazado</option>
           <option value="CANCELLED">Cancelado</option>
           <option value="REFUNDED">Reembolsado</option>
-        </Select>
-        <Input
+        </select>
+        <input
           type="date"
           value={filters.from}
           onChange={(e) => setFilters({ ...filters, from: e.target.value })}
-          className="h-9 w-full sm:max-w-[160px]"
+          className={`${INPUT_CLS} sm:max-w-[160px]`}
         />
-        <Input
+        <input
           type="date"
           value={filters.to}
           onChange={(e) => setFilters({ ...filters, to: e.target.value })}
-          className="h-9 w-full sm:max-w-[160px]"
+          className={`${INPUT_CLS} sm:max-w-[160px]`}
         />
 
         <div className="col-span-2 sm:ml-auto">
-          <Button
-            variant="ghost"
+          <button
+            type="button"
             onClick={() => exportMut.mutate()}
-            loading={exportMut.isPending}
-            className="w-full sm:w-auto"
+            disabled={exportMut.isPending}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
           >
-            <Download className="h-3 w-3" />
-            Exportar CSV
-          </Button>
+            <Download className="h-4 w-4" />
+            {exportMut.isPending ? 'Generando…' : 'Exportar CSV'}
+          </button>
         </div>
       </div>
 
@@ -161,12 +165,14 @@ export default function AdminPaymentsPage() {
       />
 
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent>
+        <DialogContent className="bg-white border-slate-200 text-slate-900">
           {detail && (
             <>
               <DialogHeader>
-                <DialogTitle>Detalle de pago</DialogTitle>
-                <DialogDescription>
+                <DialogTitle className="text-slate-900">
+                  Detalle de pago
+                </DialogTitle>
+                <DialogDescription className="text-slate-600">
                   ID: {detail.id}
                 </DialogDescription>
               </DialogHeader>
@@ -184,19 +190,24 @@ export default function AdminPaymentsPage() {
                 />
               </dl>
               <DialogFooter>
-                <Button variant="ghost" onClick={() => setDetail(null)}>
+                <button
+                  type="button"
+                  onClick={() => setDetail(null)}
+                  className={BTN_SECONDARY}
+                >
                   Cerrar
-                </Button>
+                </button>
                 {detail.status === 'APPROVED' && (
-                  <Button
-                    variant="destructive"
+                  <button
+                    type="button"
                     onClick={() => {
                       setRefund(detail);
                       setDetail(null);
                     }}
+                    className={BTN_DANGER}
                   >
                     Reembolsar
-                  </Button>
+                  </button>
                 )}
               </DialogFooter>
             </>
@@ -204,7 +215,6 @@ export default function AdminPaymentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* TODO: /admin/payments/:id/refund endpoint doesn't exist yet in backend */}
       <ConfirmDialog
         open={!!refund}
         onOpenChange={(o) => !o && setRefund(null)}
@@ -229,9 +239,11 @@ export default function AdminPaymentsPage() {
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-white/[0.02] p-3">
-      <dt className="text-[10px] uppercase tracking-wider text-white/40">{k}</dt>
-      <dd className="mt-1 text-sm text-white">{v}</dd>
+    <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        {k}
+      </dt>
+      <dd className="mt-1 text-sm text-slate-900">{v}</dd>
     </div>
   );
 }

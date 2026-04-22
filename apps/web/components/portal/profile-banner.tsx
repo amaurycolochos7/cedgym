@@ -1,18 +1,23 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { AlertCircle, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 
 export function ProfileCompletionBanner() {
   const { user } = useAuth();
+  const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     setDismissed(localStorage.getItem('cedgym_profile_banner_dismissed') === '1');
   }, []);
 
+  // Never show the banner on the perfil page itself — it's redundant noise
+  // when the user is already on the destination.
+  if (pathname?.startsWith('/portal/perfil')) return null;
   if (dismissed || !user || user.profile_completed) return null;
 
   return (

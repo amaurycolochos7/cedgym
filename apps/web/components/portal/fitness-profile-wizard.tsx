@@ -16,11 +16,48 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Field } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
 import type { ApiError } from '@/lib/schemas';
+
+/* Light-theme primitives — local so we don't pull the dark shared <Button>/<Input>/<Field>. */
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const LABEL_CLS =
+  'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600';
+
+function LightField({
+  id,
+  label,
+  hint,
+  error,
+  className,
+  children,
+}: {
+  id?: string;
+  label?: React.ReactNode;
+  hint?: React.ReactNode;
+  error?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn('flex flex-col', className)}>
+      {label && (
+        <label htmlFor={id} className={LABEL_CLS}>
+          {label}
+        </label>
+      )}
+      {children}
+      {error ? (
+        <p className="mt-1 text-xs text-rose-600" role="alert">
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="mt-1 text-xs text-slate-500">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────────────────────
  * Types mirroring apps/api/src/routes/ai-routines.js mergeProfile.
@@ -51,11 +88,11 @@ type Discipline =
   | 'CROSSFIT';
 type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 type ActivityLevel =
-  | 'SEDENTARY'
-  | 'LIGHT'
-  | 'MODERATE'
-  | 'HIGH'
-  | 'VERY_HIGH';
+  | 'sedentary'
+  | 'light'
+  | 'moderate'
+  | 'high'
+  | 'very_high';
 
 interface FitnessProfileDraft {
   // Step 1
@@ -143,11 +180,11 @@ const LEVELS: { value: Level; label: string }[] = [
 ];
 
 const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
-  { value: 'SEDENTARY', label: 'Sedentario' },
-  { value: 'LIGHT', label: 'Ligero' },
-  { value: 'MODERATE', label: 'Moderado' },
-  { value: 'HIGH', label: 'Alto' },
-  { value: 'VERY_HIGH', label: 'Muy alto' },
+  { value: 'sedentary', label: 'Sedentario' },
+  { value: 'light', label: 'Ligero' },
+  { value: 'moderate', label: 'Moderado' },
+  { value: 'high', label: 'Alto' },
+  { value: 'very_high', label: 'Muy alto' },
 ];
 
 const INJURIES: { value: string; label: string }[] = [
@@ -435,7 +472,7 @@ export function FitnessProfileWizard({ initial }: Props) {
           type="button"
           onClick={goBack}
           disabled={step === 1 || save.isPending}
-          className="inline-flex items-center h-10 px-4 rounded-xl bg-white ring-1 ring-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition"
+          className="inline-flex items-center h-10 px-4 rounded-xl bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium transition"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
           Atrás
@@ -451,14 +488,14 @@ export function FitnessProfileWizard({ initial }: Props) {
             <ChevronRight className="w-4 h-4 ml-1" />
           </button>
         ) : (
-          <Button
+          <button
+            type="button"
             onClick={goNext}
-            loading={save.isPending}
-            disabled={!stepValid}
-            className="!bg-blue-600 hover:!bg-blue-700 !text-white"
+            disabled={!stepValid || save.isPending}
+            className="inline-flex items-center h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed text-sm font-semibold transition shadow-sm"
           >
-            Guardar perfil
-          </Button>
+            {save.isPending ? 'Guardando…' : 'Guardar perfil'}
+          </button>
         )}
       </div>
     </section>
@@ -502,9 +539,10 @@ function StepAboutYou({ draft, update }: StepProps) {
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="fp_age" label="Edad">
-          <Input variant="light"
+        <LightField id="fp_age" label="Edad">
+          <input
             id="fp_age"
+            className={INPUT_CLS}
             type="number"
             min={6}
             max={99}
@@ -518,9 +556,9 @@ function StepAboutYou({ draft, update }: StepProps) {
             }
             placeholder="28"
           />
-        </Field>
+        </LightField>
 
-        <Field label="Género">
+        <LightField label="Género">
           <div className="flex flex-wrap gap-2">
             {GENDERS.map((g) => {
               const active = draft.gender === g.value;
@@ -530,10 +568,10 @@ function StepAboutYou({ draft, update }: StepProps) {
                   type="button"
                   onClick={() => update('gender', g.value)}
                   className={cn(
-                    'h-11 flex-1 min-w-[90px] rounded-xl ring-1 px-3 text-sm font-medium transition-colors',
+                    'h-11 flex-1 min-w-[90px] rounded-xl border px-3 text-sm font-medium transition-colors',
                     active
-                      ? 'ring-blue-500 bg-blue-50 text-blue-900 shadow-sm'
-                      : 'ring-slate-300 bg-white text-slate-700 hover:bg-slate-50',
+                      ? 'border-blue-500 bg-blue-50 text-blue-900'
+                      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
                   )}
                 >
                   {g.label}
@@ -541,11 +579,12 @@ function StepAboutYou({ draft, update }: StepProps) {
               );
             })}
           </div>
-        </Field>
+        </LightField>
 
-        <Field id="fp_height" label="Altura (cm)">
-          <Input variant="light"
+        <LightField id="fp_height" label="Altura (cm)">
+          <input
             id="fp_height"
+            className={INPUT_CLS}
             type="number"
             min={100}
             max={230}
@@ -559,11 +598,12 @@ function StepAboutYou({ draft, update }: StepProps) {
             }
             placeholder="175"
           />
-        </Field>
+        </LightField>
 
-        <Field id="fp_weight" label="Peso (kg)">
-          <Input variant="light"
+        <LightField id="fp_weight" label="Peso (kg)">
+          <input
             id="fp_weight"
+            className={INPUT_CLS}
             type="number"
             min={30}
             max={250}
@@ -577,7 +617,7 @@ function StepAboutYou({ draft, update }: StepProps) {
             }
             placeholder="72"
           />
-        </Field>
+        </LightField>
       </div>
     </div>
   );
@@ -626,14 +666,14 @@ function StepTrainingType({ draft, update }: StepProps) {
       </div>
 
       {draft.user_type === 'ATHLETE' && (
-        <Field id="fp_discipline" label="Disciplina" className="pt-2">
+        <LightField id="fp_discipline" label="Disciplina" className="pt-2">
           <select
             id="fp_discipline"
             value={draft.discipline ?? ''}
             onChange={(e) =>
               update('discipline', e.target.value as FitnessProfileDraft['discipline'])
             }
-            className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
           >
             <option value="">Elige tu deporte…</option>
             {DISCIPLINES.map((d) => (
@@ -642,7 +682,7 @@ function StepTrainingType({ draft, update }: StepProps) {
               </option>
             ))}
           </select>
-        </Field>
+        </LightField>
       )}
     </div>
   );
@@ -709,14 +749,14 @@ function StepGoalLevel({ draft, update }: StepProps) {
         </div>
       </div>
 
-      <Field id="fp_activity" label="Nivel de actividad fuera del gym">
+      <LightField id="fp_activity" label="Nivel de actividad fuera del gym">
         <select
           id="fp_activity"
           value={draft.activity_level}
           onChange={(e) =>
             update('activity_level', e.target.value as ActivityLevel)
           }
-          className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
         >
           <option value="">Elige…</option>
           {ACTIVITY_LEVELS.map((a) => (
@@ -725,7 +765,7 @@ function StepGoalLevel({ draft, update }: StepProps) {
             </option>
           ))}
         </select>
-      </Field>
+      </LightField>
     </div>
   );
 }
@@ -910,7 +950,7 @@ function StepRestrictions({
         </div>
       </div>
 
-      <Field
+      <LightField
         id="fp_notes"
         label="Notas (opcional)"
         hint={`${draft.notes.length}/500`}
@@ -922,9 +962,9 @@ function StepRestrictions({
           rows={3}
           maxLength={500}
           placeholder="Cualquier cosa relevante: cirugías recientes, preferencias, etc."
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
         />
-      </Field>
+      </LightField>
 
       <div className="flex items-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50 p-3 text-xs text-blue-900">
         <Dumbbell size={14} className="text-blue-600" />

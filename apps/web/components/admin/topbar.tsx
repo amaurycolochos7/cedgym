@@ -4,8 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, LogOut, Menu, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Bell, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { adminApi } from '@/lib/admin-api';
 import { MemberSearch } from './member-search';
@@ -37,17 +36,17 @@ export function Topbar({ onMenu, title }: TopbarProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-white/5 bg-neutral-950/90 px-4 backdrop-blur lg:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:px-6">
       <button
         type="button"
         onClick={onMenu}
-        className="rounded-md p-2 text-white/70 hover:bg-white/5 hover:text-white lg:hidden"
+        className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
         aria-label="Abrir menú"
       >
         <Menu className="h-4 w-4" />
       </button>
 
-      <div className="hidden text-sm font-semibold tracking-wider text-white/90 sm:block">
+      <div className="hidden text-sm font-semibold tracking-wider text-slate-900 sm:block">
         {title}
       </div>
 
@@ -62,13 +61,13 @@ export function Topbar({ onMenu, title }: TopbarProps) {
       <div className="flex items-center gap-1 sm:gap-2">
         <Link
           href="/admin/automations"
-          className="relative rounded-md p-2 text-white/70 hover:bg-white/5 hover:text-white"
+          className="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100"
           aria-label="Notificaciones"
           title="Jobs fallidos"
         >
           <Bell className="h-4 w-4" />
           {failedJobs && failedJobs.count > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
               {failedJobs.count > 99 ? '99+' : failedJobs.count}
             </span>
           ) : null}
@@ -78,9 +77,9 @@ export function Topbar({ onMenu, title }: TopbarProps) {
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex items-center gap-2 rounded-full bg-white/5 py-1 pl-1 pr-3 text-sm text-white hover:bg-white/10"
+            className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm text-slate-900 hover:bg-slate-100"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-orange text-[11px] font-bold text-black">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white ring-2 ring-slate-200">
               {initials}
             </div>
             <span className="hidden font-medium sm:block">
@@ -89,12 +88,12 @@ export function Topbar({ onMenu, title }: TopbarProps) {
           </button>
           {menuOpen && (
             <div
-              className="absolute right-0 top-full z-30 mt-2 w-48 overflow-hidden rounded-lg border border-white/10 bg-neutral-950 shadow-xl"
+              className="absolute right-0 top-full z-30 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
               onMouseLeave={() => setMenuOpen(false)}
             >
               <Link
                 href="/admin/settings"
-                className="block px-3 py-2 text-sm text-white/80 hover:bg-white/5"
+                className="block px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                 onClick={() => setMenuOpen(false)}
               >
                 Ajustes
@@ -105,7 +104,7 @@ export function Topbar({ onMenu, title }: TopbarProps) {
                   logout();
                   router.push('/login');
                 }}
-                className="flex w-full items-center gap-2 border-t border-white/5 px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10"
+                className="flex w-full items-center gap-2 border-t border-slate-200 px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 Cerrar sesión

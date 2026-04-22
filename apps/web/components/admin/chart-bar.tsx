@@ -29,35 +29,36 @@ export function ChartBar<T extends Record<string, unknown>>({
     <div className="w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <CartesianGrid stroke="rgb(226, 232, 240)" vertical={false} />
           <XAxis
             dataKey={xKey}
-            stroke="rgba(255,255,255,0.4)"
+            stroke="rgb(100, 116, 139)"
             fontSize={11}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            stroke="rgba(255,255,255,0.4)"
+            stroke="rgb(100, 116, 139)"
             fontSize={11}
             tickLine={false}
             axisLine={false}
             tickFormatter={formatter}
           />
           <Tooltip
-            cursor={{ fill: 'rgba(30,90,255,0.08)' }}
+            cursor={{ fill: 'rgba(37, 99, 235, 0.06)' }}
             contentStyle={{
-              background: 'rgba(15,15,15,0.95)',
-              border: '1px solid rgba(30,90,255,0.2)',
+              background: '#ffffff',
+              border: '1px solid rgb(226, 232, 240)',
               borderRadius: 8,
-              color: '#fff',
+              color: 'rgb(15, 23, 42)',
               fontSize: 12,
+              boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.08)',
             }}
             formatter={(v: number) =>
               formatter ? formatter(v) : String(v)
             }
           />
-          <Bar dataKey={yKey} fill="#1e5aff" radius={[6, 6, 0, 0]} />
+          <Bar dataKey={yKey} fill="#2563eb" radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -10,10 +10,6 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -69,6 +65,19 @@ const LEVELS: { value: AdminProductCreateInput['level']; label: string }[] = [
   { value: 'ADVANCED', label: 'Avanzado' },
   { value: 'ALL_LEVELS', label: 'Todos los niveles' },
 ];
+
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const INPUT_CLS_SM =
+  'w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_PRIMARY_SM =
+  'inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_DANGER =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-60 disabled:pointer-events-none';
 
 export default function AdminProductsPage() {
   const qc = useQueryClient();
@@ -135,59 +144,58 @@ export default function AdminProductsPage() {
 
   const renderActionsPending = (p: AdminProduct) => (
     <div className="flex items-center gap-2">
-      <Button
-        size="sm"
+      <button
+        type="button"
         onClick={() => approve.mutate(p.id)}
-        loading={approve.isPending}
+        disabled={approve.isPending}
+        className={BTN_PRIMARY_SM}
       >
         <Check className="h-3 w-3" />
         Aprobar
-      </Button>
-      <Button
-        size="sm"
-        variant="destructive"
+      </button>
+      <button
+        type="button"
         onClick={() => setRejectTarget(p)}
+        className={BTN_DANGER}
       >
         <X className="h-3 w-3" />
         Rechazar
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
+      </button>
+      <button
+        type="button"
         onClick={() => {
           setEditing(p);
           setEditorOpen(true);
         }}
+        className={BTN_SECONDARY}
       >
         <Pencil className="h-3 w-3" />
         Editar
-      </Button>
+      </button>
     </div>
   );
 
   const renderActionsPublished = (p: AdminProduct) => (
     <div className="flex items-center gap-2">
-      <Button
-        size="sm"
-        variant="ghost"
+      <button
+        type="button"
         onClick={() => {
           setEditing(p);
           setEditorOpen(true);
         }}
+        className={BTN_SECONDARY}
       >
         <Pencil className="h-3 w-3" />
         Editar
-      </Button>
-      <Button
-        size="sm"
-        variant={p.featured ? 'primary' : 'ghost'}
-        onClick={() =>
-          feature.mutate({ id: p.id, featured: !p.featured })
-        }
+      </button>
+      <button
+        type="button"
+        onClick={() => feature.mutate({ id: p.id, featured: !p.featured })}
+        className={p.featured ? BTN_PRIMARY_SM : BTN_SECONDARY}
       >
         <Star className="h-3 w-3" />
         {p.featured ? 'Destacado' : 'Destacar'}
-      </Button>
+      </button>
     </div>
   );
 
@@ -195,22 +203,24 @@ export default function AdminProductsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+          <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Marketplace
           </h2>
-          <p className="text-xs text-white/50">
+          <p className="text-sm text-slate-600 mt-1">
             Modera, destaca y crea rutinas y productos digitales.
           </p>
         </div>
-        <Button
+        <button
+          type="button"
           onClick={() => {
             setEditing(null);
             setEditorOpen(true);
           }}
+          className={BTN_PRIMARY}
         >
           <Plus className="h-4 w-4" />
           Crear rutina/producto
-        </Button>
+        </button>
       </div>
 
       <Tabs defaultValue="pending">
@@ -240,18 +250,18 @@ export default function AdminProductsPage() {
       </Tabs>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-900">
             Top vendidos
           </h3>
           <ul className="space-y-2">
             {(top.data ?? []).slice(0, 6).map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between rounded-lg bg-white/[0.02] p-3 text-sm"
+                className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm"
               >
-                <span className="font-semibold text-white">{p.name}</span>
-                <span className="text-white/60">
+                <span className="font-semibold text-slate-900">{p.name}</span>
+                <span className="text-slate-600">
                   {p.sales_count ?? 0} ventas
                 </span>
               </li>
@@ -259,31 +269,33 @@ export default function AdminProductsPage() {
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-white">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-900">
             Payouts pendientes
           </h3>
           <ul className="space-y-2">
             {(payouts.data ?? []).map((p) => (
               <li
                 key={p.trainer_id}
-                className="flex items-center justify-between rounded-lg bg-white/[0.02] p-3 text-sm"
+                className="flex items-center justify-between rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm"
               >
                 <div>
-                  <div className="font-semibold text-white">
+                  <div className="font-semibold text-slate-900">
                     {p.trainer_name}
                   </div>
-                  <div className="text-[11px] text-white/50">
+                  <div className="text-[11px] text-slate-500">
                     {p.orders} órdenes
                   </div>
                 </div>
-                <span className="text-brand-orange">
+                <span className="font-semibold text-blue-600">
                   {MXN.format(p.amount_mxn)}
                 </span>
               </li>
             ))}
             {payouts.data && payouts.data.length === 0 && (
-              <li className="text-xs text-white/40">Sin payouts pendientes.</li>
+              <li className="text-xs text-slate-500">
+                Sin payouts pendientes.
+              </li>
             )}
           </ul>
         </div>
@@ -293,30 +305,37 @@ export default function AdminProductsPage() {
         open={!!rejectTarget}
         onOpenChange={(o) => !o && setRejectTarget(null)}
       >
-        <DialogContent>
+        <DialogContent className="bg-white border-slate-200 text-slate-900">
           <DialogHeader>
-            <DialogTitle>Rechazar producto</DialogTitle>
+            <DialogTitle className="text-slate-900">
+              Rechazar producto
+            </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-white/60">
+          <p className="text-sm text-slate-600">
             Se notificará al creador con el motivo.
           </p>
-          <Input
+          <input
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Motivo (ej. imágenes de baja calidad)"
+            className={INPUT_CLS}
           />
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setRejectTarget(null)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => rejectMut.mutate()}
-              loading={rejectMut.isPending}
-              disabled={reason.trim().length < 3}
+            <button
+              type="button"
+              onClick={() => setRejectTarget(null)}
+              className={BTN_SECONDARY}
             >
-              Rechazar
-            </Button>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => rejectMut.mutate()}
+              disabled={rejectMut.isPending || reason.trim().length < 3}
+              className={BTN_DANGER}
+            >
+              {rejectMut.isPending ? 'Rechazando…' : 'Rechazar'}
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -350,7 +369,7 @@ function Grid({
       {items.map((p) => (
         <div
           key={p.id}
-          className="rounded-2xl border border-white/10 bg-white/[0.02] p-4"
+          className="rounded-2xl border border-slate-200 bg-white p-4"
         >
           {p.cover_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -360,34 +379,38 @@ function Grid({
               className="mb-3 h-32 w-full rounded-lg object-cover"
             />
           ) : (
-            <div className="mb-3 flex h-32 items-center justify-center rounded-lg bg-white/[0.03] text-xs text-white/30">
+            <div className="mb-3 flex h-32 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">
               Sin portada
             </div>
           )}
           <div className="mb-2 flex items-start justify-between">
             <div className="min-w-0">
-              <h4 className="truncate text-sm font-bold text-white">
+              <h4 className="truncate text-sm font-bold text-slate-900">
                 {p.name}
               </h4>
-              <div className="text-[11px] text-white/50">
+              <div className="text-[11px] text-slate-500">
                 {p.author_name ?? '—'}
               </div>
             </div>
             <div className="flex items-center gap-1">
               {p.featured && (
-                <Badge variant="brand">
+                <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
                   <Star className="h-3 w-3" />
-                </Badge>
+                </span>
               )}
-              <Badge variant="default">{p.kind || p.type}</Badge>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                {p.kind || p.type}
+              </span>
             </div>
           </div>
-          <div className="text-xs text-white/60">
+          <div className="text-xs text-slate-600">
             Precio:{' '}
-            <span className="text-white">{MXN.format(p.price_mxn)}</span>
+            <span className="text-slate-900 font-semibold">
+              {MXN.format(p.price_mxn)}
+            </span>
           </div>
           {showReason && p.rejected_reason && (
-            <div className="mt-2 rounded-md bg-red-500/10 p-2 text-[11px] text-red-300">
+            <div className="mt-2 rounded-md border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-700">
               {p.rejected_reason}
             </div>
           )}
@@ -395,7 +418,7 @@ function Grid({
         </div>
       ))}
       {items.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/40 md:col-span-2 xl:col-span-3">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
           Nada por acá.
         </div>
       )}
@@ -501,7 +524,10 @@ function ProductEditor({
   const save = useMutation({
     mutationFn: async () => {
       const payload: Partial<AdminProductCreateInput> &
-        Pick<AdminProductCreateInput, 'title' | 'description' | 'type' | 'price_mxn'> = {
+        Pick<
+          AdminProductCreateInput,
+          'title' | 'description' | 'type' | 'price_mxn'
+        > = {
         type: state.type,
         title: state.title,
         description: state.description,
@@ -521,9 +547,7 @@ function ProductEditor({
       if (isEdit && product) {
         return adminApi.updateAdminProduct(product.id, payload);
       }
-      return adminApi.createAdminProduct(
-        payload as AdminProductCreateInput,
-      );
+      return adminApi.createAdminProduct(payload as AdminProductCreateInput);
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Producto actualizado' : 'Producto creado');
@@ -584,7 +608,10 @@ function ProductEditor({
       if (!w) return s;
       weeks[wi] = {
         ...w,
-        days: [...(w.days ?? []), emptyDay(`Día ${(w.days?.length ?? 0) + 1}`)],
+        days: [
+          ...(w.days ?? []),
+          emptyDay(`Día ${(w.days?.length ?? 0) + 1}`),
+        ],
       };
       return { ...s, content: { ...s.content, weeks } };
     });
@@ -663,8 +690,6 @@ function ProductEditor({
     });
   };
 
-  /* ----- Video URLs ----- */
-
   const addVideo = () =>
     setState((s) => ({ ...s, video_urls: [...s.video_urls, ''] }));
   const updateVideo = (i: number, v: string) =>
@@ -680,9 +705,9 @@ function ProductEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-slate-900">
             {isEdit ? 'Editar producto' : 'Nuevo producto'}
           </DialogTitle>
         </DialogHeader>
@@ -695,22 +720,22 @@ function ProductEditor({
               <TabsTrigger value="media">Multimedia</TabsTrigger>
             </TabsList>
 
-            {/* ─── Info ──────────────────────────────────────── */}
             <TabsContent value="info">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="md:col-span-2">
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Título
                   </label>
-                  <Input
+                  <input
                     value={state.title}
                     onChange={(e) =>
                       setState({ ...state, title: e.target.value })
                     }
+                    className={INPUT_CLS}
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Descripción
                   </label>
                   <textarea
@@ -719,15 +744,15 @@ function ProductEditor({
                     onChange={(e) =>
                       setState({ ...state, description: e.target.value })
                     }
-                    className="w-full rounded-xl border border-white/10 bg-input/60 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-brand-orange/60 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+                    className={INPUT_CLS}
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Tipo
                   </label>
-                  <Select
+                  <select
                     value={state.type}
                     onChange={(e) =>
                       setState({
@@ -735,37 +760,39 @@ function ProductEditor({
                         type: e.target.value as EditorState['type'],
                       })
                     }
+                    className={INPUT_CLS}
                   >
                     {TYPES.map((t) => (
                       <option key={t.value} value={t.value}>
                         {t.label}
                       </option>
                     ))}
-                  </Select>
+                  </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Deporte
                   </label>
-                  <Select
+                  <select
                     value={state.sport}
                     onChange={(e) =>
                       setState({ ...state, sport: e.target.value })
                     }
+                    className={INPUT_CLS}
                   >
                     {SPORTS.map((s) => (
                       <option key={s.value} value={s.value}>
                         {s.label}
                       </option>
                     ))}
-                  </Select>
+                  </select>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Nivel
                   </label>
-                  <Select
+                  <select
                     value={state.level}
                     onChange={(e) =>
                       setState({
@@ -773,19 +800,20 @@ function ProductEditor({
                         level: e.target.value as EditorState['level'],
                       })
                     }
+                    className={INPUT_CLS}
                   >
                     {LEVELS.map((l) => (
                       <option key={l.value} value={l.value}>
                         {l.label}
                       </option>
                     ))}
-                  </Select>
+                  </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Duración (semanas)
                   </label>
-                  <Input
+                  <input
                     type="number"
                     min={1}
                     max={104}
@@ -796,14 +824,15 @@ function ProductEditor({
                         duration_weeks: Number(e.target.value) || 0,
                       })
                     }
+                    className={INPUT_CLS}
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Precio (MXN)
                   </label>
-                  <Input
+                  <input
                     type="number"
                     min={0}
                     value={state.price_mxn}
@@ -813,13 +842,14 @@ function ProductEditor({
                         price_mxn: Number(e.target.value) || 0,
                       })
                     }
+                    className={INPUT_CLS}
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Precio oferta (opcional)
                   </label>
-                  <Input
+                  <input
                     type="number"
                     min={0}
                     value={state.sale_price_mxn}
@@ -832,11 +862,12 @@ function ProductEditor({
                             : Number(e.target.value),
                       })
                     }
+                    className={INPUT_CLS}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     Autor
                   </label>
                   <TrainerAutocomplete
@@ -852,81 +883,78 @@ function ProductEditor({
                   />
                 </div>
 
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-3 text-sm text-white md:col-span-1">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 md:col-span-1">
                   <input
                     type="checkbox"
                     checked={state.publish_now}
                     onChange={(e) =>
                       setState({ ...state, publish_now: e.target.checked })
                     }
-                    className="accent-brand-orange"
+                    className="accent-blue-600"
                   />
                   Publicar inmediatamente
                 </label>
-                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-3 text-sm text-white md:col-span-1">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-900 md:col-span-1">
                   <input
                     type="checkbox"
                     checked={state.featured}
                     onChange={(e) =>
                       setState({ ...state, featured: e.target.checked })
                     }
-                    className="accent-brand-orange"
+                    className="accent-blue-600"
                   />
                   Destacar
                 </label>
               </div>
             </TabsContent>
 
-            {/* ─── Contenido ─────────────────────────────────── */}
             <TabsContent value="content">
               <div className="space-y-3">
                 {(state.content.weeks ?? []).map((w, wi) => (
                   <div
                     key={wi}
-                    className="rounded-xl border border-white/10 bg-white/[0.02] p-3"
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                   >
                     <div className="mb-2 flex items-center gap-2">
-                      <Input
+                      <input
                         value={w.label ?? ''}
                         onChange={(e) =>
                           updateWeek(wi, { label: e.target.value })
                         }
                         placeholder={`Semana ${wi + 1}`}
-                        className="h-9"
+                        className={INPUT_CLS}
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="ghost"
-                        size="icon"
                         onClick={() => removeWeek(wi)}
+                        className="rounded-md p-2 text-rose-600 hover:bg-rose-50"
                       >
-                        <Trash2 className="h-4 w-4 text-red-300" />
-                      </Button>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
 
                     <div className="space-y-2">
                       {(w.days ?? []).map((d, di) => (
                         <div
                           key={di}
-                          className="rounded-lg border border-white/10 bg-white/[0.02] p-3"
+                          className="rounded-lg border border-slate-200 bg-white p-3"
                         >
                           <div className="mb-2 flex items-center gap-2">
-                            <Input
+                            <input
                               value={d.label ?? ''}
                               onChange={(e) =>
                                 updateDay(wi, di, { label: e.target.value })
                               }
                               placeholder={`Día ${di + 1}`}
-                              className="h-8"
+                              className={INPUT_CLS_SM}
                             />
-                            <Button
+                            <button
                               type="button"
-                              variant="ghost"
-                              size="icon"
                               onClick={() => removeDay(wi, di)}
+                              className="rounded-md p-1.5 text-rose-600 hover:bg-rose-50"
                             >
-                              <Trash2 className="h-3 w-3 text-red-300" />
-                            </Button>
+                              <Trash2 className="h-3 w-3" />
+                            </button>
                           </div>
                           <div className="space-y-1.5">
                             {(d.exercises ?? []).map((ex, ei) => (
@@ -934,8 +962,8 @@ function ProductEditor({
                                 key={ei}
                                 className="grid grid-cols-12 gap-2"
                               >
-                                <Input
-                                  className="col-span-5 h-8"
+                                <input
+                                  className={`${INPUT_CLS_SM} col-span-5`}
                                   placeholder="Ejercicio"
                                   value={ex.name}
                                   onChange={(e) =>
@@ -944,8 +972,8 @@ function ProductEditor({
                                     })
                                   }
                                 />
-                                <Input
-                                  className="col-span-2 h-8"
+                                <input
+                                  className={`${INPUT_CLS_SM} col-span-2`}
                                   placeholder="Sets"
                                   type="number"
                                   value={ex.sets ?? ''}
@@ -958,8 +986,8 @@ function ProductEditor({
                                     })
                                   }
                                 />
-                                <Input
-                                  className="col-span-2 h-8"
+                                <input
+                                  className={`${INPUT_CLS_SM} col-span-2`}
                                   placeholder="Reps"
                                   value={ex.reps ?? ''}
                                   onChange={(e) =>
@@ -968,8 +996,8 @@ function ProductEditor({
                                     })
                                   }
                                 />
-                                <Input
-                                  className="col-span-2 h-8"
+                                <input
+                                  className={`${INPUT_CLS_SM} col-span-2`}
                                   placeholder="Notas"
                                   value={ex.notes ?? ''}
                                   onChange={(e) =>
@@ -978,67 +1006,63 @@ function ProductEditor({
                                     })
                                   }
                                 />
-                                <Button
+                                <button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="col-span-1"
                                   onClick={() =>
                                     removeExercise(wi, di, ei)
                                   }
+                                  className="col-span-1 rounded-md p-1.5 text-rose-600 hover:bg-rose-50"
                                 >
-                                  <Trash2 className="h-3 w-3 text-red-300" />
-                                </Button>
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
                               </div>
                             ))}
-                            <Button
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
                               onClick={() => addExercise(wi, di)}
+                              className={BTN_SECONDARY}
                             >
                               <Plus className="h-3 w-3" />
                               Añadir ejercicio
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       ))}
-                      <Button
+                      <button
                         type="button"
-                        variant="outline"
-                        size="sm"
                         onClick={() => addDay(wi)}
+                        className={BTN_SECONDARY}
                       >
                         <Plus className="h-3 w-3" />
                         Añadir día
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 ))}
-                <Button
+                <button
                   type="button"
-                  variant="secondary"
                   onClick={addWeek}
+                  className={BTN_SECONDARY}
                 >
                   <Plus className="h-4 w-4" />
                   Añadir semana
-                </Button>
+                </button>
               </div>
             </TabsContent>
 
-            {/* ─── Multimedia ────────────────────────────────── */}
             <TabsContent value="media">
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs text-white/60">
+                  <label className="mb-1 block text-xs font-semibold text-slate-600">
                     URL de portada
                   </label>
-                  <Input
+                  <input
                     value={state.cover_url}
                     onChange={(e) =>
                       setState({ ...state, cover_url: e.target.value })
                     }
                     placeholder="https://cdn.cedgym.mx/covers/…"
+                    className={INPUT_CLS}
                   />
                   {state.cover_url && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -1052,40 +1076,39 @@ function ProductEditor({
 
                 <div>
                   <div className="mb-1 flex items-center justify-between">
-                    <label className="text-xs text-white/60">
+                    <label className="text-xs font-semibold text-slate-600">
                       Videos (URLs)
                     </label>
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
                       onClick={addVideo}
+                      className={BTN_SECONDARY}
                     >
                       <Plus className="h-3 w-3" />
                       Añadir video
-                    </Button>
+                    </button>
                   </div>
                   <div className="space-y-2">
                     {state.video_urls.length === 0 && (
-                      <div className="rounded-lg border border-dashed border-white/10 p-3 text-center text-xs text-white/40">
+                      <div className="rounded-xl border border-dashed border-slate-300 p-3 text-center text-xs text-slate-500">
                         Sin videos.
                       </div>
                     )}
                     {state.video_urls.map((u, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <Input
+                        <input
                           value={u}
                           onChange={(e) => updateVideo(i, e.target.value)}
                           placeholder="https://…"
+                          className={INPUT_CLS}
                         />
-                        <Button
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
                           onClick={() => removeVideo(i)}
+                          className="rounded-md p-2 text-rose-600 hover:bg-rose-50"
                         >
-                          <Trash2 className="h-3 w-3 text-red-300" />
-                        </Button>
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1096,16 +1119,25 @@ function ProductEditor({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => save.mutate()}
-            loading={save.isPending}
-            disabled={disabled}
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className={BTN_SECONDARY}
           >
-            {isEdit ? 'Guardar cambios' : 'Crear producto'}
-          </Button>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => save.mutate()}
+            disabled={save.isPending || disabled}
+            className={BTN_PRIMARY}
+          >
+            {save.isPending
+              ? 'Guardando…'
+              : isEdit
+              ? 'Guardar cambios'
+              : 'Crear producto'}
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

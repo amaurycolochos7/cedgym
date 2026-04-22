@@ -35,48 +35,50 @@ export function KpiCard({
 
   const body = (
     <>
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-white/50 sm:text-[11px]">
-          {label}
-        </div>
+      <div className="flex items-start justify-between gap-2">
         {Icon ? (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-orange/10 text-brand-orange ring-1 ring-brand-orange/20 sm:h-9 sm:w-9">
-            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <Icon className="h-4 w-4" />
           </div>
         ) : null}
-      </div>
-      <div className="mt-3 truncate text-xl font-bold text-white sm:text-2xl md:text-3xl">{value}</div>
-      <div className="mt-2 flex items-center gap-2 text-xs">
-        {typeof delta === 'number' && (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold',
-              positive
-                ? 'bg-emerald-500/15 text-emerald-300'
-                : 'bg-red-500/15 text-red-300',
-            )}
-          >
-            {positive ? (
-              <TrendingUp className="h-3 w-3" />
-            ) : (
-              <TrendingDown className="h-3 w-3" />
-            )}
-            {positive ? '+' : ''}
-            {delta.toFixed(1)}%
-          </span>
+        {href && (
+          <div className="text-slate-300 transition group-hover:text-blue-600">
+            <ArrowUpRight className="h-4 w-4" />
+          </div>
         )}
-        {hint && <span className="text-white/40">{hint}</span>}
       </div>
-      {href && (
-        <div className="absolute right-3 top-3 text-white/20 transition group-hover:text-brand-orange">
-          <ArrowUpRight className="h-3.5 w-3.5" />
+      <div className="mt-3 truncate text-3xl font-bold text-slate-900">
+        {value}
+      </div>
+      <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </div>
+      {(typeof delta === 'number' || hint) && (
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          {typeof delta === 'number' && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 text-xs font-semibold',
+                positive ? 'text-emerald-600' : 'text-rose-600',
+              )}
+            >
+              {positive ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <TrendingDown className="h-3 w-3" />
+              )}
+              {positive ? '+' : ''}
+              {delta.toFixed(1)}%
+            </span>
+          )}
+          {hint && <span className="text-slate-500">{hint}</span>}
         </div>
       )}
     </>
   );
 
   const base =
-    'relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-3 sm:p-5';
+    'relative rounded-2xl border border-slate-200 bg-white p-5';
 
   if (href) {
     return (
@@ -84,7 +86,7 @@ export function KpiCard({
         href={href}
         className={cn(
           base,
-          'group block transition-all hover:border-brand-orange/50 hover:from-white/[0.07] hover:shadow-[0_0_30px_rgba(30,90,255,0.08)] focus:outline-none focus:ring-2 focus:ring-brand-orange/40',
+          'group block transition hover:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-100',
           className,
         )}
       >

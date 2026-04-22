@@ -5,7 +5,11 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { Download, Star } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
+
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
+const BTN_GHOST =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
 
 export default function RutinaViewerPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,7 +34,7 @@ export default function RutinaViewerPage() {
   });
 
   if (isLoading) return <div className="text-slate-500">Cargando rutina…</div>;
-  if (!data) return <div className="text-red-600">No se pudo cargar esta rutina.</div>;
+  if (!data) return <div className="text-rose-600">No se pudo cargar esta rutina.</div>;
 
   const product = data.product ?? {};
   const weeks: any[] = data.content?.weeks ?? [];
@@ -45,14 +49,14 @@ export default function RutinaViewerPage() {
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <Button onClick={() => download.mutate()} disabled={download.isPending}>
-          <Download className="w-4 h-4 mr-2" />
+        <button type="button" className={BTN_PRIMARY} onClick={() => download.mutate()} disabled={download.isPending}>
+          <Download className="w-4 h-4" />
           {download.isPending ? 'Preparando…' : 'Descargar PDF'}
-        </Button>
-        <Button variant="ghost" onClick={() => alert('Ver reseña: pendiente.')}>
-          <Star className="w-4 h-4 mr-2" />
+        </button>
+        <button type="button" className={BTN_GHOST} onClick={() => alert('Ver reseña: pendiente.')}>
+          <Star className="w-4 h-4" />
           Escribir reseña
-        </Button>
+        </button>
       </div>
 
       {weeks.length > 0 ? (

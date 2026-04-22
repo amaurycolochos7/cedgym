@@ -4,7 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Calendar, Users, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
+
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
+const BTN_GHOST =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
 
 export default function PortalClasesPage() {
   const qc = useQueryClient();
@@ -102,13 +106,14 @@ export default function PortalClasesPage() {
                     <span className="tabular-nums">{c.spots_available} / {c.capacity}</span> cupos
                   </div>
                 </div>
-                <Button
-                  className="w-full mt-4"
+                <button
+                  type="button"
+                  className={`${BTN_PRIMARY} w-full mt-4`}
                   onClick={() => book.mutate(c.id)}
                   disabled={book.isPending}
                 >
                   {c.spots_available > 0 ? 'Reservar' : 'Lista de espera'}
-                </Button>
+                </button>
               </div>
             ))
           )}
@@ -134,13 +139,14 @@ export default function PortalClasesPage() {
                     Status: <span className="text-blue-700 font-medium">{b.status}</span>
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
+                <button
+                  type="button"
+                  className={BTN_GHOST}
                   onClick={() => cancel.mutate(b.class_id)}
                   disabled={cancel.isPending}
                 >
                   Cancelar
-                </Button>
+                </button>
               </div>
             ))
           )}

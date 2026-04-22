@@ -129,7 +129,7 @@ export default function PortalQRPage() {
     <div className="flex min-h-[calc(100vh-10rem)] flex-col items-center gap-6 py-6 sm:py-10">
       <div className="text-center">
         <div className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
-          {user?.name?.split(' ')[0] ?? 'Atleta'}
+          {user?.name?.split(' ')[0] ?? ''}
         </div>
         <h1 className="mt-1 font-display text-2xl sm:text-3xl font-bold text-slate-900">
           Mi QR de acceso

@@ -3,14 +3,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
 import { Snowflake, RefreshCw, Calendar, Camera } from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
+import { PlansModal } from '@/components/portal/plans-modal';
+
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
+const BTN_GHOST =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
 
 export default function PortalMembershipPage() {
   const qc = useQueryClient();
   const [freezeOpen, setFreezeOpen] = useState(false);
   const [selfieOpen, setSelfieOpen] = useState(false);
+  const [plansOpen, setPlansOpen] = useState(false);
 
   const { data: me } = useQuery({
     queryKey: ['auth', 'me'],
@@ -28,16 +34,6 @@ export default function PortalMembershipPage() {
     queryFn: async () => (await api.get('/memberships/history')).data,
   });
 
-  const renew = useMutation({
-    mutationFn: async () => {
-      const res = await api.post('/memberships/renew', {});
-      return res.data;
-    },
-    onSuccess: (data) => {
-      if (data?.init_point) window.location.href = data.init_point;
-    },
-  });
-
   if (isLoading) return <div className="text-slate-500">Cargando…</div>;
 
   const days = membership?.days_remaining ?? 0;
@@ -49,7 +45,7 @@ export default function PortalMembershipPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold text-slate-900">Mi membresía</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Mi membresía</h1>
           <p className="text-slate-500 mt-1">Gestiona tu plan y pagos.</p>
         </div>
       </div>
@@ -66,25 +62,28 @@ export default function PortalMembershipPage() {
               de comprar o renovar.
             </div>
           </div>
-          <Button
+          <button
+            type="button"
+            className={BTN_PRIMARY}
             onClick={() => setSelfieOpen(true)}
-            className="!bg-blue-600 hover:!bg-blue-700 !text-white !normal-case !tracking-normal !font-semibold"
           >
-            <Camera className="w-4 h-4 mr-2" /> Tomar selfie
-          </Button>
+            <Camera className="w-4 h-4" /> Tomar selfie
+          </button>
         </div>
       )}
 
       {!membership?.plan ? (
         <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-8 text-center">
           <p className="text-slate-600 mb-4">No tienes una membresía activa.</p>
-          <Button
-            onClick={() => (window.location.href = '/#planes')}
+          <button
+            type="button"
+            className={BTN_PRIMARY}
+            onClick={() => setPlansOpen(true)}
             disabled={needsSelfie}
             title={needsSelfie ? 'Sube tu selfie primero' : undefined}
           >
             Ver planes
-          </Button>
+          </button>
           {needsSelfie && (
             <div className="text-xs text-slate-500 mt-2">
               Sube tu selfie antes de continuar.
@@ -127,13 +126,15 @@ export default function PortalMembershipPage() {
                   Tu membresía vence pronto. Renueva hoy y ahorra.
                 </div>
               </div>
-              <Button
-                onClick={() => renew.mutate()}
-                disabled={renew.isPending || needsSelfie}
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                onClick={() => setPlansOpen(true)}
+                disabled={needsSelfie}
                 title={needsSelfie ? 'Sube tu selfie primero' : undefined}
               >
-                {renew.isPending ? 'Procesando…' : 'Renovar ahora'}
-              </Button>
+                Renovar ahora
+              </button>
             </div>
           )}
 
@@ -146,8 +147,8 @@ export default function PortalMembershipPage() {
                   ? 'Sube tu selfie primero'
                   : 'Extiende tu membresía'
               }
-              onClick={() => renew.mutate()}
-              disabled={renew.isPending || needsSelfie}
+              onClick={() => setPlansOpen(true)}
+              disabled={needsSelfie}
             />
             <ActionCard
               icon={<Snowflake className="w-5 h-5" />}
@@ -161,7 +162,7 @@ export default function PortalMembershipPage() {
               description={
                 needsSelfie ? 'Sube tu selfie primero' : 'Ver otros planes'
               }
-              onClick={() => (window.location.href = '/#planes')}
+              onClick={() => setPlansOpen(true)}
               disabled={needsSelfie}
             />
           </div>
@@ -226,6 +227,18 @@ export default function PortalMembershipPage() {
           </div>
         </div>
       )}
+
+      <PlansModal
+        open={plansOpen}
+        onClose={() => {
+          setPlansOpen(false);
+          qc.invalidateQueries({ queryKey: ['memberships'] });
+        }}
+        highlightPlan={
+          (membership?.plan?.toUpperCase?.() as 'STARTER' | 'PRO' | 'ELITE') ??
+          undefined
+        }
+      />
     </div>
   );
 }
@@ -291,15 +304,15 @@ function FreezeModal({ onClose, onDone }: any) {
           </div>
         </div>
         {freeze.error && (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-rose-600">
             {(freeze.error as any)?.response?.data?.error?.message ?? 'Error'}
           </p>
         )}
         <div className="flex gap-2 justify-end">
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => freeze.mutate()} disabled={freeze.isPending}>
+          <button type="button" className={BTN_GHOST} onClick={onClose}>Cancelar</button>
+          <button type="button" className={BTN_PRIMARY} onClick={() => freeze.mutate()} disabled={freeze.isPending}>
             {freeze.isPending ? 'Procesando…' : 'Confirmar congelamiento'}
-          </Button>
+          </button>
         </div>
       </div>
     </div>

@@ -70,7 +70,7 @@ export default function AdminLayout({
   }, [pathname]);
 
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-white">
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <Sidebar variant="admin" open={open} onClose={() => setOpen(false)} />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar onMenu={() => setOpen(true)} title={title} />

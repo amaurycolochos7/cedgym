@@ -48,102 +48,116 @@ export default function TrainerChatPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold uppercase tracking-widest text-white">
-          Chat
-        </h1>
-        <p className="text-sm text-white/50">
+        <h1 className="text-3xl font-bold text-slate-900">Chat</h1>
+        <p className="text-sm text-slate-600">
           Comunícate con tus atletas y el equipo del gym.
         </p>
       </div>
-      <div className="grid md:grid-cols-[280px_1fr] gap-4 h-[calc(100vh-14rem)]">
-        <aside className="bg-zinc-900/70 border border-zinc-800 rounded-xl overflow-y-auto">
-          <div className="p-4 border-b border-zinc-800">
-            <h2 className="font-semibold">Conversaciones</h2>
+      <div className="grid h-[calc(100vh-14rem)] gap-4 md:grid-cols-[280px_1fr]">
+        <aside className="overflow-y-auto rounded-2xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 p-4">
+            <h2 className="font-semibold text-slate-900">Conversaciones</h2>
           </div>
           {items.length === 0 ? (
-            <div className="p-4 text-sm text-zinc-500">
+            <div className="p-4 text-sm text-slate-500">
               Sin conversaciones activas.
             </div>
           ) : (
-            items.map((c: { id: string; title?: string; last_message?: { body?: string } }) => (
-              <button
-                key={c.id}
-                onClick={() => setActiveId(c.id)}
-                className={
-                  activeId === c.id
-                    ? 'w-full text-left p-4 border-b border-zinc-800 bg-orange-500/10'
-                    : 'w-full text-left p-4 border-b border-zinc-800 hover:bg-zinc-800/60'
-                }
-              >
-                <div className="font-medium text-sm">
-                  {c.title ?? 'Conversación'}
-                </div>
-                <div className="text-xs text-zinc-500 mt-1 truncate">
-                  {c.last_message?.body ?? 'Sin mensajes'}
-                </div>
-              </button>
-            ))
+            items.map(
+              (c: {
+                id: string;
+                title?: string;
+                last_message?: { body?: string };
+              }) => (
+                <button
+                  key={c.id}
+                  onClick={() => setActiveId(c.id)}
+                  className={
+                    activeId === c.id
+                      ? 'w-full border-b border-slate-200 bg-blue-50 p-4 text-left'
+                      : 'w-full border-b border-slate-200 p-4 text-left hover:bg-slate-50'
+                  }
+                >
+                  <div className="text-sm font-medium text-slate-900">
+                    {c.title ?? 'Conversación'}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-slate-500">
+                    {c.last_message?.body ?? 'Sin mensajes'}
+                  </div>
+                </button>
+              ),
+            )
           )}
         </aside>
 
-        <section className="bg-zinc-900/70 border border-zinc-800 rounded-xl flex flex-col">
+        <section className="flex flex-col rounded-2xl border border-slate-200 bg-white">
           {!activeId ? (
-            <div className="flex-1 flex items-center justify-center text-zinc-500">
+            <div className="flex flex-1 items-center justify-center text-slate-500">
               <div className="text-center">
-                <MessageSquare className="w-10 h-10 mx-auto mb-2" />
+                <MessageSquare className="mx-auto mb-2 h-10 w-10" />
                 Selecciona una conversación
               </div>
             </div>
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {messages.map((m: {
-                  id: string;
-                  is_own?: boolean;
-                  body: string;
-                  created_at: string;
-                }) => (
-                  <div
-                    key={m.id}
-                    className={m.is_own ? 'flex justify-end' : 'flex justify-start'}
-                  >
+              <div className="flex-1 space-y-2 overflow-y-auto p-4">
+                {messages.map(
+                  (m: {
+                    id: string;
+                    is_own?: boolean;
+                    body: string;
+                    created_at: string;
+                  }) => (
                     <div
+                      key={m.id}
                       className={
-                        m.is_own
-                          ? 'max-w-[70%] bg-orange-600 text-white px-3 py-2 rounded-2xl rounded-br-sm'
-                          : 'max-w-[70%] bg-zinc-800 px-3 py-2 rounded-2xl rounded-bl-sm'
+                        m.is_own ? 'flex justify-end' : 'flex justify-start'
                       }
                     >
-                      <div className="text-sm">{m.body}</div>
-                      <div className="text-[10px] opacity-60 mt-1">
-                        {new Date(m.created_at).toLocaleTimeString('es-MX', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                      <div
+                        className={
+                          m.is_own
+                            ? 'max-w-[70%] rounded-2xl rounded-br-md bg-blue-600 px-3 py-2 text-white'
+                            : 'max-w-[70%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3 py-2 text-slate-900'
+                        }
+                      >
+                        <div className="text-sm">{m.body}</div>
+                        <div
+                          className={
+                            m.is_own
+                              ? 'mt-1 text-[10px] text-white/70'
+                              : 'mt-1 text-[10px] text-slate-500'
+                          }
+                        >
+                          {new Date(m.created_at).toLocaleTimeString('es-MX', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (draft.trim()) send.mutate();
                 }}
-                className="p-3 border-t border-zinc-800 flex gap-2"
+                className="flex gap-2 border-t border-slate-200 p-3"
               >
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder="Escribe un mensaje…"
-                  className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm"
+                  className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
                 />
                 <button
                   type="submit"
                   disabled={!draft.trim() || send.isPending}
-                  className="p-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50"
+                  className="inline-flex items-center justify-center rounded-xl bg-blue-600 p-2.5 text-white shadow-md shadow-blue-600/25 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="h-4 w-4" />
                 </button>
               </form>
             </>

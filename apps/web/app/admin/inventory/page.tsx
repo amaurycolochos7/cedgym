@@ -11,10 +11,6 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +29,15 @@ const ADJUST_REASONS = [
   'venta',
   'otro',
 ];
+
+const INPUT_CLS =
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
+const INPUT_CLS_SM =
+  'w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none';
+const BTN_PRIMARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+const BTN_SECONDARY =
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
 
 export default function AdminInventoryPage() {
   const qc = useQueryClient();
@@ -75,16 +80,19 @@ export default function AdminInventoryPage() {
   ).length;
 
   const upd = useMutation({
-    mutationFn: ({ sku, patch }: { sku: string; patch: Partial<InventoryItem> }) =>
-      adminApi.updateInventoryItem(sku, patch),
+    mutationFn: ({
+      sku,
+      patch,
+    }: {
+      sku: string;
+      patch: Partial<InventoryItem>;
+    }) => adminApi.updateInventoryItem(sku, patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'inventory'] });
     },
     onError: () => toast.error('No se pudo actualizar'),
   });
 
-  // The backend doesn't expose a DELETE on inventory; we soft-delete
-  // by disabling + zeroing stock so the item stops appearing in POS.
   const softDelete = useMutation({
     mutationFn: async (it: InventoryItem) => {
       await adminApi.updateInventoryItem(it.sku, { enabled: false });
@@ -133,44 +141,48 @@ export default function AdminInventoryPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+          <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Inventario POS
           </h2>
-          <p className="text-xs text-white/50">
+          <p className="text-sm text-slate-600 mt-1">
             Suplementos, agua, toallas y extras que se venden en caja.
             {lowStockCount > 0 && (
-              <span className="ml-2 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-300">
+              <span className="ml-2 rounded-full border border-rose-200 bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
                 {lowStockCount} con stock bajo
               </span>
             )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={exportCsv}>
+          <button type="button" onClick={exportCsv} className={BTN_SECONDARY}>
             <Download className="h-4 w-4" />
             Exportar CSV
-          </Button>
-          <Button onClick={() => setNewOpen(true)}>
+          </button>
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            className={BTN_PRIMARY}
+          >
             <Plus className="h-4 w-4" />
             Nuevo ítem
-          </Button>
+          </button>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-          <Input
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar SKU, nombre o categoría"
-            className="w-72 pl-9"
+            className={`${INPUT_CLS} w-72 pl-9`}
           />
         </div>
-        <Select
+        <select
           value={cat}
           onChange={(e) => setCat(e.target.value)}
-          className="w-48"
+          className={`${INPUT_CLS} w-48`}
         >
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
@@ -178,171 +190,194 @@ export default function AdminInventoryPage() {
               {c}
             </option>
           ))}
-        </Select>
-        <span className="ml-auto text-xs text-white/50">
+        </select>
+        <span className="ml-auto text-xs text-slate-500">
           {filtered.length} ítems
         </span>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-        <table className="w-full text-sm">
-          <thead className="text-left text-[11px] uppercase tracking-wider text-white/40">
-            <tr>
-              <th className="px-3 py-2">SKU</th>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Categoría</th>
-              <th className="px-3 py-2">Precio</th>
-              <th className="px-3 py-2">Stock</th>
-              <th className="px-3 py-2">Mín.</th>
-              <th className="px-3 py-2">Activo</th>
-              <th className="px-3 py-2 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-slate-700">
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-3 py-6 text-center text-xs text-white/40"
-                >
-                  Cargando…
-                </td>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  SKU
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Nombre
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Categoría
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Precio
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Stock
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Mín.
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
+                  Activo
+                </th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-right">
+                  Acciones
+                </th>
               </tr>
-            )}
-            {!isLoading && filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={8}
-                  className="px-3 py-6 text-center text-xs text-white/40"
-                >
-                  Sin ítems.
-                </td>
-              </tr>
-            )}
-            {filtered.map((it) => {
-              const low =
-                typeof it.min_stock === 'number' &&
-                it.stock <= (it.min_stock ?? 0);
-              return (
-                <tr
-                  key={it.sku}
-                  className="border-t border-white/5 text-white/80"
-                >
-                  <td className="px-3 py-2 font-mono text-xs text-white/60">
-                    {it.sku}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      defaultValue={it.name}
-                      onBlur={(e) => {
-                        if (e.target.value !== it.name) {
-                          upd.mutate({
-                            sku: it.sku,
-                            patch: { name: e.target.value },
-                          });
-                        }
-                      }}
-                      className="h-8"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      defaultValue={it.category ?? ''}
-                      onBlur={(e) => {
-                        const v = e.target.value || null;
-                        if (v !== (it.category ?? null)) {
-                          upd.mutate({
-                            sku: it.sku,
-                            patch: { category: v ?? undefined },
-                          });
-                        }
-                      }}
-                      className="h-8 w-32"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      type="number"
-                      defaultValue={it.price_mxn}
-                      onBlur={(e) => {
-                        const v = Number(e.target.value) || 0;
-                        if (v !== it.price_mxn) {
-                          upd.mutate({
-                            sku: it.sku,
-                            patch: { price_mxn: v },
-                          });
-                        }
-                      }}
-                      className="h-8 w-24"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => setAdjust(it)}
-                      className="inline-flex items-center gap-2 rounded-md px-2 py-1 hover:bg-white/5"
-                    >
-                      <span
-                        className={
-                          low ? 'font-semibold text-red-300' : 'text-white'
-                        }
-                      >
-                        {it.stock}
-                      </span>
-                      {low && <AlertTriangle className="h-3 w-3 text-red-300" />}
-                    </button>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Input
-                      type="number"
-                      defaultValue={it.min_stock ?? 0}
-                      onBlur={(e) => {
-                        const v = Number(e.target.value) || 0;
-                        if (v !== (it.min_stock ?? 0)) {
-                          upd.mutate({
-                            sku: it.sku,
-                            patch: { min_stock: v },
-                          });
-                        }
-                      }}
-                      className="h-8 w-20"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={it.enabled}
-                      onChange={(e) =>
-                        upd.mutate({
-                          sku: it.sku,
-                          patch: { enabled: e.target.checked },
-                        })
-                      }
-                      className="accent-brand-orange"
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setAdjust(it)}
-                    >
-                      Ajustar stock
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeleteTarget(it)}
-                      className="text-red-300 hover:text-red-200"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+            </thead>
+            <tbody>
+              {isLoading && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-6 text-center text-xs text-slate-500"
+                  >
+                    Cargando…
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+              {!isLoading && filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-6 text-center text-xs text-slate-500"
+                  >
+                    Sin ítems.
+                  </td>
+                </tr>
+              )}
+              {filtered.map((it) => {
+                const low =
+                  typeof it.min_stock === 'number' &&
+                  it.stock <= (it.min_stock ?? 0);
+                return (
+                  <tr
+                    key={it.sku}
+                    className="border-t border-slate-200 text-slate-700"
+                  >
+                    <td className="px-4 py-3 font-mono text-xs text-slate-600">
+                      {it.sku}
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        defaultValue={it.name}
+                        onBlur={(e) => {
+                          if (e.target.value !== it.name) {
+                            upd.mutate({
+                              sku: it.sku,
+                              patch: { name: e.target.value },
+                            });
+                          }
+                        }}
+                        className={INPUT_CLS_SM}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        defaultValue={it.category ?? ''}
+                        onBlur={(e) => {
+                          const v = e.target.value || null;
+                          if (v !== (it.category ?? null)) {
+                            upd.mutate({
+                              sku: it.sku,
+                              patch: { category: v ?? undefined },
+                            });
+                          }
+                        }}
+                        className={`${INPUT_CLS_SM} w-32`}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        defaultValue={it.price_mxn}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value) || 0;
+                          if (v !== it.price_mxn) {
+                            upd.mutate({
+                              sku: it.sku,
+                              patch: { price_mxn: v },
+                            });
+                          }
+                        }}
+                        className={`${INPUT_CLS_SM} w-24`}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => setAdjust(it)}
+                        className="inline-flex items-center gap-2 rounded-md px-2 py-1 hover:bg-slate-100"
+                      >
+                        <span
+                          className={
+                            low
+                              ? 'font-semibold text-rose-600'
+                              : 'text-slate-900'
+                          }
+                        >
+                          {it.stock}
+                        </span>
+                        {low && (
+                          <AlertTriangle className="h-3 w-3 text-rose-600" />
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        defaultValue={it.min_stock ?? 0}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value) || 0;
+                          if (v !== (it.min_stock ?? 0)) {
+                            upd.mutate({
+                              sku: it.sku,
+                              patch: { min_stock: v },
+                            });
+                          }
+                        }}
+                        className={`${INPUT_CLS_SM} w-20`}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={it.enabled}
+                        onChange={(e) =>
+                          upd.mutate({
+                            sku: it.sku,
+                            patch: { enabled: e.target.checked },
+                          })
+                        }
+                        className="accent-blue-600"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setAdjust(it)}
+                          className={BTN_SECONDARY}
+                        >
+                          Ajustar stock
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(it)}
+                          className="inline-flex items-center rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <NewItemDialog
@@ -433,54 +468,66 @@ function NewItemDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>Nuevo ítem de inventario</DialogTitle>
+          <DialogTitle className="text-slate-900">
+            Nuevo ítem de inventario
+          </DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs text-white/60">SKU</label>
-            <Input
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              SKU
+            </label>
+            <input
               value={form.sku}
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
               placeholder="BOTELLA-600"
+              className={INPUT_CLS}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-white/60">Nombre</label>
-            <Input
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              Nombre
+            </label>
+            <input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Botella de agua 600ml"
+              className={INPUT_CLS}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-white/60">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
               Categoría
             </label>
-            <Input
+            <input
               value={form.category ?? ''}
               onChange={(e) =>
                 setForm({ ...form, category: e.target.value })
               }
               placeholder="Bebidas"
+              className={INPUT_CLS}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-white/60">Precio</label>
-            <Input
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              Precio
+            </label>
+            <input
               type="number"
               value={form.price_mxn}
               onChange={(e) =>
                 setForm({ ...form, price_mxn: Number(e.target.value) || 0 })
               }
+              className={INPUT_CLS}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-white/60">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
               Costo (opcional)
             </label>
-            <Input
+            <input
               type="number"
               value={form.cost_mxn ?? ''}
               onChange={(e) =>
@@ -490,44 +537,55 @@ function NewItemDialog({
                     e.target.value === '' ? null : Number(e.target.value),
                 })
               }
+              className={INPUT_CLS}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-white/60">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
               Stock inicial
             </label>
-            <Input
+            <input
               type="number"
               value={form.stock}
               onChange={(e) =>
                 setForm({ ...form, stock: Number(e.target.value) || 0 })
               }
+              className={INPUT_CLS}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-white/60">
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
               Stock mínimo
             </label>
-            <Input
+            <input
               type="number"
               value={form.min_stock ?? 0}
               onChange={(e) =>
-                setForm({ ...form, min_stock: Number(e.target.value) || 0 })
+                setForm({
+                  ...form,
+                  min_stock: Number(e.target.value) || 0,
+                })
               }
+              className={INPUT_CLS}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => mut.mutate()}
-            loading={mut.isPending}
-            disabled={!form.sku || !form.name}
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className={BTN_SECONDARY}
           >
-            Crear
-          </Button>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => mut.mutate()}
+            disabled={mut.isPending || !form.sku || !form.name}
+            className={BTN_PRIMARY}
+          >
+            {mut.isPending ? 'Creando…' : 'Crear'}
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -535,7 +593,7 @@ function NewItemDialog({
 }
 
 /* =========================================================================
- * Adjust stock dialog (popover-like)
+ * Adjust stock dialog
  * =========================================================================*/
 
 function AdjustDialog({
@@ -577,83 +635,90 @@ function AdjustDialog({
 
   return (
     <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent className="bg-white border-slate-200 text-slate-900">
         <DialogHeader>
-          <DialogTitle>Ajustar stock — {item?.name}</DialogTitle>
+          <DialogTitle className="text-slate-900">
+            Ajustar stock — {item?.name}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
+              type="button"
               onClick={() => setDelta((d) => d - 1)}
+              className="inline-flex items-center rounded-lg border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50"
             >
               <Minus className="h-4 w-4" />
-            </Button>
-            <Input
+            </button>
+            <input
               type="number"
               value={delta}
               onChange={(e) => setDelta(Number(e.target.value) || 0)}
-              className="text-center"
+              className={`${INPUT_CLS} text-center`}
             />
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
+              type="button"
               onClick={() => setDelta((d) => d + 1)}
+              className="inline-flex items-center rounded-lg border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50"
             >
               <Plus className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
-          <div className="text-xs text-white/60">
+          <div className="text-xs text-slate-600">
             Stock actual:{' '}
-            <span className="text-white">{item?.stock ?? 0}</span> · Nuevo:{' '}
+            <span className="text-slate-900">{item?.stock ?? 0}</span> · Nuevo:{' '}
             <span
               className={
                 newStock < 0
-                  ? 'font-semibold text-red-300'
-                  : 'font-semibold text-emerald-300'
+                  ? 'font-semibold text-rose-600'
+                  : 'font-semibold text-emerald-700'
               }
             >
               {newStock}
             </span>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-white/60">Razón</label>
-            <Select
+            <label className="mb-1 block text-xs font-semibold text-slate-600">
+              Razón
+            </label>
+            <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
+              className={INPUT_CLS}
             >
               {ADJUST_REASONS.map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>
               ))}
-            </Select>
+            </select>
           </div>
           {reason === 'otro' && (
-            <Input
+            <input
               value={customReason}
               onChange={(e) => setCustomReason(e.target.value)}
               placeholder="Especifica la razón"
+              className={INPUT_CLS}
             />
           )}
           {newStock < 0 && (
-            <Badge variant="danger">
+            <div className="inline-flex items-center rounded-full border border-rose-200 bg-rose-100 px-2.5 py-0.5 text-xs font-semibold text-rose-700">
               Stock resultante negativo — revisa la cantidad
-            </Badge>
+            </div>
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
+          <button type="button" onClick={onClose} className={BTN_SECONDARY}>
             Cancelar
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={() => mut.mutate()}
-            loading={mut.isPending}
-            disabled={delta === 0}
+            disabled={mut.isPending || delta === 0}
+            className={BTN_PRIMARY}
           >
-            Aplicar
-          </Button>
+            {mut.isPending ? 'Aplicando…' : 'Aplicar'}
+          </button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

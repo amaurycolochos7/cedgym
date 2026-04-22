@@ -15,7 +15,6 @@ import { KpiCard } from '@/components/admin/kpi-card';
 import { ChartLine } from '@/components/admin/chart-line';
 import { ChartBar } from '@/components/admin/chart-bar';
 import { Heatmap } from '@/components/admin/heatmap';
-import { Button } from '@/components/ui/button';
 import { adminApi } from '@/lib/admin-api';
 
 const MXN = new Intl.NumberFormat('es-MX', {
@@ -107,26 +106,26 @@ export default function AdminDashboardPage() {
 
       {/* Revenue + retention */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5 xl:col-span-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 xl:col-span-2">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 Ingresos
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-slate-500">
                 Ingresos cobrados por día/semana/mes
               </p>
             </div>
-            <div className="inline-flex rounded-full border border-white/10 p-1">
+            <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-1">
               {(['day', 'week', 'month'] as const).map((r) => (
                 <button
                   key={r}
                   type="button"
                   onClick={() => setRange(r)}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider transition-all ${
+                  className={`rounded-md px-3 py-1 text-xs font-semibold uppercase tracking-wider transition ${
                     range === r
-                      ? 'bg-brand-orange text-black'
-                      : 'text-white/60 hover:text-white'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   {r === 'day' ? 'Día' : r === 'week' ? 'Semana' : 'Mes'}
@@ -142,12 +141,12 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
           <div className="mb-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
               Retención
             </h3>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-slate-500">
               % de renovaciones por mes
             </p>
           </div>
@@ -161,12 +160,12 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Heatmap */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
         <div className="mb-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
             Check-ins por día y hora
           </h3>
-          <p className="text-xs text-white/50">
+          <p className="text-xs text-slate-500">
             Entradas al gym en los últimos 30 días
           </p>
         </div>
@@ -185,19 +184,19 @@ export default function AdminDashboardPage() {
           subtitle="Clases impartidas"
           items={topCoaches.data ?? []}
         />
-        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
           <div className="mb-3 flex items-start justify-between">
             <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 Riesgo de churn
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-slate-500">
                 Atletas con &lt;60% asistencia esperada
               </p>
             </div>
             <Link
               href="/admin/miembros"
-              className="text-xs font-semibold text-brand-orange hover:underline"
+              className="text-xs font-semibold text-blue-600 hover:underline"
             >
               Ver todos
             </Link>
@@ -206,21 +205,21 @@ export default function AdminDashboardPage() {
             {(churn.data ?? []).slice(0, 6).map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between rounded-lg bg-white/[0.02] p-3"
+                className="flex items-center justify-between rounded-lg bg-slate-50 p-3"
               >
                 <Link
                   href={`/admin/miembros/${c.id}`}
-                  className="flex-1 truncate text-sm font-semibold text-white hover:text-brand-orange"
+                  className="flex-1 truncate text-sm font-semibold text-slate-900 hover:text-blue-600"
                 >
                   {c.name}
                 </Link>
-                <span className="ml-2 shrink-0 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-300">
+                <span className="ml-2 shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700 border border-rose-200">
                   {Math.round(c.attendance_pct)}%
                 </span>
               </li>
             ))}
             {churn.data && churn.data.length === 0 && (
-              <li className="rounded-lg bg-white/[0.02] p-3 text-xs text-white/50">
+              <li className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
                 Sin riesgos detectados.
               </li>
             )}
@@ -242,30 +241,30 @@ function TopList({
 }) {
   const max = items.reduce((m, i) => Math.max(m, i.value), 1);
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="mb-3">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
           {title}
         </h3>
-        <p className="text-xs text-white/50">{subtitle}</p>
+        <p className="text-xs text-slate-500">{subtitle}</p>
       </div>
       <ul className="space-y-2">
         {items.slice(0, 5).map((it) => (
           <li key={it.name}>
             <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="font-semibold text-white">{it.name}</span>
-              <span className="text-white/60">{it.value}</span>
+              <span className="font-semibold text-slate-900">{it.name}</span>
+              <span className="text-slate-600">{it.value}</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-brand-orange to-brand-orange-2"
+                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-sky-500"
                 style={{ width: `${(it.value / max) * 100}%` }}
               />
             </div>
           </li>
         ))}
         {items.length === 0 && (
-          <li className="text-xs text-white/40">Sin datos todavía.</li>
+          <li className="text-xs text-slate-500">Sin datos todavía.</li>
         )}
       </ul>
     </div>

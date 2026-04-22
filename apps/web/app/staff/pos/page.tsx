@@ -12,8 +12,6 @@ import {
   X,
   Printer,
 } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import {
   staffPosApi,
@@ -62,6 +60,8 @@ function paymentLabel(m: PaymentMethod) {
   return m === 'CASH' ? 'Efectivo' : m === 'CARD_TERMINAL' ? 'Terminal' : 'QR Mercado Pago';
 }
 
+type CatalogTab = 'PRODUCT' | 'MEMBERSHIP' | 'COURSE';
+
 // ─────────────────────────────────────────────────────────────────
 export default function StaffPOSPage() {
   const searchParams = useSearchParams();
@@ -73,7 +73,7 @@ export default function StaffPOSPage() {
     queryFn: () => staffPosApi.productsMenu(),
   });
 
-  const [tab, setTab] = useState<'PRODUCT' | 'MEMBERSHIP' | 'COURSE'>('PRODUCT');
+  const [tab, setTab] = useState<CatalogTab>('PRODUCT');
   const [cart, setCart] = useState<CartLine[]>([]);
   const [method, setMethod] = useState<PaymentMethod>('CASH');
 
@@ -302,104 +302,123 @@ export default function StaffPOSPage() {
   const memberships = menu?.memberships ?? [];
   const courses = menu?.courses ?? [];
 
+  const tabs: { key: CatalogTab; label: string }[] = [
+    { key: 'PRODUCT', label: 'Productos' },
+    { key: 'MEMBERSHIP', label: 'Membresías' },
+    { key: 'COURSE', label: 'Cursos' },
+  ];
+
   // ─────────────────────────────────────────────────────────────
   return (
-    <div className="grid md:grid-cols-[1fr_380px] gap-6 h-[calc(100vh-4rem)]">
+    <div className="grid h-[calc(100vh-4rem)] gap-6 md:grid-cols-[1fr_380px]">
       {/* ─── Left: catalog with tabs ─── */}
-      <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 overflow-y-auto">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList>
-            <TabsTrigger value="PRODUCT">Productos</TabsTrigger>
-            <TabsTrigger value="MEMBERSHIP">Membresías</TabsTrigger>
-            <TabsTrigger value="COURSE">Cursos</TabsTrigger>
-          </TabsList>
+      <div className="overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={
+                tab === t.key
+                  ? 'inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-blue-700 shadow-sm'
+                  : 'inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600 hover:text-slate-900'
+              }
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-          <TabsContent value="PRODUCT">
-            {products.length === 0 ? (
-              <p className="text-zinc-500 text-sm">Inventario vacío.</p>
+        <div className="mt-4">
+          {tab === 'PRODUCT' &&
+            (products.length === 0 ? (
+              <p className="text-sm text-slate-500">Inventario vacío.</p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {products.map((p) => (
                   <button
                     key={p.sku}
                     onClick={() => addProduct(p)}
                     disabled={p.stock <= 0}
-                    className="bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-left disabled:opacity-40"
+                    className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-400 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <div className="text-sm font-medium truncate">{p.name}</div>
-                    <div className="text-xs text-zinc-500">Stock: {p.stock}</div>
-                    <div className="text-blue-400 font-bold mt-1">
+                    <div className="truncate text-sm font-medium text-slate-900">
+                      {p.name}
+                    </div>
+                    <div className="text-xs text-slate-500">Stock: {p.stock}</div>
+                    <div className="mt-1 font-bold text-blue-600">
                       {mxn(p.price_mxn)}
                     </div>
                   </button>
                 ))}
               </div>
-            )}
-          </TabsContent>
+            ))}
 
-          <TabsContent value="MEMBERSHIP">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {tab === 'MEMBERSHIP' && (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               {memberships.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => addMembership(m)}
-                  className="bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-left"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-400 hover:shadow-md"
                 >
-                  <div className="text-[10px] uppercase tracking-widest text-brand-orange mb-1">
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-blue-600">
                     {m.plan}
                   </div>
-                  <div className="font-semibold">{m.name}</div>
-                  <div className="text-blue-400 font-bold text-lg mt-2">
+                  <div className="font-semibold text-slate-900">{m.name}</div>
+                  <div className="mt-2 text-lg font-bold text-blue-600">
                     {mxn(m.price_mxn)}
                   </div>
                 </button>
               ))}
             </div>
-          </TabsContent>
+          )}
 
-          <TabsContent value="COURSE">
-            {courses.length === 0 ? (
-              <p className="text-zinc-500 text-sm">No hay cursos publicados.</p>
+          {tab === 'COURSE' &&
+            (courses.length === 0 ? (
+              <p className="text-sm text-slate-500">No hay cursos publicados.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {courses.map((c) => (
                   <button
                     key={c.id}
                     onClick={() => addCourse(c)}
                     disabled={c.seats_left <= 0}
-                    className="bg-zinc-800/70 hover:bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-left disabled:opacity-40"
+                    className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-400 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <div className="text-[10px] uppercase tracking-widest text-brand-orange mb-1">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-blue-600">
                       {c.sport ?? 'Curso'}
                     </div>
-                    <div className="font-semibold">{c.name}</div>
-                    <div className="text-xs text-zinc-500 mt-1">
+                    <div className="font-semibold text-slate-900">{c.name}</div>
+                    <div className="mt-1 text-xs text-slate-500">
                       {c.seats_left} cupos · inicia{' '}
                       {new Date(c.starts_at).toLocaleDateString('es-MX')}
                     </div>
-                    <div className="text-blue-400 font-bold text-lg mt-2">
+                    <div className="mt-2 text-lg font-bold text-blue-600">
                       {mxn(c.price_mxn)}
                     </div>
                   </button>
                 ))}
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            ))}
+        </div>
       </div>
 
       {/* ─── Right: cart sidebar ─── */}
-      <aside className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 flex flex-col min-h-0">
+      <aside className="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-5">
         {/* Member search */}
         <div className="mb-4">
-          <label className="text-xs uppercase text-zinc-500 block mb-1">
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600">
             Asociar a socio
           </label>
           {selectedMember ? (
-            <div className="bg-zinc-800/70 border border-zinc-700 rounded-lg px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
               <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{selectedMember.name}</div>
-                <div className="text-[11px] text-zinc-500 truncate">
+                <div className="truncate text-sm font-medium text-slate-900">
+                  {selectedMember.name}
+                </div>
+                <div className="truncate text-[11px] text-slate-500">
                   {selectedMember.plan ?? 'Sin plan'}
                   {selectedMember.days_remaining
                     ? ` — vence en ${selectedMember.days_remaining}d`
@@ -409,12 +428,12 @@ export default function StaffPOSPage() {
                 </div>
               </div>
               <button onClick={() => setSelectedMember(null)}>
-                <X className="w-4 h-4 text-zinc-500 hover:text-red-400" />
+                <X className="h-4 w-4 text-slate-400 hover:text-rose-600" />
               </button>
             </div>
           ) : (
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={memberQuery}
                 onChange={(e) => {
@@ -423,12 +442,12 @@ export default function StaffPOSPage() {
                 }}
                 onFocus={() => setShowSearchDropdown(true)}
                 placeholder="Nombre o teléfono…"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg pl-9 pr-3 py-2 text-sm"
+                className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
               />
               {showSearchDropdown &&
                 debouncedQuery.length >= 2 &&
                 (searchResults?.length ?? 0) > 0 && (
-                  <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-zinc-900 border border-zinc-700 rounded-lg max-h-52 overflow-y-auto">
+                  <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
                     {searchResults!.map((m) => (
                       <button
                         key={m.id}
@@ -437,10 +456,10 @@ export default function StaffPOSPage() {
                           setShowSearchDropdown(false);
                           setMemberQuery('');
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-zinc-800 border-b border-zinc-800 last:border-0"
+                        className="w-full border-b border-slate-100 px-3 py-2 text-left last:border-0 hover:bg-slate-50"
                       >
-                        <div className="text-sm">{m.name}</div>
-                        <div className="text-[11px] text-zinc-500">
+                        <div className="text-sm text-slate-900">{m.name}</div>
+                        <div className="text-[11px] text-slate-500">
                           {m.phone} · {m.plan ?? 'Sin plan'}
                         </div>
                       </button>
@@ -450,74 +469,85 @@ export default function StaffPOSPage() {
             </div>
           )}
           {!selectedMember && (
-            <p className="text-[11px] text-zinc-500 mt-1">
+            <p className="mt-1 text-[11px] text-slate-500">
               Sin socio: sólo se permiten productos (venta anónima).
             </p>
           )}
         </div>
 
-        <h2 className="font-semibold mb-3 flex items-center gap-2">
-          <ShoppingCart className="w-4 h-4" /> Carrito ({cart.length})
+        <h2 className="mb-3 flex items-center gap-2 font-semibold text-slate-900">
+          <ShoppingCart className="h-4 w-4" /> Carrito ({cart.length})
         </h2>
-        <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
-          {cart.length === 0 && <p className="text-zinc-500 text-sm">Vacío</p>}
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+          {cart.length === 0 && (
+            <p className="text-sm text-slate-500">Vacío</p>
+          )}
           {cart.map((l) => (
-            <div key={l.key} className="bg-zinc-800/70 rounded-lg p-3">
+            <div
+              key={l.key}
+              className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+            >
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="text-[10px] uppercase text-zinc-500 tracking-widest">
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500">
                     {l.kind === 'PRODUCT'
                       ? 'Producto'
                       : l.kind === 'MEMBERSHIP'
                         ? 'Membresía'
                         : 'Curso'}
                   </div>
-                  <div className="text-sm font-medium truncate">{l.name}</div>
+                  <div className="truncate text-sm font-medium text-slate-900">
+                    {l.name}
+                  </div>
                 </div>
                 <button onClick={() => removeLine(l.key)}>
-                  <Trash2 className="w-4 h-4 text-zinc-500 hover:text-red-400" />
+                  <Trash2 className="h-4 w-4 text-slate-400 hover:text-rose-600" />
                 </button>
               </div>
-              <div className="flex items-center justify-between mt-2">
+              <div className="mt-2 flex items-center justify-between">
                 {l.kind === 'PRODUCT' ? (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => changeQty(l.key, -1)}
-                      className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 flex items-center justify-center"
+                      className="flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="h-3 w-3" />
                     </button>
-                    <span className="text-sm w-6 text-center">{l.qty}</span>
+                    <span className="w-6 text-center text-sm text-slate-900">
+                      {l.qty}
+                    </span>
                     <button
                       onClick={() => changeQty(l.key, 1)}
-                      className="w-6 h-6 rounded bg-zinc-700 hover:bg-zinc-600 flex items-center justify-center"
+                      className="flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="h-3 w-3" />
                     </button>
                   </div>
                 ) : (
-                  <span className="text-xs text-zinc-500">×1</span>
+                  <span className="text-xs text-slate-500">×1</span>
                 )}
-                <div className="text-sm font-semibold">
+                <div className="text-sm font-semibold text-slate-900">
                   {mxn(l.price_mxn * l.qty)}
                 </div>
               </div>
             </div>
           ))}
           {requiresMember && !selectedMember && (
-            <div className="bg-amber-900/20 border border-amber-700/40 text-amber-200 text-xs rounded-lg p-2">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
               Asocia un socio para cobrar membresías o cursos.
             </div>
           )}
         </div>
 
-        <div className="mt-4 space-y-3 border-t border-zinc-800 pt-4">
+        <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
           <div>
-            <label className="text-xs uppercase text-zinc-500">Método de pago</label>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600">
+              Método de pago
+            </label>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-              className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
             >
               <option value="CASH">Efectivo</option>
               <option value="CARD_TERMINAL">Terminal</option>
@@ -525,64 +555,69 @@ export default function StaffPOSPage() {
             </select>
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-sm text-zinc-400">Total</span>
-            <span className="text-2xl font-bold">{mxn(total)} MXN</span>
+            <span className="text-sm text-slate-600">Total</span>
+            <span className="text-3xl font-bold text-slate-900">
+              {mxn(total)} MXN
+            </span>
           </div>
-          <Button
-            className="w-full"
+          <button
+            type="button"
             disabled={!canCheckout}
             onClick={doCheckout}
-            loading={processing}
+            className="w-full rounded-2xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Cobrar
-          </Button>
+            {processing ? 'Procesando…' : 'Cobrar'}
+          </button>
         </div>
       </aside>
 
       {/* ─── Receipt modal ─── */}
       {receipt && (
         <div
-          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
           onClick={() => setReceipt(null)}
         >
           <div
             id="receipt"
             onClick={(e) => e.stopPropagation()}
-            className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-md w-full"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
           >
-            <h3 className="text-xl font-bold mb-3">Venta registrada</h3>
+            <h3 className="mb-3 text-xl font-bold text-slate-900">
+              Venta registrada
+            </h3>
             {receipt.customer_name && (
-              <div className="text-sm text-zinc-400 mb-2">
-                Socio: <span className="text-zinc-100">{receipt.customer_name}</span>
+              <div className="mb-2 text-sm text-slate-600">
+                Socio:{' '}
+                <span className="text-slate-900">{receipt.customer_name}</span>
               </div>
             )}
-            <div className="text-xs text-zinc-500 mb-3">
+            <div className="mb-3 text-xs text-slate-500">
               Pago: {paymentLabel(receipt.method)}
             </div>
-            <ul className="text-sm space-y-1 border-y border-zinc-800 py-3 mb-3">
+            <ul className="mb-3 space-y-1 border-y border-slate-200 py-3 text-sm">
               {receipt.lines.map((l, i) => (
-                <li key={i} className="flex justify-between">
-                  <span className="truncate mr-2">
+                <li key={i} className="flex justify-between text-slate-900">
+                  <span className="mr-2 truncate">
                     {l.qty} × {l.name}
                   </span>
                   <span>{mxn(l.subtotal)}</span>
                 </li>
               ))}
             </ul>
-            <div className="flex justify-between font-semibold mb-4">
+            <div className="mb-4 flex justify-between font-semibold text-slate-900">
               <span>Total</span>
               <span>{mxn(receipt.total_mxn)} MXN</span>
             </div>
             {receipt.operations.length > 0 && (
-              <div className="text-[11px] text-zinc-500 mb-3 space-y-0.5">
+              <div className="mb-3 space-y-0.5 text-[11px] text-slate-500">
                 {receipt.operations.map((op, i) => (
                   <div key={i}>• {op}</div>
                 ))}
               </div>
             )}
             {receipt.init_points.length > 0 && (
-              <div className="space-y-2 mb-3">
-                <p className="text-xs text-zinc-400">
+              <div className="mb-3 space-y-2">
+                <p className="text-xs text-slate-600">
                   Muestra este enlace al cliente para completar el pago:
                 </p>
                 {receipt.init_points.map((url, i) => (
@@ -590,7 +625,7 @@ export default function StaffPOSPage() {
                     key={i}
                     href={url}
                     target="_blank"
-                    className="block text-center bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-sm"
+                    className="block rounded-xl bg-blue-600 py-2 text-center text-sm font-bold text-white hover:bg-blue-700"
                   >
                     Abrir Mercado Pago #{i + 1}
                   </a>
@@ -598,18 +633,23 @@ export default function StaffPOSPage() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => window.print()}>
-                <Printer className="w-4 h-4" /> Imprimir
-              </Button>
-              <Button
-                variant="ghost"
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Printer className="h-4 w-4" /> Imprimir
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setReceipt(null);
                   setCart([]);
                 }}
+                className="inline-flex items-center justify-center rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-200"
               >
                 Cerrar
-              </Button>
+              </button>
             </div>
           </div>
         </div>

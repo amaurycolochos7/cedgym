@@ -55,27 +55,46 @@ export function SelfieCapture({ onSuccess, onCancel }: SelfieCaptureProps) {
       );
       return;
     }
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setPhase('fallback');
+      setError(
+        'La cámara solo funciona en sitios seguros (HTTPS) o en localhost. Sube una foto desde tu dispositivo.',
+      );
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {
-          /* autoplay may fail silently on some browsers */
-        });
-      }
+      // Switch to 'live' first so React mounts the <video> element.
+      // The effect below wires the stream once the ref is populated —
+      // doing it inline here would no-op because videoRef.current is
+      // still null at this point in the same tick.
       setPhase('live');
     } catch (e) {
       // Permission denied, no camera, etc. Fall back to file input.
       setPhase('fallback');
       setError(
-        'No pudimos acceder a la cámara. Puedes subir una foto desde tu dispositivo.',
+        'No pudimos acceder a la cámara. Verifica que el navegador tenga permiso de cámara o sube una foto desde tu dispositivo.',
       );
     }
   }, []);
+
+  // Wire the captured stream to the <video> element as soon as both exist.
+  useEffect(() => {
+    if (phase !== 'live') return;
+    const v = videoRef.current;
+    const s = streamRef.current;
+    if (!v || !s) return;
+    if (v.srcObject !== s) {
+      v.srcObject = s;
+    }
+    v.play().catch(() => {
+      /* autoplay may fail silently on some browsers — user gesture starts it */
+    });
+  }, [phase]);
 
   useEffect(() => {
     return () => {
