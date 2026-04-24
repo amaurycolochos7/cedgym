@@ -19,16 +19,37 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
+import { audit, auditCtx } from '../lib/audit.js';
 import { applyPromoToAmount } from '../lib/memberships.js';
 import {
     createCardPayment,
     mapPaymentStatus,
 } from '../lib/mercadopago.js';
+import { SETTING_KEYS, getWorkspaceSetting, setWorkspaceSetting } from '../lib/settings.js';
 import { activateMealPlanAddonFromPayment } from './webhooks.js';
 
-// Single source of truth for the addon price. Bump here and the
-// /price endpoint + the purchase flow follow automatically.
-const MEAL_PLAN_ADDON_PRICE_MXN = 499;
+// Default price used when no admin override is set. Admins can
+// change the effective price via PATCH /admin/addons/meal-plan/price
+// which writes to workspace_settings[meal_plan_addon.price_mxn].
+const MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN = 499;
+
+// Resolve the currently-effective addon price for `workspaceId`,
+// falling back to the default when no override exists.
+async function resolveAddonPrice(prisma, workspaceId) {
+    if (!workspaceId) return MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN;
+    try {
+        const v = await getWorkspaceSetting(
+            prisma,
+            workspaceId,
+            SETTING_KEYS.MEAL_PLAN_ADDON_PRICE,
+            null,
+        );
+        if (typeof v === 'number' && v >= 0) return v;
+        return MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN;
+    } catch {
+        return MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN;
+    }
+}
 
 const ACTIVE_MEMBERSHIP_STATUSES = new Set(['ACTIVE', 'TRIAL']);
 
@@ -84,16 +105,94 @@ export default async function addonsRoutes(fastify) {
     const { prisma } = fastify;
 
     // ─── GET /addons/meal-plan/price ─────────────────────────────
-    // Public-shaped endpoint (still auth-gated, just no role check)
-    // so the modal fetches the canonical price without ever hardcoding
-    // 499 in the frontend.
+    // Authenticated but no role check — every member in the portal
+    // needs to know the current price to render the upgrade banner
+    // and the modal total. Pulls the admin-editable override first
+    // and falls back to the hardcoded default.
     fastify.get(
         '/addons/meal-plan/price',
         { preHandler: [fastify.authenticate] },
-        async () => ({
-            price_mxn: MEAL_PLAN_ADDON_PRICE_MXN,
-            currency: 'MXN',
-        })
+        async (req) => {
+            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const priceMxn = await resolveAddonPrice(prisma, workspaceId);
+            return { price_mxn: priceMxn, currency: 'MXN' };
+        }
+    );
+
+    // ─── PATCH /admin/addons/meal-plan/price ─────────────────────
+    // Admin-only. Persists the new effective price in
+    // `workspace_settings[meal_plan_addon.price_mxn]`. Bumping this
+    // immediately affects:
+    //   • GET /addons/meal-plan/price (modal + portal banner)
+    //   • POST /addons/meal-plan/purchase-card (charge amount)
+    const addonPriceBody = z.object({
+        price_mxn: z.number().int().min(0).max(1_000_000),
+    });
+
+    fastify.patch(
+        '/admin/addons/meal-plan/price',
+        {
+            preHandler: [
+                fastify.authenticate,
+                fastify.requireRole('ADMIN', 'SUPERADMIN'),
+            ],
+        },
+        async (req) => {
+            const parsed = addonPriceBody.safeParse(req.body);
+            if (!parsed.success) {
+                throw err('BAD_BODY', parsed.error.message, 400);
+            }
+            const { price_mxn } = parsed.data;
+
+            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            if (!workspaceId) {
+                throw err('WORKSPACE_MISSING', 'No se pudo resolver el workspace', 500);
+            }
+
+            await setWorkspaceSetting(
+                prisma,
+                workspaceId,
+                SETTING_KEYS.MEAL_PLAN_ADDON_PRICE,
+                price_mxn,
+                req.user.sub || req.user.id || null,
+            );
+
+            try {
+                await audit(prisma, {
+                    ...auditCtx(req),
+                    action: 'ADMIN.ADDON_PRICE_UPDATED',
+                    entity_type: 'MealPlanAddon',
+                    entity_id: 'default',
+                    metadata: { price_mxn },
+                });
+            } catch {
+                /* best-effort */
+            }
+
+            return { success: true, price_mxn, currency: 'MXN' };
+        },
+    );
+
+    // ─── GET /admin/addons/meal-plan/price ───────────────────────
+    // Admin-only helper so the admin UI hydrates the "current
+    // price" card without having to reuse the auth'd member endpoint.
+    fastify.get(
+        '/admin/addons/meal-plan/price',
+        {
+            preHandler: [
+                fastify.authenticate,
+                fastify.requireRole('ADMIN', 'SUPERADMIN'),
+            ],
+        },
+        async (req) => {
+            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const priceMxn = await resolveAddonPrice(prisma, workspaceId);
+            return {
+                price_mxn: priceMxn,
+                default_price_mxn: MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN,
+                currency: 'MXN',
+            };
+        },
     );
 
     // ─── GET /addons/meal-plan/me ────────────────────────────────
@@ -194,7 +293,7 @@ export default async function addonsRoutes(fastify) {
                 );
             }
 
-            const basePrice = MEAL_PLAN_ADDON_PRICE_MXN;
+            const basePrice = await resolveAddonPrice(prisma, user.workspace_id);
             const { amount, discount, promo } = await resolvePromo(
                 prisma,
                 promo_code,

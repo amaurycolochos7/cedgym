@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import dayjs from 'dayjs';
+import { SETTING_KEYS, getWorkspaceSettings } from './settings.js';
 
 // ────────────────────────────────────────────────────────────────
 // Catalog. Keep in sync with the /plans endpoint contract.
@@ -101,6 +102,12 @@ export const PLAN_CATALOG = [
 // internal `monthly`/`quarterly`/`annual` aliases so the external
 // API is clean, and projects only the fields the landing/portal
 // actually need.
+//
+// NOTE: this is the non-DB variant. Use `getMergedPublicPlanCatalog`
+// from routes that have a prisma + workspace handy so admin-editable
+// overrides get applied. This one is kept for sync call sites that
+// predate the override table (e.g. legacy callers that never mutated
+// prices anyway).
 export function getPublicPlanCatalog() {
     return PLAN_CATALOG.map((p) => ({
         id: p.id,
@@ -114,7 +121,89 @@ export function getPublicPlanCatalog() {
         ai_meal_plans_per_month: p.ai_meal_plans_per_month ?? null,
         features: [...p.features],
         popular: p.popular,
+        enabled: true,
     }));
+}
+
+// DB-aware variant. Reads the `plan.overrides` setting for the
+// workspace and overlays any non-null fields on top of the in-code
+// catalog. Returns the same shape as `getPublicPlanCatalog()` plus
+// an explicit `enabled` flag.
+//
+// Contract for overrides:
+//   { STARTER: { monthly_price_mxn?, quarterly_price_mxn?,
+//                annual_price_mxn?, enabled? }, PRO: {...}, ELITE: {...} }
+//
+// Any individual field left undefined/null falls back to the catalog
+// default — so admins can override just one cycle without having to
+// restate the others.
+export async function getMergedPublicPlanCatalog(prisma, workspaceId) {
+    const base = getPublicPlanCatalog();
+    if (!prisma || !workspaceId) return base;
+
+    let overrides = {};
+    try {
+        const settings = await getWorkspaceSettings(prisma, workspaceId, [
+            SETTING_KEYS.PLAN_OVERRIDES,
+        ]);
+        overrides = settings[SETTING_KEYS.PLAN_OVERRIDES] || {};
+    } catch {
+        // If the settings table is missing (pre-migration deploy)
+        // we degrade gracefully to the hardcoded catalog rather
+        // than 500 the public /plans endpoint.
+        return base;
+    }
+
+    return base.map((p) => {
+        const o = overrides[p.id] || {};
+        return {
+            ...p,
+            monthly_price_mxn:
+                typeof o.monthly_price_mxn === 'number'
+                    ? o.monthly_price_mxn
+                    : p.monthly_price_mxn,
+            quarterly_price_mxn:
+                typeof o.quarterly_price_mxn === 'number'
+                    ? o.quarterly_price_mxn
+                    : p.quarterly_price_mxn,
+            annual_price_mxn:
+                typeof o.annual_price_mxn === 'number'
+                    ? o.annual_price_mxn
+                    : p.annual_price_mxn,
+            enabled: typeof o.enabled === 'boolean' ? o.enabled : true,
+        };
+    });
+}
+
+// Price lookup that respects admin overrides. Used by the subscribe
+// flows so a member pays what the admin configured, not what's
+// hardcoded. Falls back to the catalog default if no override exists
+// (or the lookup fails), matching `getPlanPrice` semantics.
+export async function getEffectivePlanPrice(prisma, workspaceId, planCode, billingCycle) {
+    const catalogPrice = getPlanPrice(planCode, billingCycle);
+    if (!prisma || !workspaceId) return catalogPrice;
+
+    let overrides = {};
+    try {
+        const settings = await getWorkspaceSettings(prisma, workspaceId, [
+            SETTING_KEYS.PLAN_OVERRIDES,
+        ]);
+        overrides = settings[SETTING_KEYS.PLAN_OVERRIDES] || {};
+    } catch {
+        return catalogPrice;
+    }
+
+    const o = overrides[planCode] || {};
+    const key =
+        billingCycle === 'MONTHLY'
+            ? 'monthly_price_mxn'
+            : billingCycle === 'QUARTERLY'
+                ? 'quarterly_price_mxn'
+                : billingCycle === 'ANNUAL'
+                    ? 'annual_price_mxn'
+                    : null;
+    if (!key) return catalogPrice;
+    return typeof o[key] === 'number' ? o[key] : catalogPrice;
 }
 
 export const VALID_PLANS = PLAN_CATALOG.map((p) => p.code);
@@ -239,8 +328,10 @@ export default {
     VALID_CYCLES,
     PLAN_RANK,
     getPlanPrice,
+    getEffectivePlanPrice,
     getPlanByCode,
     getPublicPlanCatalog,
+    getMergedPublicPlanCatalog,
     computeExpiresAt,
     daysRemaining,
     earlyRenewalDiscount,

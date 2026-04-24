@@ -218,8 +218,41 @@ model Workspace {
   whatsapp_sessions WhatsAppSession[]
   qr_tokens     QRToken[]
   meal_plan_addons  MealPlanAddon[]
+  settings      WorkspaceSetting[]
 
   @@map("workspaces")
+}
+
+// ────────────────────────────────────────────────────────────────
+// Generic key/value settings store — per-workspace.
+//
+// Used as the single source of truth for admin-editable pricing
+// knobs that don't deserve their own structured table:
+//
+//   • plan.overrides           → { STARTER: { monthly_price_mxn?, quarterly_price_mxn?,
+//                                             annual_price_mxn?, enabled? }, PRO: {...}, ELITE: {...} }
+//     Merged into PLAN_CATALOG at read time (lib/memberships.js).
+//
+//   • meal_plan_addon.price_mxn → integer. Overrides the hardcoded
+//                                 $499 in routes/addons.js.
+//
+// `value` is JSON to keep the table flexible (numbers, strings,
+// nested objects) without a migration per new key.
+// ────────────────────────────────────────────────────────────────
+model WorkspaceSetting {
+  id           String   @id @default(cuid())
+  workspace_id String
+  key          String
+  value        Json
+  updated_by   String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@unique([workspace_id, key])
+  @@index([workspace_id])
+  @@map("workspace_settings")
 }
 
 model User {

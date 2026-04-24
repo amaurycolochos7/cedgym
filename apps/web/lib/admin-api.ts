@@ -82,13 +82,24 @@ export interface Paginated<T> {
 
 export interface AdminMembershipPlan {
   id: string;
-  code: 'starter' | 'pro' | 'elite' | string;
+  // Backend plan codes are UPPERCASE ('STARTER' | 'PRO' | 'ELITE').
+  // `code` is only present when the admin endpoint exposes it — the
+  // public /memberships/plans response does not, so we look up
+  // `plan.id` (which equals the code) for the PATCH path.
+  code?: 'STARTER' | 'PRO' | 'ELITE' | string;
   name: string;
   monthly_price_mxn: number;
   quarterly_price_mxn: number;
-  yearly_price_mxn: number;
+  // Backend zod schema uses `annual_price_mxn` (PATCH /admin/memberships/plans/:code).
+  annual_price_mxn: number;
   features?: string[];
   enabled: boolean;
+}
+
+export interface MealPlanAddonPrice {
+  price_mxn: number;
+  default_price_mxn?: number;
+  currency: string;
 }
 
 export interface AdminCourse {
@@ -603,8 +614,35 @@ export const adminApi = {
       const d: any = r.data;
       return Array.isArray(d) ? d : (d?.plans ?? d?.items ?? []);
     }),
-  updateMembershipPlan: (id: string, patch: Partial<AdminMembershipPlan>) =>
-    api.patch(`/admin/memberships/plans/${id}`, patch).then((r) => r.data),
+  updateMembershipPlan: (id: string, patch: Partial<AdminMembershipPlan>) => {
+    // Backend zod schema is strict and only accepts these four keys.
+    // The list endpoint returns extra fields (name, tagline, features…)
+    // that would fail zod's .strict() check, so we whitelist here.
+    const body: Record<string, unknown> = {};
+    if (typeof patch.monthly_price_mxn === 'number')
+      body.monthly_price_mxn = patch.monthly_price_mxn;
+    if (typeof patch.quarterly_price_mxn === 'number')
+      body.quarterly_price_mxn = patch.quarterly_price_mxn;
+    if (typeof patch.annual_price_mxn === 'number')
+      body.annual_price_mxn = patch.annual_price_mxn;
+    if (typeof patch.enabled === 'boolean') body.enabled = patch.enabled;
+    return api
+      .patch(`/admin/memberships/plans/${id}`, body)
+      .then((r) => r.data);
+  },
+
+  // Meal-plan add-on (one-time $499 unlock). KV-backed, admin-editable.
+  getMealPlanAddonPrice: () =>
+    api
+      .get<MealPlanAddonPrice>('/admin/addons/meal-plan/price')
+      .then((r) => r.data),
+  updateMealPlanAddonPrice: (priceMxn: number) =>
+    api
+      .patch<{ success: boolean; price_mxn: number; currency: string }>(
+        '/admin/addons/meal-plan/price',
+        { price_mxn: priceMxn },
+      )
+      .then((r) => r.data),
   // Memberships admin list reuses /admin/miembros (backend source of truth
   // for member+membership joined rows). Backend returns `items` with
   // `membership.plan/status/expires_at` nested — we flatten to the

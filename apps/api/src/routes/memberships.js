@@ -31,13 +31,16 @@ import {
     VALID_CYCLES,
     PLAN_RANK,
     getPlanPrice,
+    getEffectivePlanPrice,
     getPlanByCode,
     getPublicPlanCatalog,
+    getMergedPublicPlanCatalog,
     computeExpiresAt,
     daysRemaining,
     earlyRenewalDiscount,
     applyPromoToAmount,
 } from '../lib/memberships.js';
+import { SETTING_KEYS, getWorkspaceSettings, setWorkspaceSetting } from '../lib/settings.js';
 import {
     createPreference,
     cancelSubscription,
@@ -214,12 +217,96 @@ export default async function membershipsRoutes(fastify) {
     // ─── GET /memberships/plans (public) ───────────────────────────
     //
     // Canonical catalog: landing page + portal fetch this so copy,
-    // prices and features come from ONE place (apps/api/src/lib/memberships.js).
-    // Public = no auth; responses are cacheable by shape.
-    fastify.get('/memberships/plans', async () => ({
-        plans: getPublicPlanCatalog(),
-        currency: 'MXN',
-    }));
+    // prices and features come from ONE place. Now pulls admin-editable
+    // price overrides from `workspace_settings` and overlays them on
+    // the in-code catalog, so the admin UI drives what both the
+    // landing and the portal show. Public = no auth; the default
+    // workspace is resolved at boot (fastify.defaultWorkspaceId).
+    fastify.get('/memberships/plans', async () => {
+        const workspaceId = fastify.defaultWorkspaceId || null;
+        const plans = await getMergedPublicPlanCatalog(prisma, workspaceId);
+        return { plans, currency: 'MXN' };
+    });
+
+    // ─── PATCH /admin/memberships/plans/:code ──────────────────────
+    //
+    // Updates the admin-editable override for a single plan. Stores
+    // the deltas in `workspace_settings[plan.overrides]`; the
+    // in-code PLAN_CATALOG (lib/memberships.js) is never mutated so
+    // "reset to default" is as simple as clearing a field.
+    //
+    // Body accepts any subset of: monthly_price_mxn, quarterly_price_mxn,
+    // annual_price_mxn, enabled. Missing keys are left untouched.
+    const planOverrideBody = z.object({
+        monthly_price_mxn: z.number().int().min(0).max(1_000_000).optional(),
+        quarterly_price_mxn: z.number().int().min(0).max(1_000_000).optional(),
+        annual_price_mxn: z.number().int().min(0).max(1_000_000).optional(),
+        enabled: z.boolean().optional(),
+    });
+
+    fastify.patch(
+        '/admin/memberships/plans/:code',
+        {
+            preHandler: [
+                fastify.authenticate,
+                fastify.requireRole('ADMIN', 'SUPERADMIN'),
+            ],
+        },
+        async (req) => {
+            const code = String(req.params?.code || '').toUpperCase();
+            if (!VALID_PLANS.includes(code)) {
+                throw err('PLAN_INVALID', `Plan desconocido: ${code}`, 400);
+            }
+            const parsed = planOverrideBody.safeParse(req.body);
+            if (!parsed.success) {
+                throw err('BAD_BODY', parsed.error.message, 400);
+            }
+            const patch = parsed.data;
+            if (Object.keys(patch).length === 0) {
+                throw err(
+                    'EMPTY_PATCH',
+                    'Envía al menos un campo para actualizar.',
+                    400,
+                );
+            }
+
+            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            if (!workspaceId) {
+                throw err('WORKSPACE_MISSING', 'No se pudo resolver el workspace', 500);
+            }
+
+            const current = await getWorkspaceSettings(prisma, workspaceId, [
+                SETTING_KEYS.PLAN_OVERRIDES,
+            ]);
+            const existing = current[SETTING_KEYS.PLAN_OVERRIDES] || {};
+            const nextForCode = { ...(existing[code] || {}), ...patch };
+            const nextAll = { ...existing, [code]: nextForCode };
+
+            await setWorkspaceSetting(
+                prisma,
+                workspaceId,
+                SETTING_KEYS.PLAN_OVERRIDES,
+                nextAll,
+                req.user.sub || req.user.id || null,
+            );
+
+            try {
+                await audit(prisma, {
+                    ...auditCtx(req),
+                    action: 'ADMIN.MEMBERSHIP_PLAN_UPDATED',
+                    entity_type: 'MembershipPlan',
+                    entity_id: code,
+                    metadata: { patch, override: nextForCode },
+                });
+            } catch {
+                /* audit is best-effort */
+            }
+
+            const merged = await getMergedPublicPlanCatalog(prisma, workspaceId);
+            const plan = merged.find((p) => p.id === code);
+            return { success: true, plan };
+        },
+    );
 
     // ─── GET /memberships/me ──────────────────────────────────────
     fastify.get(
@@ -251,14 +338,14 @@ export default async function membershipsRoutes(fastify) {
             }
             const { plan, billing_cycle, promo_code } = parsed.data;
 
-            const basePrice = getPlanPrice(plan, billing_cycle);
-            if (basePrice == null) {
-                throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
-            }
-
             const userId = req.user.sub || req.user.id;
             const user = await prisma.user.findUnique({ where: { id: userId } });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
+
+            const basePrice = await getEffectivePlanPrice(prisma, user.workspace_id, plan, billing_cycle);
+            if (basePrice == null) {
+                throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
+            }
 
             // Gate: el usuario debe tener una selfie en su perfil antes de
             // pagar. El staff la usa para identificarlo en check-in. Los
@@ -369,14 +456,14 @@ export default async function membershipsRoutes(fastify) {
             } = parsed.data;
             const billingCycle = CYCLE_MAP[cycle];
 
-            const basePrice = getPlanPrice(plan, billingCycle);
-            if (basePrice == null) {
-                throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
-            }
-
             const userId = req.user.sub || req.user.id;
             const user = await prisma.user.findUnique({ where: { id: userId } });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
+
+            const basePrice = await getEffectivePlanPrice(prisma, user.workspace_id, plan, billingCycle);
+            if (basePrice == null) {
+                throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
+            }
 
             // Selfie gate — same rule as /subscribe. Staff identifies
             // the member at check-in by the selfie.
@@ -661,7 +748,7 @@ export default async function membershipsRoutes(fastify) {
 
             const billing_cycle = parsed.data.billing_cycle || existing.billing_cycle;
             const plan = existing.plan;
-            const basePrice = getPlanPrice(plan, billing_cycle);
+            const basePrice = await getEffectivePlanPrice(prisma, user.workspace_id, plan, billing_cycle);
             if (basePrice == null) {
                 throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
             }
@@ -983,7 +1070,7 @@ export default async function membershipsRoutes(fastify) {
                 );
             }
 
-            const basePrice = getPlanPrice(plan, billingCycle);
+            const basePrice = await getEffectivePlanPrice(prisma, user.workspace_id, plan, billingCycle);
             if (basePrice == null) {
                 throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
             }

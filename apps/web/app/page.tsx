@@ -29,7 +29,91 @@ import { InteractivityClient } from '@/components/home/InteractivityClient';
 import { MobileMenu } from '@/components/home/mobile-menu';
 import { PlanCarousel } from '@/components/ui/plan-carousel';
 
-export default function HomePage() {
+// Always render with live prices — the admin-editable overrides must
+// show up on the landing right after the admin saves them, so we can't
+// let Next cache this page indefinitely.
+export const revalidate = 0;
+
+type PlanId = 'STARTER' | 'PRO' | 'ELITE';
+
+interface PublicPlan {
+  id: PlanId;
+  name?: string;
+  monthly_price_mxn: number;
+  quarterly_price_mxn?: number;
+  annual_price_mxn?: number;
+  enabled?: boolean;
+}
+
+// Fallback prices match the in-code catalog (apps/api/src/lib/memberships.js).
+// Used when the API is down so the landing still renders something sane
+// instead of an empty plan grid.
+const FALLBACK_PRICES: Record<PlanId, number> = {
+  STARTER: 599,
+  PRO: 999,
+  ELITE: 1590,
+};
+
+async function fetchPlans(): Promise<Record<PlanId, PublicPlan | null>> {
+  const baseURL =
+    process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+  try {
+    const res = await fetch(`${baseURL}/memberships/plans`, {
+      // Re-fetch on every render — admin price changes must propagate
+      // without a redeploy.
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const body = (await res.json()) as { plans?: PublicPlan[] };
+    const out: Record<PlanId, PublicPlan | null> = {
+      STARTER: null,
+      PRO: null,
+      ELITE: null,
+    };
+    for (const p of body.plans ?? []) {
+      if (p && (p.id === 'STARTER' || p.id === 'PRO' || p.id === 'ELITE')) {
+        out[p.id] = p;
+      }
+    }
+    return out;
+  } catch {
+    return { STARTER: null, PRO: null, ELITE: null };
+  }
+}
+
+function formatMxn(n: number): string {
+  return n.toLocaleString('es-MX');
+}
+
+export default async function HomePage() {
+  const plans = await fetchPlans();
+
+  // Resolve each plan: prefer API, fall back to hardcoded, and honor
+  // `enabled: false` so disabled plans don't render on the landing.
+  const resolved: Record<
+    PlanId,
+    { priceMonth: string; enabled: boolean }
+  > = {
+    STARTER: {
+      priceMonth: formatMxn(
+        plans.STARTER?.monthly_price_mxn ?? FALLBACK_PRICES.STARTER,
+      ),
+      enabled: plans.STARTER ? plans.STARTER.enabled !== false : true,
+    },
+    PRO: {
+      priceMonth: formatMxn(
+        plans.PRO?.monthly_price_mxn ?? FALLBACK_PRICES.PRO,
+      ),
+      enabled: plans.PRO ? plans.PRO.enabled !== false : true,
+    },
+    ELITE: {
+      priceMonth: formatMxn(
+        plans.ELITE?.monthly_price_mxn ?? FALLBACK_PRICES.ELITE,
+      ),
+      enabled: plans.ELITE ? plans.ELITE.enabled !== false : true,
+    },
+  };
+
   return (
     <div className="bg-white text-slate-900">
       {/* ═════════ NAVBAR ═════════ */}
@@ -149,51 +233,62 @@ export default function HomePage() {
 
           <div className="mt-10">
             <PlanCarousel>
-              <PlanCard
-                href="/register?redirect=/checkout/starter&product=starter&type=membership"
-                tier="Básico" subtitle="Para empezar"
-                icon={<Dumbbell className="h-6 w-6" strokeWidth={2.25} />}
-                priceMonth="599"
-                subprice="+ $99 inscripción única"
-                features={[
-                  { t: '1 visita al día al gym' },
-                  { t: '1 rutina gratis generada en la app' },
-                  { t: 'Panel del atleta + progreso' },
-                ]}
-                cta="Elegir Básico"
-              />
-              <PlanCard
-                href="/register?redirect=/checkout/pro&product=pro&type=membership"
-                tier="Pro" subtitle="Atleta regular" popular
-                icon={<Flame className="h-6 w-6" strokeWidth={2.25} />}
-                priceMonth="999"
-                subprice="Sin inscripción"
-                features={[
-                  { t: 'Entradas ilimitadas al día (AM + PM)' },
-                  { t: 'Genera rutinas ilimitadas desde la app' },
-                  { t: 'Plan de comidas básico en la app' },
-                  { t: 'Precio de socio en tienda' },
-                  { t: '2 congelamientos al año' },
-                  { t: '1 pase de invitado al mes' },
-                ]}
-                cta="Elegir Pro"
-              />
-              <PlanCard
-                href="/register?redirect=/checkout/elite&product=elite&type=membership"
-                tier="Élite" subtitle="Preparación deportiva"
-                icon={<Trophy className="h-6 w-6" strokeWidth={2.25} />}
-                priceMonth="1,590"
-                subprice="Sin inscripción"
-                features={[
-                  { t: 'Todo lo del plan Pro' },
-                  { t: 'Rutina específica por deporte (football, powerlifting, HYROX, etc.)' },
-                  { t: 'Nutrición personalizada con bioimpedancia cada 2 meses' },
-                  { t: 'Feedback de video cada 2 semanas' },
-                  { t: 'WhatsApp directo (1 consulta por semana)' },
-                  { t: 'Precio de socio preferente en tienda' },
-                ]}
-                cta="Elegir Élite"
-              />
+              {[
+                resolved.STARTER.enabled && (
+                  <PlanCard
+                    key="STARTER"
+                    href="/register?redirect=/checkout/starter&product=starter&type=membership"
+                    tier="Básico" subtitle="Para empezar"
+                    icon={<Dumbbell className="h-6 w-6" strokeWidth={2.25} />}
+                    priceMonth={resolved.STARTER.priceMonth}
+                    subprice="+ $99 inscripción única"
+                    features={[
+                      { t: '1 visita al día al gym' },
+                      { t: '1 rutina gratis generada en la app' },
+                      { t: 'Panel del atleta + progreso' },
+                    ]}
+                    cta="Elegir Básico"
+                  />
+                ),
+                resolved.PRO.enabled && (
+                  <PlanCard
+                    key="PRO"
+                    href="/register?redirect=/checkout/pro&product=pro&type=membership"
+                    tier="Pro" subtitle="Atleta regular" popular
+                    icon={<Flame className="h-6 w-6" strokeWidth={2.25} />}
+                    priceMonth={resolved.PRO.priceMonth}
+                    subprice="Sin inscripción"
+                    features={[
+                      { t: 'Entradas ilimitadas al día (AM + PM)' },
+                      { t: 'Genera rutinas ilimitadas desde la app' },
+                      { t: 'Plan de comidas básico en la app' },
+                      { t: 'Precio de socio en tienda' },
+                      { t: '2 congelamientos al año' },
+                      { t: '1 pase de invitado al mes' },
+                    ]}
+                    cta="Elegir Pro"
+                  />
+                ),
+                resolved.ELITE.enabled && (
+                  <PlanCard
+                    key="ELITE"
+                    href="/register?redirect=/checkout/elite&product=elite&type=membership"
+                    tier="Élite" subtitle="Preparación deportiva"
+                    icon={<Trophy className="h-6 w-6" strokeWidth={2.25} />}
+                    priceMonth={resolved.ELITE.priceMonth}
+                    subprice="Sin inscripción"
+                    features={[
+                      { t: 'Todo lo del plan Pro' },
+                      { t: 'Rutina específica por deporte (football, powerlifting, HYROX, etc.)' },
+                      { t: 'Nutrición personalizada con bioimpedancia cada 2 meses' },
+                      { t: 'Feedback de video cada 2 semanas' },
+                      { t: 'WhatsApp directo (1 consulta por semana)' },
+                      { t: 'Precio de socio preferente en tienda' },
+                    ]}
+                    cta="Elegir Élite"
+                  />
+                ),
+              ].filter(Boolean) as React.ReactElement[]}
             </PlanCarousel>
           </div>
 
