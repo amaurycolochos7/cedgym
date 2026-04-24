@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import {
   X,
   Check,
+  CheckCircle,
   ArrowLeft,
   ShieldCheck,
   Tag,
@@ -309,6 +310,7 @@ function StepPay({
     final_amount: number;
   } | null>(null);
   const [promoChecking, setPromoChecking] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -476,113 +478,130 @@ function StepPay({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Hero summary card — gradient, icon, tagline. */}
-      <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-5 text-white shadow-md shadow-blue-600/20">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30">
-            <Utensils className="h-6 w-6" strokeWidth={2.25} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
-              Add-on único
-            </div>
-            <div className="font-display text-xl font-bold leading-tight sm:text-2xl">
-              Plan Alimenticio IA
-            </div>
-            <p className="mt-1 text-[13px] text-white/90">
-              Un plan personalizado de 7 días. Pago único, sin renovación automática.
-            </p>
-            {promoPreview?.valid && (
-              <div className="mt-1 text-[11px] text-white/90">
-                Código <span className="font-semibold">{promoCode}</span> · ahorras $
-                {promoPreview.discount_mxn.toLocaleString('es-MX')}
+    <div className="space-y-5">
+      {/* Compact hero — single-row layout, no awkward title wrap */}
+      <div className="rounded-2xl bg-blue-600 p-4 text-white sm:p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+              <Utensils className="h-5 w-5" strokeWidth={2.25} />
+            </span>
+            <div className="min-w-0">
+              <div className="font-display text-lg font-bold leading-tight sm:text-xl">
+                Plan alimenticio
               </div>
-            )}
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
-              Total
+              <div className="mt-0.5 text-[12px] text-white/80">
+                Pago único · 7 días personalizados
+              </div>
             </div>
+          </div>
+          <div className="shrink-0 text-right leading-none">
             {promoPreview?.valid && promoPreview.discount_mxn > 0 && (
-              <div className="text-xs text-white/70 line-through tabular-nums">
+              <div className="mb-0.5 text-[11px] text-white/70 line-through tabular-nums">
                 ${price.toLocaleString('es-MX')}
               </div>
             )}
-            <div className="font-display text-2xl font-bold tabular-nums">
-              ${effectiveAmount.toLocaleString('es-MX')}{' '}
-              <span className="text-xs">MXN</span>
+            <div className="font-display text-[26px] font-bold tabular-nums">
+              ${effectiveAmount.toLocaleString('es-MX')}
+            </div>
+            <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
+              MXN
             </div>
           </div>
         </div>
+        {promoPreview?.valid && (
+          <div className="mt-3 flex items-center gap-2 border-t border-white/15 pt-3 text-[12px] text-white/90">
+            <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              Código <span className="font-semibold">{promoCode}</span> · ahorras $
+              {promoPreview.discount_mxn.toLocaleString('es-MX')}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Benefit list */}
-      <ul className="space-y-2 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+      {/* Benefits — flat list, no boxed card */}
+      <ul className="space-y-2 px-1">
         {ADDON_BENEFITS.map((b) => (
-          <li key={b} className="flex items-start gap-2 text-sm text-slate-700">
-            <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-              <Check className="h-3.5 w-3.5" strokeWidth={3} />
-            </span>
+          <li key={b} className="flex items-start gap-2.5 text-[14px] text-slate-700">
+            <Check
+              className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600"
+              strokeWidth={2.75}
+            />
             <span>{b}</span>
           </li>
         ))}
       </ul>
 
-      {/* Promo code */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-600">
-          <Tag className="h-4 w-4 text-blue-600" />
-          Código de descuento
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            value={promoDraft}
-            onChange={(e) => setPromoDraft(e.target.value.toUpperCase())}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                applyPromo();
-              }
-            }}
-            placeholder="CÓDIGO (opcional)"
-            disabled={promoChecking || is100Off}
-            className="flex-1 min-w-[140px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono uppercase text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:bg-slate-50 disabled:text-slate-500"
-          />
-          {promoPreview?.valid ? (
-            <button
-              type="button"
-              onClick={clearPromo}
-              className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
-            >
-              Quitar
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={applyPromo}
-              disabled={promoChecking || !promoDraft.trim()}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {promoChecking ? 'Validando…' : 'Aplicar'}
-            </button>
+      {/* Promo code — collapsed trigger → expands on demand */}
+      {!promoOpen && !promoPreview ? (
+        <button
+          type="button"
+          onClick={() => setPromoOpen(true)}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-blue-700 transition hover:text-blue-800"
+        >
+          <Tag className="h-3.5 w-3.5" />
+          ¿Tienes un código de descuento?
+        </button>
+      ) : (
+        <div className="space-y-1.5">
+          <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            <Tag className="h-3.5 w-3.5" />
+            Código de descuento
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={promoDraft}
+              onChange={(e) => setPromoDraft(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyPromo();
+                }
+              }}
+              placeholder="CÓDIGO"
+              autoFocus
+              disabled={promoChecking || is100Off}
+              className="flex-1 min-w-0 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-mono uppercase text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none disabled:bg-slate-50 disabled:text-slate-500"
+            />
+            {promoPreview?.valid ? (
+              <button
+                type="button"
+                onClick={clearPromo}
+                className="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Quitar
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={applyPromo}
+                disabled={promoChecking || !promoDraft.trim()}
+                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              >
+                {promoChecking ? '…' : 'Aplicar'}
+              </button>
+            )}
+          </div>
+          {promoPreview?.valid === false && (
+            <p className="text-xs text-rose-600">{reasonLabel(promoPreview.reason)}</p>
+          )}
+          {promoPreview?.valid && !is100Off && (
+            <p className="text-xs text-emerald-700">
+              Descuento aplicado: -${promoPreview.discount_mxn.toLocaleString('es-MX')} MXN
+            </p>
+          )}
+          {promoPreview?.valid && is100Off && (
+            <p className="text-xs text-emerald-700">
+              100% de descuento — puedes activar tu plan sin pago.
+            </p>
           )}
         </div>
-        {promoPreview?.valid === false && (
-          <p className="mt-1.5 text-xs text-rose-600">{reasonLabel(promoPreview.reason)}</p>
-        )}
-        {promoPreview?.valid && (
-          <p className="mt-1.5 text-xs text-emerald-700">
-            {is100Off
-              ? '100% de descuento. Puedes activar tu add-on sin pago.'
-              : `Descuento aplicado: -$${promoPreview.discount_mxn.toLocaleString('es-MX')} MXN`}
-          </p>
-        )}
-      </div>
+      )}
 
       {lastError && (
-        <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200">
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700">
           {lastError}
         </div>
       )}
@@ -592,9 +611,9 @@ function StepPay({
           type="button"
           onClick={submitFree}
           disabled={submitting}
-          className="w-full rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 py-4 font-display text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-60"
+          className="w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60"
         >
-          {submitting ? 'Activando…' : '✓ Activar add-on sin costo'}
+          {submitting ? 'Activando…' : 'Activar mi plan sin costo'}
         </button>
       ) : sdkAvailable === false || !publicKey ? (
         <MpFallback publicKeyMissing={!publicKey} />
@@ -635,20 +654,15 @@ function StepPay({
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-1">
+      <div className="border-t border-slate-100 pt-3">
         <button
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-900 disabled:opacity-50"
         >
-          <ArrowLeft className="h-4 w-4" />
           Cancelar
         </button>
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-          <ShieldCheck className="h-4 w-4 text-blue-600" />
-          Protegido · MP
-        </p>
       </div>
     </div>
   );

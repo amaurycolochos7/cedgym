@@ -107,7 +107,14 @@ export default function PortalMembershipPage() {
                 <div className="text-xs uppercase tracking-wider text-white/80 font-semibold">Plan</div>
                 <div className="font-display text-3xl font-bold">{membership.plan}</div>
                 <div className="text-sm text-white/80 mt-1">
-                  {membership.sport ?? 'General'} · {membership.billing_cycle}
+                  {membership.sport ?? 'General'} ·{' '}
+                  {membership.billing_cycle === 'MONTHLY'
+                    ? 'Mensual'
+                    : membership.billing_cycle === 'QUARTERLY'
+                    ? 'Trimestral'
+                    : membership.billing_cycle === 'ANNUAL'
+                    ? 'Anual'
+                    : membership.billing_cycle}
                 </div>
               </div>
               <div className="text-right">

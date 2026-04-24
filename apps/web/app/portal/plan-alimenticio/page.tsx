@@ -357,7 +357,7 @@ function NoPlanView({
 
         <EditorialHero
           eyebrow="Nutrición a tu medida"
-          title="Tu plan alimenticio, hecho por IA"
+          title="Tu plan alimenticio a tu medida"
           subtitle="Comidas mexicanas, macros calibrados a tu objetivo, lista de compras lista. Sin pensar."
         />
 
@@ -575,86 +575,44 @@ function PaywallSection({
   onBuyAddon: () => void;
 }) {
   return (
-    <div className="space-y-5">
-      <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-6 sm:p-8">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-          <Lock className="h-3.5 w-3.5" />
-          Función bloqueada
-        </div>
-        <h2 className="font-display text-2xl sm:text-3xl leading-tight text-slate-900 mt-2">
-          Desbloquea tu plan alimenticio personalizado
-        </h2>
-        <p className="text-sm text-slate-600 mt-2 max-w-2xl">
-          {plan === 'STARTER'
-            ? 'Tu plan Básico no incluye plan alimenticio. '
-            : ''}
-          Compra el add-on una sola vez o mejora tu membresía a PRO/Élite para acceso continuo.
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
-          <BenefitCard
-            icon={<Apple className="h-5 w-5" />}
-            title="Plan a tu medida"
-            text="Calorías y macros calibrados a tu perfil y objetivo."
-          />
-          <BenefitCard
-            icon={<Flame className="h-5 w-5" />}
-            title="Ingredientes MX"
-            text="Recetas con ingredientes locales y accesibles."
-          />
-          <BenefitCard
-            icon={<ShoppingCart className="h-5 w-5" />}
-            title="Lista de compras auto"
-            text="Descarga tu lista lista para el súper."
-          />
-        </div>
-
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            onClick={onBuyAddon}
-            className="group inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-[0.12em] text-sm px-6 py-4 rounded-xl shadow-md shadow-blue-600/25 transition"
-          >
-            <Sparkles className="h-4 w-4" />
-            Comprar add-on · $499 MXN
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </button>
-          <Link
-            href="/portal/membership"
-            className="inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 px-2 py-2"
-          >
-            o mejora tu plan a PRO
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-          <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-          Código promocional disponible al pagar
-        </div>
+    <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 sm:p-6">
+      {/* Header: small meta label */}
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <Lock className="h-3.5 w-3.5" />
+        Función bloqueada
       </div>
-    </div>
-  );
-}
 
-function BenefitCard({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
-      <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white text-blue-700 ring-1 ring-blue-200">
-        {icon}
-      </div>
-      <div className="font-display text-base font-bold text-slate-900 mt-3">
-        {title}
-      </div>
-      <p className="text-xs text-slate-600 mt-1 leading-relaxed">{text}</p>
+      {/* Title + one-line pitch */}
+      <h2 className="font-display mt-2 text-2xl sm:text-[1.75rem] leading-tight text-slate-900">
+        Desbloquea tu plan alimenticio
+      </h2>
+      <p className="mt-1.5 text-sm text-slate-600">
+        {plan === 'STARTER' ? 'Tu membresía Básico no lo incluye. ' : ''}
+        Plan personalizado · ingredientes mexicanos · lista de compras.
+      </p>
+
+      {/* Primary — solid brand blue, price inline */}
+      <button
+        type="button"
+        onClick={onBuyAddon}
+        className="group mt-5 flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-5 py-3.5 font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-md"
+      >
+        <span>Quiero mi plan</span>
+        <span className="inline-flex items-baseline gap-1 rounded-lg bg-white/15 px-2.5 py-0.5 tabular-nums">
+          <span className="text-sm font-bold">$499</span>
+          <span className="text-[10px] font-semibold opacity-80">MXN</span>
+        </span>
+        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+      </button>
+
+      {/* Secondary — outlined full-width button, not a tiny caps link */}
+      <Link
+        href="/portal/membership"
+        className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+      >
+        Ver planes PRO y Élite
+        <ArrowRight className="h-4 w-4" />
+      </Link>
     </div>
   );
 }
