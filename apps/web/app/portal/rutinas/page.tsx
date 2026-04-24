@@ -27,7 +27,6 @@ import {
   ChevronDown,
   Clock,
   Dumbbell,
-  ExternalLink,
   Lightbulb,
   Loader2,
   Lock,
@@ -130,18 +129,6 @@ interface AiQuota {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-
-/**
- * Extract a YouTube video id from a plain watch/short URL so we can embed
- * it. Returns null for search URLs (`/results?search_query=…`) or anything
- * else — the UI falls back to an "open in YouTube" link in that case.
- */
-function getYouTubeEmbedUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-  if (!m) return null;
-  return `https://www.youtube.com/embed/${m[1]}`;
-}
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -941,9 +928,6 @@ function ExerciseCard({
     exercise.exercise_name ??
     exercise.exercise?.name ??
     'Ejercicio';
-  const embedUrl = getYouTubeEmbedUrl(exercise.video_url);
-  const hasSearchUrl =
-    !embedUrl && !!exercise.video_url && /\/results\?search_query=/.test(exercise.video_url);
 
   return (
     <motion.div
@@ -1019,33 +1003,9 @@ function ExerciseCard({
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-4 border-t border-slate-100 pt-4">
-              {/* Enlarged media / embed */}
-              {embedUrl ? (
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden ring-1 ring-slate-200 bg-black">
-                  <iframe
-                    src={embedUrl}
-                    title={name}
-                    loading="lazy"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="absolute inset-0 w-full h-full"
-                  />
-                </div>
-              ) : (
-                <ExerciseMedia name={name} size="lg" />
-              )}
-
-              {exercise.video_url && !embedUrl && (
-                <a
-                  href={exercise.video_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-semibold"
-                >
-                  {hasSearchUrl ? 'Ver video completo en YouTube' : 'Ver video completo'}
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
+              {/* Enlarged media — ExerciseMedia handles its own thumbnail
+                  → inline YouTube iframe swap when the user taps play. */}
+              <ExerciseMedia name={name} size="lg" />
 
               {exercise.exercise?.description && (
                 <p className="text-sm text-slate-700 leading-relaxed">
