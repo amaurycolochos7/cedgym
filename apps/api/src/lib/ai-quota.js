@@ -93,9 +93,18 @@ function limitFor(plan, kind) {
 //     has_active_membership: boolean,
 //     period_ends_at: ISO | null,
 //     days_until_renewal: number,
+//     membership_expires_at: ISO | null,
+//     membership_days_remaining: number,
 //     routine:    { used, limit, allowed, unlimited },
 //     meal_plan:  { used, limit, allowed, unlimited },
 //   }
+//
+// `days_until_renewal` is the time until the user's current 30-day
+// quota window refreshes. `membership_days_remaining` is the time
+// until the membership itself expires. The UI should clamp the
+// renewal countdown by `membership_days_remaining` so we never tell
+// a user "próxima rutina en 29 días" when their membership ends in
+// 5 — the quota only actually renews if they re-up.
 export async function getUserAIQuota(prisma, userId) {
     const membership = await loadActiveMembership(prisma, userId);
     if (!membership) {
@@ -104,6 +113,8 @@ export async function getUserAIQuota(prisma, userId) {
             has_active_membership: false,
             period_ends_at: null,
             days_until_renewal: 0,
+            membership_expires_at: null,
+            membership_days_remaining: 0,
             routine: { used: 0, limit: 0, allowed: false, unlimited: false },
             meal_plan: { used: 0, limit: 0, allowed: false, unlimited: false },
         };
@@ -119,11 +130,18 @@ export async function getUserAIQuota(prisma, userId) {
     const routineLimit = limitFor(plan, 'ROUTINE');
     const mealLimit = limitFor(plan, 'MEAL_PLAN');
 
+    // Days from now until membership.expires_at — clamped to zero
+    // so a technically-expired row never goes negative on the wire.
+    const msLeft = new Date(membership.expires_at).getTime() - Date.now();
+    const membershipDaysRemaining = Math.max(0, Math.ceil(msLeft / DAY_MS));
+
     return {
         plan: membership.plan,
         has_active_membership: true,
         period_ends_at: periodEnd(periodStart).toISOString(),
         days_until_renewal: daysRemainingInPeriod(periodStart),
+        membership_expires_at: new Date(membership.expires_at).toISOString(),
+        membership_days_remaining: membershipDaysRemaining,
         routine: {
             used: routinesUsed,
             limit: routineLimit,

@@ -62,6 +62,8 @@ interface AiQuota {
   has_active_membership: boolean;
   period_ends_at: string | null;
   days_until_renewal: number;
+  membership_expires_at?: string | null;
+  membership_days_remaining?: number;
   routine: QuotaFeature;
   meal_plan: QuotaFeature;
 }
@@ -437,15 +439,32 @@ function QuotaStatus({ quota }: { quota?: AiQuota }) {
     );
   }
 
-  // Quota exhausted
+  // Quota exhausted — show whichever countdown hits first: the 30-day
+  // quota window or the membership's expiry date. A member whose plan
+  // expires sooner needs to renew the membership, not wait for a
+  // quota reset that won't come without it.
   if (!mp.allowed) {
+    const quotaDays = quota.days_until_renewal;
+    const memberDays = quota.membership_days_remaining ?? Number.POSITIVE_INFINITY;
+    const membershipEndsFirst = memberDays < quotaDays;
+    const days = membershipEndsFirst ? memberDays : quotaDays;
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
         <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <p className="text-amber-900">
-          Ya usaste tu plan alimenticio de este periodo. Se renueva en{' '}
-          <strong className="font-semibold">{quota.days_until_renewal}</strong>{' '}
-          día{quota.days_until_renewal === 1 ? '' : 's'}.
+          {membershipEndsFirst ? (
+            <>
+              Tu membresía vence en{' '}
+              <strong className="font-semibold">{days}</strong> día
+              {days === 1 ? '' : 's'} — renuévala para generar otro plan.
+            </>
+          ) : (
+            <>
+              Ya usaste tu plan alimenticio de este periodo. Se renueva en{' '}
+              <strong className="font-semibold">{days}</strong> día
+              {days === 1 ? '' : 's'}.
+            </>
+          )}
         </p>
       </div>
     );

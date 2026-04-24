@@ -21,9 +21,9 @@
  * "search on YouTube" bail-out that drops the user out of the app.
  * -------------------------------------------------------------------------*/
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Dumbbell, Play } from 'lucide-react';
+import { Dumbbell, Maximize2, Pause, Play } from 'lucide-react';
 import { api } from '@/lib/api';
 
 type Size = 'sm' | 'md' | 'lg';
@@ -113,13 +113,21 @@ function thumbUrl(videoId: string): string {
 }
 
 function embedUrl(videoId: string): string {
+  // controls=0 → YouTube's own bar is hidden. We render our own
+  //   play/pause/progress using the IFrame API so clicks on the
+  //   video title/channel never hijack the user out to youtube.com.
+  // enablejsapi=1 → enables the postMessage command channel.
+  // disablekb=1 → kill keyboard shortcuts inside the iframe so they
+  //   don't conflict with our custom ones.
   const params = new URLSearchParams({
     autoplay: '1',
-    modestbranding: '1',
+    controls: '0',
     rel: '0',
     iv_load_policy: '3',
+    modestbranding: '1',
     playsinline: '1',
-    fs: '1',
+    enablejsapi: '1',
+    disablekb: '1',
   });
   return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 }
@@ -169,6 +177,217 @@ export function useExerciseMedia(
     videoId: fromProp ?? fromMap ?? fromBackend ?? null,
     isLoading: shouldQueryBackend && q.isLoading,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Inline player — wraps the YouTube iframe with custom controls
+ * driven by the IFrame Player API over postMessage. controls=0 in
+ * the embed URL hides YouTube's own UI so the user can't miss-tap
+ * their way to youtube.com via the title/channel banner.
+ * ------------------------------------------------------------------ */
+
+// YouTube postMessage events that carry playback info back to us.
+type YTMsg =
+  | { event: 'infoDelivery'; info: { playerState?: number; currentTime?: number; duration?: number } }
+  | { event: 'onStateChange'; info: number };
+
+function fmtTime(s: number): string {
+  if (!isFinite(s) || s < 0) return '0:00';
+  const m = Math.floor(s / 60);
+  const r = Math.floor(s % 60);
+  return `${m}:${r.toString().padStart(2, '0')}`;
+}
+
+function InlinePlayer({ videoId, name, className }: { videoId: string; name: string; className?: string }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true); // autoplay=1 means it starts playing
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [showOverlay, setShowOverlay] = useState(false);
+
+  // Send a command to the YouTube iframe.
+  const send = useCallback(
+    (func: string, args: (string | number)[] = []) => {
+      iframeRef.current?.contentWindow?.postMessage(
+        JSON.stringify({ event: 'command', func, args }),
+        '*',
+      );
+    },
+    [],
+  );
+
+  // Register as a listener so the iframe starts posting state
+  // updates back to us. Has to be sent AFTER the iframe loads.
+  const registerListener = useCallback(() => {
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'listening', id: videoId, channel: 'widget' }),
+      '*',
+    );
+  }, [videoId]);
+
+  // Listen for state updates from YouTube.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (
+        typeof e.origin === 'string' &&
+        !e.origin.includes('youtube-nocookie.com') &&
+        !e.origin.includes('youtube.com')
+      ) {
+        return;
+      }
+      let parsed: YTMsg | null = null;
+      try {
+        parsed = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      } catch {
+        return;
+      }
+      if (!parsed) return;
+      if (parsed.event === 'infoDelivery' && parsed.info) {
+        if (typeof parsed.info.playerState === 'number') {
+          setIsPlaying(parsed.info.playerState === 1);
+        }
+        if (typeof parsed.info.currentTime === 'number') {
+          setCurrentTime(parsed.info.currentTime);
+        }
+        if (typeof parsed.info.duration === 'number' && parsed.info.duration > 0) {
+          setDuration(parsed.info.duration);
+        }
+      } else if (parsed.event === 'onStateChange') {
+        setIsPlaying(parsed.info === 1);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    if (isPlaying) {
+      send('pauseVideo');
+    } else {
+      send('playVideo');
+    }
+  }, [isPlaying, send]);
+
+  const handleSeek = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!duration) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      const target = Math.max(0, Math.min(duration, pct * duration));
+      send('seekTo', [target, 1]);
+      setCurrentTime(target);
+    },
+    [duration, send],
+  );
+
+  const handleFullscreen = useCallback(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else {
+      el.requestFullscreen?.();
+    }
+  }, []);
+
+  const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+  return (
+    <div
+      ref={wrapRef}
+      className={[
+        'relative overflow-hidden rounded-xl ring-1 ring-slate-200 bg-black group',
+        SIZE_MAP.lg.box,
+        className ?? '',
+      ].join(' ')}
+      onMouseEnter={() => setShowOverlay(true)}
+      onMouseLeave={() => setShowOverlay(false)}
+    >
+      <iframe
+        ref={iframeRef}
+        src={embedUrl(videoId)}
+        title={`Demostración: ${name}`}
+        className="absolute inset-0 h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+        allowFullScreen
+        loading="lazy"
+        onLoad={registerListener}
+      />
+
+      {/* Click-capturing layer above the iframe. Absorbs every tap
+          so the native YT pause overlay (title/channel links) can
+          never hijack the user out to youtube.com. Our own controls
+          sit on top of this layer with higher z-index. */}
+      <button
+        type="button"
+        onClick={togglePlay}
+        className="absolute inset-0 cursor-pointer z-10"
+        aria-label={isPlaying ? 'Pausar video' : 'Reproducir video'}
+      />
+
+      {/* Center play/pause button — always clickable, visible when
+          paused or on hover. */}
+      <div
+        className={[
+          'pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-200 z-20',
+          !isPlaying || showOverlay ? 'opacity-100' : 'opacity-0',
+        ].join(' ')}
+      >
+        <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white/95 backdrop-blur-sm ring-1 ring-white/60 shadow-xl">
+          {isPlaying ? (
+            <Pause className="w-6 h-6 text-blue-600 fill-blue-600" />
+          ) : (
+            <Play className="w-6 h-6 text-blue-600 fill-blue-600 translate-x-[2px]" />
+          )}
+        </div>
+      </div>
+
+      {/* Bottom control bar — progress + time + fullscreen. Visible
+          when paused or on hover, fades out while playing. */}
+      <div
+        className={[
+          'absolute left-0 right-0 bottom-0 z-20 transition-opacity duration-200',
+          'bg-gradient-to-t from-black/75 via-black/40 to-transparent',
+          !isPlaying || showOverlay ? 'opacity-100' : 'opacity-0',
+        ].join(' ')}
+      >
+        <div className="px-3 pb-3 pt-8 flex items-center gap-3">
+          <span className="text-[11px] tabular-nums text-white font-mono min-w-[36px]">
+            {fmtTime(currentTime)}
+          </span>
+          <div
+            className="relative flex-1 h-1.5 rounded-full bg-white/25 cursor-pointer overflow-hidden"
+            onClick={handleSeek}
+            role="slider"
+            aria-label="Progreso del video"
+            aria-valuemin={0}
+            aria-valuemax={duration || 0}
+            aria-valuenow={currentTime}
+          >
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-400 to-sky-300"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <span className="text-[11px] tabular-nums text-white/80 font-mono min-w-[36px]">
+            {fmtTime(duration)}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleFullscreen();
+            }}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-white/90 hover:text-white hover:bg-white/10 transition"
+            aria-label="Pantalla completa"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -301,28 +520,11 @@ export function ExerciseMedia({
     );
   }
 
-  // Only the large size swaps to the iframe on click. Small / medium
-  // thumbs are visual-only (the card's expand action reveals the lg
-  // player for playback).
+  // Only the large size swaps to the inline player on click. Small
+  // / medium thumbs are visual-only (the card's expand action reveals
+  // the lg player for playback).
   if (size === 'lg' && playing) {
-    return (
-      <div
-        className={[
-          'relative overflow-hidden rounded-xl ring-1 ring-slate-200 bg-black',
-          SIZE_MAP.lg.box,
-          className,
-        ].join(' ')}
-      >
-        <iframe
-          src={embedUrl(videoId)}
-          title={`Demostración: ${name}`}
-          className="absolute inset-0 h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-          allowFullScreen
-          loading="lazy"
-        />
-      </div>
-    );
+    return <InlinePlayer videoId={videoId} name={name} className={className} />;
   }
 
   return (

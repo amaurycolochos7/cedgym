@@ -30,9 +30,7 @@ import {
   Lightbulb,
   Loader2,
   Lock,
-  MapPin,
   RefreshCw,
-  Target,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
@@ -124,6 +122,8 @@ interface AiQuota {
   has_active_membership: boolean;
   period_ends_at: string | null;
   days_until_renewal: number;
+  membership_expires_at?: string | null;
+  membership_days_remaining?: number;
   routine: QuotaFeature;
   meal_plan: QuotaFeature;
 }
@@ -181,7 +181,13 @@ export default function PortalRutinasPage() {
   // pre-fill the objective selector with what the user already chose in their
   // wizard (so WEIGHT_LOSS actually reaches the AI instead of defaulting to
   // GENERAL_FITNESS on the backend).
-  const meQ = useQuery<{ user: { fitness_profile?: { objective?: string } | null } }>({
+  const meQ = useQuery<{
+    user: {
+      name?: string | null;
+      full_name?: string | null;
+      fitness_profile?: { objective?: string } | null;
+    };
+  }>({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api.get('/auth/me')).data,
   });
@@ -214,6 +220,12 @@ export default function PortalRutinasPage() {
   const hasFitnessProfile = Boolean(fitnessProfile);
   const profileObjective = (fitnessProfile?.objective ?? '') as Objective | '';
 
+  // Greet the member by first name. Split on any whitespace so
+  // "María José Pérez" resolves to "María" without the last name
+  // bleeding into the hero's display font line.
+  const rawName = meQ.data?.user?.full_name ?? meQ.data?.user?.name ?? '';
+  const firstName = rawName.trim().split(/\s+/)[0] ?? '';
+
   const quota = quotaQ.data ?? null;
   const onGenOrRegen = () => {
     qc.invalidateQueries({ queryKey: ['routines', 'me'] });
@@ -236,6 +248,7 @@ export default function PortalRutinasPage() {
       routine={routine}
       hasFitnessProfile={hasFitnessProfile}
       quota={quota}
+      firstName={firstName}
       onRegenerated={onGenOrRegen}
     />
   );
@@ -479,14 +492,22 @@ function QuotaStatus({ quota }: { quota: AiQuota | null }) {
   }
 
   if (!r.allowed) {
-    const days = quota.days_until_renewal;
+    // Clamp the countdown to whichever ends first: the 30-day quota
+    // window OR the membership itself. A member whose plan expires
+    // in 5 days won't actually have a quota reset at day 29.
+    const quotaDays = quota.days_until_renewal;
+    const memberDays = quota.membership_days_remaining ?? Number.POSITIVE_INFINITY;
+    const membershipEndsFirst = memberDays < quotaDays;
+    const days = membershipEndsFirst ? memberDays : quotaDays;
+    const headline = membershipEndsFirst
+      ? `Tu membresía vence en ${days} día${days === 1 ? '' : 's'} — renuévala para generar otra rutina.`
+      : `Ya usaste tu rutina este periodo. Se renueva en ${days} día${days === 1 ? '' : 's'}.`;
     return (
       <div className="flex items-start gap-3 bg-amber-50 ring-1 ring-amber-200 text-amber-900 rounded-xl p-4">
         <Clock className="w-5 h-5 shrink-0 mt-0.5" />
         <div className="flex-1 text-sm">
           <div className="font-semibold">
-            Ya usaste tu rutina este periodo. Se renueva en {days} día
-            {days === 1 ? '' : 's'}.
+            {headline}
           </div>
           {r.limit !== null && (
             <div className="text-xs text-amber-800/80 mt-1">
@@ -520,11 +541,13 @@ function ActiveRoutineView({
   routine,
   hasFitnessProfile,
   quota,
+  firstName,
   onRegenerated,
 }: {
   routine: Routine;
   hasFitnessProfile: boolean;
   quota: AiQuota | null;
+  firstName: string;
   onRegenerated: () => void;
 }) {
   // Sort days by day_of_week so tabs come out in weekday order.
@@ -584,6 +607,15 @@ function ActiveRoutineView({
     });
   };
 
+  // Only one exercise expanded at a time. When the user opens a new
+  // card the previous one collapses — which unmounts its InlinePlayer,
+  // so the video stops playing. Switching days also resets the
+  // expansion so a new day starts fully collapsed.
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  useEffect(() => {
+    setOpenKey(null);
+  }, [activeDayIdx]);
+
   const dayExerciseCount = activeDay?.exercises.length ?? 0;
   const dayDoneCount = activeDay
     ? activeDay.exercises.filter((_, i) => doneSet.has(`${activeDay.day_of_week}-${i}`)).length
@@ -609,92 +641,98 @@ function ActiveRoutineView({
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* ─────────────────────────────────────────────────────────────
-         Hero section — glass-on-blue gradient. Keeps the light palette
-         of the rest of the portal but feels like a flagship screen.
+         Hero — editorial greeting, display-font member name as the
+         anchor. Decorative gradient corner + accent rail keep it from
+         reading like a generic dashboard card.
          ───────────────────────────────────────────────────────────── */}
       <motion.section
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-3xl ring-1 ring-slate-900/5 shadow-xl shadow-blue-900/10"
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm"
       >
-        {/* Layered gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-slate-900 to-slate-950" />
-        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute -bottom-32 -left-16 w-96 h-96 rounded-full bg-indigo-500/15 blur-3xl" />
-        {/* subtle grid */}
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage:
-              'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
+        {/* Top gradient rail — signals "premium member content"
+            without hijacking the whole card like the old dark hero. */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-transparent pointer-events-none" />
+        {/* Corner glow — subtle, brand-colored, never competes with
+            the headline or the stats row. */}
+        <div className="absolute -top-24 -right-20 w-48 h-48 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-56 h-56 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" />
 
-        <div className="relative p-6 sm:p-10">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 backdrop-blur ring-1 ring-white/15 text-white">
-              <Dumbbell className="w-4 h-4" />
-            </span>
-            <span className="text-[11px] uppercase tracking-[0.25em] text-white/60 font-semibold">
-              Tu rutina activa
-            </span>
-          </div>
-
-          <h1 className="font-display text-3xl sm:text-5xl leading-[1.05] text-white max-w-3xl">
-            {routine.name}
-          </h1>
-
-          {/* Key stats row */}
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <HeroPill icon={<Dumbbell className="w-3.5 h-3.5" />}>
-              {routine.days_per_week} días / semana
-            </HeroPill>
-            <HeroPill>
-              {totalExercises} ejercicio{totalExercises === 1 ? '' : 's'}
-            </HeroPill>
-            {goalLabel && (
-              <HeroPill icon={<Target className="w-3.5 h-3.5" />} accent>
-                {goalLabel}
-              </HeroPill>
-            )}
-            {locationLabel && (
-              <HeroPill icon={<MapPin className="w-3.5 h-3.5" />}>
-                {locationLabel}
-              </HeroPill>
+        <div className="relative px-5 sm:px-7 py-6 sm:py-7">
+          {/* Greeting block — display-font first name as the anchor.
+              "Hola," is a small intro beat; the name carries the card.
+              Goal + days-per-week ride underneath as a clean subtitle
+              so we don't need a separate eyebrow cluttering the top. */}
+          <div>
+            <div className="text-sm text-slate-500">Hola,</div>
+            <h1 className="font-display text-4xl sm:text-5xl leading-[1] text-slate-900 mt-0.5">
+              {firstName || 'atleta'}
+              <span className="text-blue-600">.</span>
+            </h1>
+            {(goalLabel || routine.days_per_week) && (
+              <div className="mt-3 text-[13px] text-slate-500">
+                {goalLabel && (
+                  <span className="font-semibold text-slate-700">{goalLabel}</span>
+                )}
+                {goalLabel && (
+                  <span className="mx-1.5 text-slate-300">·</span>
+                )}
+                <span>
+                  {routine.days_per_week} días por semana
+                </span>
+              </div>
             )}
           </div>
 
-          {startedLabel && (
-            <div className="mt-4 text-xs text-white/50">
-              {startedDays !== null && startedDays > 0
-                ? `Iniciada hace ${startedDays} día${startedDays === 1 ? '' : 's'} · ${startedLabel}`
-                : `Iniciada ${startedLabel}`}
-            </div>
-          )}
+          {/* Stats strip — secondary numeric readout. Light rule above
+              so it feels like a data block, not more copy. */}
+          <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-600">
+            <StatInline value={totalExercises} label={`ejercicio${totalExercises === 1 ? '' : 's'}`} />
+            {locationLabel && <StatInline value={locationLabel} muted />}
+            {startedDays !== null && startedDays > 0 && (
+              <StatInline value={`${startedDays}d`} label="activa" muted />
+            )}
+          </div>
 
-          {/* Action row */}
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          {/* Action row. For STARTER after their monthly routine we
+              show when the quota renews — BUT clamped to when their
+              membership ends. If the membership expires before the
+              quota window resets, the quota is moot (they need to
+              renew the plan first), so the copy switches to
+              "Renueva tu membresía" with the shorter countdown. */}
+          <div className="mt-5 flex justify-end">
             {regenState === 'locked-days' ? (
-              <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 ring-1 ring-white/10 text-sm text-white/70 backdrop-blur">
-                <Lock className="w-4 h-4" />
-                Próxima rutina disponible en {quota?.days_until_renewal ?? 0} día
-                {(quota?.days_until_renewal ?? 0) === 1 ? '' : 's'}
-              </span>
+              (() => {
+                const daysUntilQuotaRenews = quota?.days_until_renewal ?? 0;
+                const daysUntilMembershipEnds =
+                  quota?.membership_days_remaining ?? Number.POSITIVE_INFINITY;
+                const membershipEndsFirst =
+                  daysUntilMembershipEnds < daysUntilQuotaRenews;
+                const effectiveDays = membershipEndsFirst
+                  ? daysUntilMembershipEnds
+                  : daysUntilQuotaRenews;
+                const label = membershipEndsFirst
+                  ? 'Tu membresía vence en'
+                  : 'Próxima rutina en';
+                return (
+                  <span className="inline-flex items-center gap-2 text-xs text-slate-500">
+                    <Lock className="w-3.5 h-3.5 text-slate-400" />
+                    {label}{' '}
+                    <span className="font-semibold text-slate-700 tabular-nums">
+                      {effectiveDays} día{effectiveDays === 1 ? '' : 's'}
+                    </span>
+                  </span>
+                );
+              })()
             ) : (
               <button
                 type="button"
                 onClick={() => setRegenOpen(true)}
-                className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 text-sm font-semibold ring-1 ring-white/80 hover:bg-blue-50 hover:ring-blue-200 shadow-sm transition-all active:scale-[0.98]"
+                className="group inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm shadow-blue-600/20 transition-all active:scale-[0.98]"
               >
-                <RefreshCw className="w-4 h-4 text-blue-600 transition-transform group-hover:rotate-180 duration-500" />
-                Regenerar
-                {regenState === 'unlimited' && (
-                  <span className="ml-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-blue-700 font-bold">
-                    · {quota?.plan ?? 'PRO'}
-                  </span>
-                )}
+                <RefreshCw className="w-3.5 h-3.5 transition-transform group-hover:rotate-180 duration-500" />
+                Regenerar rutina
               </button>
             )}
           </div>
@@ -799,6 +837,10 @@ function ActiveRoutineView({
                     exercise={ex}
                     done={doneSet.has(exKey)}
                     onToggleDone={() => toggleDone(exKey)}
+                    open={openKey === exKey}
+                    onToggleOpen={() =>
+                      setOpenKey((curr) => (curr === exKey ? null : exKey))
+                    }
                   />
                 );
               })}
@@ -823,27 +865,33 @@ function ActiveRoutineView({
   );
 }
 
-// ── Hero pill ────────────────────────────────────────────────────────────
-function HeroPill({
-  children,
-  icon,
-  accent = false,
+// ── Stat inline ──────────────────────────────────────────────────────────
+//
+// One-line numeric readout used in the hero stats strip. Keeps the
+// visual rhythm consistent (big numeric, small caption) without
+// boxing each value into its own pill.
+function StatInline({
+  value,
+  label,
+  muted = false,
 }: {
-  children: React.ReactNode;
-  icon?: React.ReactNode;
-  accent?: boolean;
+  value: string | number;
+  label?: string;
+  muted?: boolean;
 }) {
   return (
-    <span
-      className={[
-        'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm ring-1',
-        accent
-          ? 'bg-blue-400/15 ring-blue-300/30 text-blue-100'
-          : 'bg-white/8 ring-white/15 text-white/85',
-      ].join(' ')}
-    >
-      {icon}
-      {children}
+    <span className="inline-flex items-baseline gap-1.5">
+      <span
+        className={[
+          'font-display tabular-nums font-bold',
+          muted ? 'text-slate-700 text-base' : 'text-slate-900 text-lg',
+        ].join(' ')}
+      >
+        {value}
+      </span>
+      {label && (
+        <span className="text-xs text-slate-500">{label}</span>
+      )}
     </span>
   );
 }
@@ -915,13 +963,17 @@ function ExerciseCard({
   exercise,
   done,
   onToggleDone,
+  open,
+  onToggleOpen,
 }: {
   index: number;
   exercise: RoutineExercise;
   done: boolean;
   onToggleDone: () => void;
+  /** Controlled expand state — parent keeps only one card open. */
+  open: boolean;
+  onToggleOpen: () => void;
 }) {
-  const [open, setOpen] = useState(false);
 
   const name =
     exercise.exercise_name_snapshot ??
@@ -950,7 +1002,7 @@ function ExerciseCard({
       <motion.button
         layout
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={onToggleOpen}
         className="w-full flex items-center gap-4 p-3 sm:p-4 text-left"
       >
         {/* Media slot */}
