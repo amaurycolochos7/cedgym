@@ -716,10 +716,12 @@ function ActiveRoutineView({
 
       {/* ─────────────────────────────────────────────────────────────
          Day navigation — pill tabs with day number anchor.
+         py-3 gives the active pill's blue shadow breathing room so
+         it doesn't get clipped by overflow-x-auto into a hairline.
          ───────────────────────────────────────────────────────────── */}
-      <div>
+      <div className="pb-2">
         <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-none">
-          <div className="flex gap-2 px-4 sm:px-0 min-w-max sm:justify-center snap-x snap-mandatory">
+          <div className="flex gap-2 px-4 sm:px-0 py-3 min-w-max sm:justify-center snap-x snap-mandatory">
             {sortedDays.map((day, idx) => {
               const active = idx === activeDayIdx;
               const dayNum = idx + 1;
@@ -764,6 +766,7 @@ function ActiveRoutineView({
 
       {/* ─────────────────────────────────────────────────────────────
          Day content — title + progress ring + exercise tiles.
+         Extra pt-2 so the day label breathes under the pill row.
          ───────────────────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
         {activeDay && (
@@ -773,7 +776,7 @@ function ActiveRoutineView({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25 }}
-            className="space-y-5"
+            className="space-y-5 pt-2"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
