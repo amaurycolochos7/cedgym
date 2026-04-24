@@ -9,8 +9,9 @@
 // A user without an ACTIVE membership cannot generate anything.
 // ─────────────────────────────────────────────────────────────────
 
+import dayjs from 'dayjs';
 import { err } from './errors.js';
-import { getPlanByCode } from './memberships.js';
+import { getPlanByCode, daysRemaining } from './memberships.js';
 
 const DAY_MS = 86_400_000;
 
@@ -31,9 +32,13 @@ function periodEnd(periodStart) {
     return new Date(periodStart.getTime() + 30 * DAY_MS);
 }
 
+// Use the same dayjs('day') diff pattern as lib/memberships.js's
+// `daysRemaining`. Floor semantics keep this number consistent with
+// the "Vence en X días" readout on the dashboard — otherwise one
+// ceil + one floor produce off-by-one mismatches for the same date.
 function daysRemainingInPeriod(periodStart, now = new Date()) {
     const end = periodEnd(periodStart);
-    const diff = Math.ceil((end.getTime() - now.getTime()) / DAY_MS);
+    const diff = dayjs(end).diff(dayjs(now), 'day');
     return diff > 0 ? diff : 0;
 }
 
@@ -130,10 +135,10 @@ export async function getUserAIQuota(prisma, userId) {
     const routineLimit = limitFor(plan, 'ROUTINE');
     const mealLimit = limitFor(plan, 'MEAL_PLAN');
 
-    // Days from now until membership.expires_at — clamped to zero
-    // so a technically-expired row never goes negative on the wire.
-    const msLeft = new Date(membership.expires_at).getTime() - Date.now();
-    const membershipDaysRemaining = Math.max(0, Math.ceil(msLeft / DAY_MS));
+    // Days from now until membership.expires_at, using the shared
+    // daysRemaining() helper so this matches the "Vence en X días"
+    // readout rendered on the dashboard and membership page.
+    const membershipDaysRemaining = daysRemaining(membership.expires_at);
 
     return {
         plan: membership.plan,

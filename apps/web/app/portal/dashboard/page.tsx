@@ -50,9 +50,6 @@ export default function PortalDashboardPage() {
         <h1 className="font-display text-2xl font-bold text-slate-900 sm:text-3xl">
           Hola, {user?.name?.split(' ')[0] ?? ''}
         </h1>
-        <p className="mt-1 text-sm text-slate-500 sm:text-base">
-          Tu membresía, tu QR y tus rutinas, todo en un solo lugar.
-        </p>
       </div>
 
       {/* Mi QR de acceso — top, prominent hero card */}
