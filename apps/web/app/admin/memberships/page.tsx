@@ -215,7 +215,7 @@ export default function AdminMembershipsPage() {
               Planes
             </h2>
             <p className="text-xs text-slate-500">
-              Precios por ciclo. Editar guarda inmediatamente.
+              Precio mensual. Cambios se reflejan en landing, portal y cobros.
             </p>
           </div>
           <button
@@ -477,12 +477,7 @@ function PlanEditor({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="mb-3 flex items-center justify-between">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-            {form.code ?? form.id}
-          </div>
-          <h3 className="text-base font-bold text-slate-900">{form.name}</h3>
-        </div>
+        <h3 className="text-base font-bold text-slate-900">{form.name}</h3>
         <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-700">
           <input
             type="checkbox"
@@ -494,53 +489,23 @@ function PlanEditor({
         </label>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-          Mensual (MXN)
-          <input
-            type="number"
-            value={form.monthly_price_mxn}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                monthly_price_mxn: Number(e.target.value),
-              })
-            }
-            className={`${INPUT_CLS} mt-1`}
-          />
-        </label>
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-          Trimestral (MXN)
-          <input
-            type="number"
-            value={form.quarterly_price_mxn}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                quarterly_price_mxn: Number(e.target.value),
-              })
-            }
-            className={`${INPUT_CLS} mt-1`}
-          />
-        </label>
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-          Anual (MXN)
-          <input
-            type="number"
-            value={form.annual_price_mxn}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                annual_price_mxn: Number(e.target.value),
-              })
-            }
-            className={`${INPUT_CLS} mt-1`}
-          />
-        </label>
-      </div>
+      <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        Precio mensual (MXN)
+        <input
+          type="number"
+          value={form.monthly_price_mxn}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              monthly_price_mxn: Number(e.target.value),
+            })
+          }
+          className={`${INPUT_CLS} mt-1`}
+        />
+      </label>
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>Mensual: {MXN.format(form.monthly_price_mxn)}</span>
+        <span>{MXN.format(form.monthly_price_mxn)} / mes</span>
         <button
           type="button"
           onClick={() => mut.mutate()}

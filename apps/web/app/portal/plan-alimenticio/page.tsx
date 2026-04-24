@@ -14,6 +14,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { AIGenerationOverlay } from '@/components/portal/ai-generation-overlay';
 import { MealPlanAddonModal } from '@/components/portal/meal-plan-addon-modal';
+import { PlansModal } from '@/components/portal/plans-modal';
 
 /* =========================================================================
  * Types
@@ -298,6 +299,7 @@ function NoPlanView({
   const [allergies, setAllergies] = useState<string[]>([]);
   const [disliked, setDisliked] = useState<string>('');
   const [addonOpen, setAddonOpen] = useState(false);
+  const [plansOpen, setPlansOpen] = useState(false);
 
   const generate = useMutation({
     mutationFn: async () => {
@@ -354,6 +356,11 @@ function NoPlanView({
             onCreated();
           }}
         />
+        <PlansModal
+          open={plansOpen}
+          onClose={() => setPlansOpen(false)}
+          highlightPlan="PRO"
+        />
 
         <EditorialHero
           eyebrow="Nutrición a tu medida"
@@ -361,7 +368,11 @@ function NoPlanView({
           subtitle="Comidas mexicanas, macros calibrados a tu objetivo, lista de compras lista. Sin pensar."
         />
 
-        <PaywallSection plan={quota?.plan} onBuyAddon={() => setAddonOpen(true)} />
+        <PaywallSection
+          plan={quota?.plan}
+          onBuyAddon={() => setAddonOpen(true)}
+          onUpgradePlan={() => setPlansOpen(true)}
+        />
       </div>
     );
   }
@@ -570,9 +581,11 @@ function NoPlanView({
 function PaywallSection({
   plan,
   onBuyAddon,
+  onUpgradePlan,
 }: {
   plan?: AiQuota['plan'];
   onBuyAddon: () => void;
+  onUpgradePlan: () => void;
 }) {
   return (
     <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm p-5 sm:p-6">
@@ -605,14 +618,15 @@ function PaywallSection({
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
       </button>
 
-      {/* Secondary — outlined full-width button, not a tiny caps link */}
-      <Link
-        href="/portal/membership"
+      {/* Secondary — outlined full-width button, opens PlansModal in-place */}
+      <button
+        type="button"
+        onClick={onUpgradePlan}
         className="mt-2.5 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
       >
         Ver planes PRO y Élite
         <ArrowRight className="h-4 w-4" />
-      </Link>
+      </button>
     </div>
   );
 }

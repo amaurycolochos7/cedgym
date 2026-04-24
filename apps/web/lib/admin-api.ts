@@ -121,37 +121,39 @@ export interface AdminCourse {
   enrolled_count?: number;
 }
 
-export interface AdminClass {
-  id: string;
-  name: string;
-  sport?: string;
-  trainer_id?: string;
-  coach_name?: string;
-  starts_at: string;
-  ends_at: string;
-  duration_min?: number;
-  capacity: number;
-  booked: number;
-  location?: string;
-  min_plan?: 'STARTER' | 'PRO' | 'ELITE' | null;
-  status?: 'scheduled' | 'cancelled' | 'completed';
-}
-
 export interface AdminPayment {
   id: string;
   user_id: string;
-  user_name?: string;
-  type: 'MEMBERSHIP' | 'COURSE' | 'POS' | 'PRODUCT';
+  user_name?: string | null;
+  type:
+    | 'MEMBERSHIP'
+    | 'COURSE'
+    | 'DIGITAL_PRODUCT'
+    | 'SUPPLEMENT'
+    | 'MEAL_PLAN_ADDON'
+    | 'OTHER';
   status:
     | 'PENDING'
     | 'APPROVED'
     | 'REJECTED'
-    | 'CANCELLED'
+    | 'CANCELED'
     | 'REFUNDED';
   amount_mxn: number;
-  method?: string;
-  mp_payment_id?: string;
-  mp_status_detail?: string;
+  // Only present when a promo was applied: `base_amount_mxn` is the
+  // pre-discount price, `discount_mxn` the delta, `promo_code` the
+  // code used. UI renders a strike-through + badge when these exist.
+  base_amount_mxn?: number | null;
+  discount_mxn?: number | null;
+  promo_code?: string | null;
+  // Method is a loose string; can be a card brand ('visa', 'master'…),
+  // 'CARD', 'CASH', 'TRANSFER', 'TERMINAL', 'COURTESY_PROMO',
+  // 'COMPLIMENTARY', or null.
+  method?: string | null;
+  mp_payment_id?: string | null;
+  mp_status_detail?: string | null;
+  reference?: string | null;
+  description?: string | null;
+  paid_at?: string | null;
   created_at: string;
 }
 
@@ -485,7 +487,7 @@ export const adminApi = {
       return arr.map(
         (c: any): TopItem => ({
           name: c.name ?? '—',
-          value: Number(c.classes ?? c.attended ?? c.value ?? 0),
+          value: Number(c.attended ?? c.value ?? 0),
           subtitle: c.trainer_id,
         }),
       );
@@ -782,47 +784,6 @@ export const adminApi = {
       }>(`/admin/courses/${id}/enrollments`)
       .then((r) => r.data),
 
-  // Classes
-  listClasses: (params: { from: string; to: string }) =>
-    api
-      .get<AdminClass[] | { classes: AdminClass[] }>('/admin/classes', { params })
-      .then((r) => {
-        const d: any = r.data;
-        if (Array.isArray(d)) return d as AdminClass[];
-        return (d?.classes ?? d?.items ?? []) as AdminClass[];
-      }),
-  createClass: (input: {
-    name: string;
-    sport: string;
-    trainer_id: string;
-    starts_at: string;
-    duration_min: number;
-    capacity: number;
-    location: string;
-    min_plan?: 'STARTER' | 'PRO' | 'ELITE' | null;
-    repeat_weeks?: number;
-  }) =>
-    api
-      .post<{ created_count: number; classes: AdminClass[] }>('/admin/classes', input)
-      .then((r) => r.data),
-  updateClass: (id: string, patch: Partial<AdminClass>) =>
-    api.patch(`/admin/classes/${id}`, patch).then((r) => r.data),
-  createRecurringClass: (input: {
-    name: string;
-    coach_id?: string;
-    days: number[];
-    hour: string;
-    duration_min: number;
-    capacity: number;
-    until: string;
-  }) => api.post('/admin/classes/recurring', input).then((r) => r.data),
-  cancelClass: (id: string, reason?: string) =>
-    api.post(`/admin/classes/${id}/cancel`, { reason }).then((r) => r.data),
-  getClass: (id: string) =>
-    api
-      .get<AdminClass & { bookings: AdminMember[] }>(`/admin/classes/${id}`)
-      .then((r) => r.data),
-
   // Payments
   listPayments: (params: {
     type?: string;
@@ -853,6 +814,13 @@ export const adminApi = {
   // TODO: endpoint not yet implemented on backend
   refundPayment: (id: string) =>
     api.post(`/admin/payments/${id}/refund`).then((r) => r.data),
+  // Admin-only: seeds 4 demo payments (full card, discount, 100%-off,
+  // add-on). Backend tags them with metadata.demo=true and wipes
+  // existing demo rows before inserting so it's idempotent.
+  seedDemoPayments: () =>
+    api
+      .post<{ created: number }>('/admin/payments/_seed_demo')
+      .then((r) => r.data),
 
   // Marketplace approval
   listProducts: (tab: 'pending' | 'published' | 'rejected') =>
@@ -1179,13 +1147,4 @@ export const staffApi = {
       }>('/staff/pos/sale', input)
       .then((r) => r.data),
 
-  // Attendance
-  dayClasses: (date: string) =>
-    api
-      .get<AdminClass[]>('/staff/classes/by-day', { params: { date } })
-      .then((r) => r.data),
-  markAttendance: (bookingId: string, attended: boolean) =>
-    api
-      .post(`/staff/bookings/${bookingId}/attendance`, { attended })
-      .then((r) => r.data),
 };

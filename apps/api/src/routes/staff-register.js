@@ -28,7 +28,7 @@ import dayjs from 'dayjs';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
 import {
-    getPlanPrice,
+    getEffectivePlanPrice,
     getPlanByCode,
     computeExpiresAt,
     daysRemaining,
@@ -307,7 +307,7 @@ export default async function staffRegisterRoutes(fastify) {
         const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
         if (!workspaceId) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
-        const basePrice = getPlanPrice(plan, billing_cycle);
+        const basePrice = await getEffectivePlanPrice(prisma, workspaceId, plan, billing_cycle);
         if (basePrice == null) throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
 
         // Duplicate check (match admin-members behaviour).
@@ -474,11 +474,11 @@ export default async function staffRegisterRoutes(fastify) {
             throw err('PLAN_REQUIRED', 'Este socio no tiene plan previo; indica plan y ciclo', 400);
         }
 
-        const basePrice = getPlanPrice(plan, billing_cycle);
-        if (basePrice == null) throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
-
         const isOffline = payment_method === 'CASH' || payment_method === 'CARD_TERMINAL';
         const workspaceId = user.workspace_id;
+
+        const basePrice = await getEffectivePlanPrice(prisma, workspaceId, plan, billing_cycle);
+        if (basePrice == null) throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
 
         if (isOffline) {
             const payment = await prisma.payment.create({

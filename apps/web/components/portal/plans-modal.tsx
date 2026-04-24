@@ -32,7 +32,6 @@ import {
   ShieldCheck,
   ArrowLeft,
   ArrowRight,
-  Sparkles,
   Camera,
   UserCircle2,
   PartyPopper,
@@ -411,30 +410,7 @@ function StepPlans({
         </div>
       )}
 
-      {/* Cycle toggle */}
-      <div className="flex items-center justify-center">
-        <div className="inline-flex rounded-full bg-slate-100 p-1 ring-1 ring-slate-200">
-          {(['monthly', 'quarterly', 'annual'] as Cycle[]).map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => onCycle(c)}
-              className={cn(
-                'rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-[0.12em] transition',
-                cycle === c
-                  ? 'bg-white text-blue-700 shadow-sm ring-1 ring-slate-200'
-                  : 'text-slate-600 hover:text-slate-900',
-              )}
-            >
-              {c === 'monthly' && 'Mensual'}
-              {c === 'quarterly' && 'Trimestral'}
-              {c === 'annual' && 'Anual'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Plan cards */}
+      {/* Plan cards — mensual only */}
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-3">
           {[0, 1, 2].map((i) => (
@@ -490,27 +466,11 @@ function PlanCardModal({
       <Trophy className="h-5 w-5" strokeWidth={2.25} />
     );
 
-  // Calculate monthly equivalent for the current cycle to expose savings.
-  const monthlyEquivalent =
-    cycle === 'monthly'
-      ? plan.monthly_price_mxn
-      : cycle === 'quarterly'
-      ? Math.round(plan.quarterly_price_mxn / 3)
-      : Math.round(plan.annual_price_mxn / 12);
-
-  const savingsPerMonth =
-    cycle === 'monthly' ? 0 : Math.max(0, plan.monthly_price_mxn - monthlyEquivalent);
-
-  const priceMain =
-    cycle === 'monthly'
-      ? plan.monthly_price_mxn
-      : cycle === 'quarterly'
-      ? plan.quarterly_price_mxn
-      : plan.annual_price_mxn;
-
-  const cycleLabel =
-    cycle === 'monthly' ? '/mes' : cycle === 'quarterly' ? '/3 meses' : '/año';
-
+  // Monthly-only product: there's no cycle toggle anymore, so the
+  // card just shows the monthly price. `cycle` stays 'monthly' for
+  // the API contract; `quarterly_price_mxn` / `annual_price_mxn` are
+  // ignored in the UI.
+  const priceMain = plan.monthly_price_mxn;
   const popular = !!plan.popular;
 
   return (
@@ -566,22 +526,9 @@ function PlanCardModal({
             ${priceMain.toLocaleString('es-MX')}
           </span>
           <span className={cn('text-xs', popular ? 'text-white/80' : 'text-slate-500')}>
-            MXN <em className="not-italic">{cycleLabel}</em>
+            MXN <em className="not-italic">/mes</em>
           </span>
         </div>
-        {savingsPerMonth > 0 && (
-          <div
-            className={cn(
-              'mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold',
-              popular
-                ? 'bg-white/15 text-white ring-1 ring-white/20'
-                : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-            )}
-          >
-            <Sparkles className="h-3 w-3" />
-            Ahorras ${savingsPerMonth.toLocaleString('es-MX')} al mes
-          </div>
-        )}
       </div>
 
       <ul className="mb-2 space-y-1.5 text-xs">
@@ -854,7 +801,7 @@ function StepPay({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-4 text-white">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
-            {cycle === 'monthly' ? 'Mensual' : cycle === 'quarterly' ? 'Trimestral' : 'Anual'}
+            Mensual
           </div>
           <div className="font-display text-xl font-bold">{plan.name}</div>
           {promoPreview?.valid && (

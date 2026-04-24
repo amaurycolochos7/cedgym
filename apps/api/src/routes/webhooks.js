@@ -21,7 +21,7 @@ import {
     mapPaymentStatus,
     getWebhookSecret,
 } from '../lib/mercadopago.js';
-import { computeExpiresAt, getPlanPrice } from '../lib/memberships.js';
+import { computeExpiresAt, getEffectivePlanPrice } from '../lib/memberships.js';
 
 // Parse the MP x-signature header.
 // Format: `ts=1699999999,v1=abcdef1234…`
@@ -257,7 +257,17 @@ export async function activateMembershipFromPayment(fastify, payment) {
             ? existing.expires_at
             : new Date();
     const newExpiresAt = computeExpiresAt(billingCycle, base);
-    const priceMxn = getPlanPrice(plan, billingCycle) || payment.amount;
+    // Read the workspace-overridden price so admin edits in
+    // /admin/memberships/plans/:code are reflected on the membership row.
+    // Falls back to the static catalog price, and finally to the amount
+    // actually paid, to keep legacy rows intact.
+    const effectivePrice = await getEffectivePlanPrice(
+        prisma,
+        payment.workspace_id,
+        plan,
+        billingCycle,
+    );
+    const priceMxn = effectivePrice || payment.amount;
 
     let membership;
     let isRenewal = false;

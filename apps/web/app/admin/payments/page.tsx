@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Download } from 'lucide-react';
+import { Download, Sparkles, Tag } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -25,6 +25,33 @@ const MXN = new Intl.NumberFormat('es-MX', {
   currency: 'MXN',
   maximumFractionDigits: 0,
 });
+
+const TYPE_LABELS: Record<AdminPayment['type'], string> = {
+  MEMBERSHIP: 'Membresía',
+  COURSE: 'Curso',
+  DIGITAL_PRODUCT: 'Producto digital',
+  SUPPLEMENT: 'Suplemento',
+  MEAL_PLAN_ADDON: 'Plan alimenticio',
+  OTHER: 'Otro',
+};
+
+// Pretty-print the `method` field (can be a card brand, a flow tag, or
+// null). Anything we don't recognize falls back to the raw value so
+// it's still debuggable in prod.
+function methodLabel(method?: string | null): string {
+  if (!method) return '—';
+  const m = method.toLowerCase();
+  if (m === 'visa') return 'Visa';
+  if (m === 'master' || m === 'mastercard') return 'Mastercard';
+  if (m === 'amex') return 'American Express';
+  if (m === 'card' || m === 'card_brick') return 'Tarjeta';
+  if (m === 'cash') return 'Efectivo';
+  if (m === 'transfer') return 'Transferencia';
+  if (m === 'terminal' || m === 'card_terminal') return 'Terminal';
+  if (m === 'complimentary' || m === 'courtesy_promo') return 'Cortesía';
+  if (m === 'oxxo') return 'OXXO';
+  return method;
+}
 
 const INPUT_CLS =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
@@ -77,14 +104,59 @@ export default function AdminPaymentsPage() {
         cell: ({ row }) =>
           format(new Date(row.original.created_at), 'dd MMM HH:mm'),
       },
-      { header: 'Socio', accessorKey: 'user_name' },
-      { header: 'Tipo', accessorKey: 'type' },
+      {
+        header: 'Socio',
+        accessorKey: 'user_name',
+        cell: ({ row }) => row.original.user_name ?? '—',
+      },
+      {
+        header: 'Tipo',
+        accessorKey: 'type',
+        cell: ({ row }) => TYPE_LABELS[row.original.type] ?? row.original.type,
+      },
       {
         header: 'Monto',
         accessorKey: 'amount_mxn',
-        cell: ({ row }) => MXN.format(row.original.amount_mxn),
+        cell: ({ row }) => {
+          const p = row.original;
+          const hasDiscount =
+            typeof p.discount_mxn === 'number' &&
+            p.discount_mxn > 0 &&
+            typeof p.base_amount_mxn === 'number';
+          const isFree = p.amount_mxn === 0;
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-2">
+                <span
+                  className={
+                    isFree
+                      ? 'font-semibold text-emerald-700 tabular-nums'
+                      : 'font-medium text-slate-900 tabular-nums'
+                  }
+                >
+                  {isFree ? 'Gratis' : MXN.format(p.amount_mxn)}
+                </span>
+                {hasDiscount && (
+                  <span className="text-xs text-slate-400 line-through tabular-nums">
+                    {MXN.format(p.base_amount_mxn!)}
+                  </span>
+                )}
+              </div>
+              {hasDiscount && p.promo_code && (
+                <span className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  <Tag className="h-2.5 w-2.5" />
+                  {p.promo_code} · −{MXN.format(p.discount_mxn!)}
+                </span>
+              )}
+            </div>
+          );
+        },
       },
-      { header: 'Método', accessorKey: 'method' },
+      {
+        header: 'Método',
+        accessorKey: 'method',
+        cell: ({ row }) => methodLabel(row.original.method),
+      },
       {
         header: 'Estado',
         accessorKey: 'status',
@@ -93,6 +165,12 @@ export default function AdminPaymentsPage() {
     ],
     [],
   );
+
+  const seedDemo = useMutation({
+    mutationFn: () => adminApi.seedDemoPayments(),
+    onSuccess: (r) => toast.success(`Demo: ${r.created} pagos creados`),
+    onError: () => toast.error('No se pudieron crear los pagos demo'),
+  });
 
   return (
     <div className="space-y-5">
@@ -112,13 +190,15 @@ export default function AdminPaymentsPage() {
         <select
           value={filters.type}
           onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          className={`${INPUT_CLS} sm:max-w-[160px]`}
+          className={`${INPUT_CLS} sm:max-w-[180px]`}
         >
           <option value="">Todos los tipos</option>
           <option value="MEMBERSHIP">Membresía</option>
+          <option value="MEAL_PLAN_ADDON">Plan alimenticio</option>
           <option value="COURSE">Curso</option>
-          <option value="POS">POS</option>
-          <option value="PRODUCT">Producto</option>
+          <option value="DIGITAL_PRODUCT">Producto digital</option>
+          <option value="SUPPLEMENT">Suplemento</option>
+          <option value="OTHER">Otro</option>
         </select>
         <select
           value={filters.status}
@@ -129,7 +209,7 @@ export default function AdminPaymentsPage() {
           <option value="APPROVED">Aprobado</option>
           <option value="PENDING">Pendiente</option>
           <option value="REJECTED">Rechazado</option>
-          <option value="CANCELLED">Cancelado</option>
+          <option value="CANCELED">Cancelado</option>
           <option value="REFUNDED">Reembolsado</option>
         </select>
         <input
@@ -145,7 +225,17 @@ export default function AdminPaymentsPage() {
           className={`${INPUT_CLS} sm:max-w-[160px]`}
         />
 
-        <div className="col-span-2 sm:ml-auto">
+        <div className="col-span-2 flex flex-wrap gap-2 sm:ml-auto">
+          <button
+            type="button"
+            onClick={() => seedDemo.mutate()}
+            disabled={seedDemo.isPending}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
+            title="Crea 4 pagos demo: completo, con descuento, 100% OFF, add-on"
+          >
+            <Sparkles className="h-4 w-4" />
+            {seedDemo.isPending ? 'Creando…' : 'Cargar pagos demo'}
+          </button>
           <button
             type="button"
             onClick={() => exportMut.mutate()}
@@ -178,10 +268,43 @@ export default function AdminPaymentsPage() {
               </DialogHeader>
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <Row k="Socio" v={detail.user_name ?? '—'} />
-                <Row k="Tipo" v={detail.type} />
-                <Row k="Monto" v={MXN.format(detail.amount_mxn)} />
+                <Row
+                  k="Tipo"
+                  v={TYPE_LABELS[detail.type] ?? detail.type}
+                />
+                <Row
+                  k="Monto cobrado"
+                  v={
+                    detail.amount_mxn === 0
+                      ? 'Gratis (100% OFF)'
+                      : MXN.format(detail.amount_mxn)
+                  }
+                />
                 <Row k="Estado" v={<StatusBadge status={detail.status} />} />
-                <Row k="Método" v={detail.method ?? '—'} />
+                <Row k="Método" v={methodLabel(detail.method)} />
+                {typeof detail.base_amount_mxn === 'number' && (
+                  <Row
+                    k="Precio base"
+                    v={MXN.format(detail.base_amount_mxn)}
+                  />
+                )}
+                {detail.promo_code && (
+                  <Row
+                    k="Código promo"
+                    v={
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                        <Tag className="h-3 w-3" />
+                        {detail.promo_code}
+                        {typeof detail.discount_mxn === 'number' &&
+                          detail.discount_mxn > 0 && (
+                            <span className="ml-1 text-emerald-800">
+                              −{MXN.format(detail.discount_mxn)}
+                            </span>
+                          )}
+                      </span>
+                    }
+                  />
+                )}
                 <Row k="MP payment ID" v={detail.mp_payment_id ?? '—'} />
                 <Row k="MP status detail" v={detail.mp_status_detail ?? '—'} />
                 <Row
