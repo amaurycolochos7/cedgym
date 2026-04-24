@@ -220,6 +220,8 @@ async function processPaymentEvent(fastify, mpPaymentId) {
             await fulfillDigitalProduct(fastify, updated);
         } else if (updated.type === 'COURSE') {
             await enrollInCourse(fastify, updated);
+        } else if (updated.type === 'MEAL_PLAN_ADDON') {
+            await activateMealPlanAddonFromPayment(fastify, updated);
         }
     }
 }
@@ -396,6 +398,67 @@ async function enrollInCourse(fastify, payment) {
         workspaceId: payment.workspace_id,
         userId: payment.user_id,
         courseId,
+        amount: payment.amount,
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Meal-plan add-on activation.
+//
+// Exported so /addons/meal-plan/purchase-card (synchronous Brick
+// flow) can short-circuit MP and activate the addon in the same
+// request when the resolved amount is 0 (100%-off promo). Also
+// invoked from processPaymentEvent when MP fires the webhook for
+// regular paid charges. Idempotent — calling twice on the same
+// payment is a no-op.
+// ─────────────────────────────────────────────────────────────────
+export async function activateMealPlanAddonFromPayment(fastify, payment) {
+    const { prisma } = fastify;
+    const meta = payment.metadata || {};
+
+    const addon = await prisma.mealPlanAddon.findUnique({
+        where: { payment_id: payment.id },
+    });
+    if (!addon) {
+        fastify.log.warn(
+            { paymentId: payment.id },
+            '[mp-webhook] meal_plan_addon row missing for payment'
+        );
+        return;
+    }
+    if (addon.status === 'ACTIVE' || addon.status === 'CONSUMED') {
+        // Already activated (or already used) — webhook idempotency.
+        return;
+    }
+
+    const updated = await prisma.mealPlanAddon.update({
+        where: { id: addon.id },
+        data: {
+            status: 'ACTIVE',
+            activated_at: new Date(),
+        },
+    });
+
+    // Bump promo code usage now that the charge actually landed.
+    if (meta.promo_id) {
+        try {
+            await prisma.promoCode.update({
+                where: { id: meta.promo_id },
+                data: { used_count: { increment: 1 } },
+            });
+        } catch (e) {
+            fastify.log.warn(
+                { err: e, promoId: meta.promo_id },
+                '[mp-webhook] failed to bump promo used_count for addon'
+            );
+        }
+    }
+
+    await fireEvent('addon.meal_plan.activated', {
+        workspaceId: payment.workspace_id,
+        userId: payment.user_id,
+        addonId: updated.id,
+        paymentId: payment.id,
         amount: payment.amount,
     });
 }

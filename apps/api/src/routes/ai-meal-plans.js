@@ -24,6 +24,7 @@ import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { generateJSON } from '../lib/openai.js';
 import { assertAIQuota } from '../lib/ai-quota.js';
+import { getPlanByCode } from '../lib/memberships.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 
@@ -315,7 +316,11 @@ export default async function aiMealPlansRoutes(fastify) {
         const userId = req.user.sub || req.user.id;
 
         // Enforce plan-tier quota BEFORE spending OpenAI tokens.
-        await assertAIQuota(prisma, userId, 'MEAL_PLAN');
+        // The returned snapshot tells us whether the user is drawing
+        // from the membership's monthly quota or from a paid add-on,
+        // which we need below to decide if the addon should be marked
+        // CONSUMED after persistence.
+        const quotaSnapshot = await assertAIQuota(prisma, userId, 'MEAL_PLAN');
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
@@ -436,6 +441,47 @@ export default async function aiMealPlansRoutes(fastify) {
             });
             return { plan, meals };
         });
+
+        // ── Post-generation: consume an add-on if the membership
+        // plan didn't cover this generation. The new MealPlan is
+        // already persisted at this point — if anything below fails
+        // we log loud but DO NOT throw, since the user's plan exists.
+        try {
+            const planMeta = getPlanByCode(quotaSnapshot.plan);
+            const planLimit = planMeta?.ai_meal_plans_per_month ?? null;
+            // The current MealPlan we just created is already counted
+            // by quotaSnapshot.meal_plan.used as part of the period total
+            // *only* if it persisted before assertAIQuota ran — it didn't,
+            // so .used here is the count BEFORE this generation. Therefore
+            // the plan covers this generation iff:
+            //   - unlimited (planLimit === null), OR
+            //   - the count BEFORE this generation was below planLimit.
+            const usedBefore = quotaSnapshot.meal_plan.used;
+            const planCoveredThisGeneration =
+                planLimit === null || usedBefore < planLimit;
+
+            if (!planCoveredThisGeneration) {
+                const oldestAddon = await prisma.mealPlanAddon.findFirst({
+                    where: { user_id: userId, status: 'ACTIVE' },
+                    orderBy: { activated_at: 'asc' },
+                });
+                if (oldestAddon) {
+                    await prisma.mealPlanAddon.update({
+                        where: { id: oldestAddon.id },
+                        data: {
+                            status: 'CONSUMED',
+                            consumed_at: new Date(),
+                            consumed_by_meal_plan_id: created.plan.id,
+                        },
+                    });
+                }
+            }
+        } catch (e) {
+            req.log.warn(
+                { err: e, userId, mealPlanId: created.plan.id },
+                '[ai-meal-plans] addon consumption failed (plan still delivered)'
+            );
+        }
 
         return {
             plan: created.plan,

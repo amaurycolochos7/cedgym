@@ -86,6 +86,7 @@ enum PaymentType {
   COURSE
   DIGITAL_PRODUCT
   SUPPLEMENT
+  MEAL_PLAN_ADDON
   OTHER
 }
 
@@ -216,6 +217,7 @@ model Workspace {
   products      DigitalProduct[]
   whatsapp_sessions WhatsAppSession[]
   qr_tokens     QRToken[]
+  meal_plan_addons  MealPlanAddon[]
 
   @@map("workspaces")
 }
@@ -254,6 +256,7 @@ model User {
   routines           Routine[]
   mealPlans          MealPlan[]
   ai_generations     AIGeneration[]
+  meal_plan_addons   MealPlanAddon[]
 
   @@index([workspace_id])
   @@index([phone])
@@ -931,4 +934,48 @@ model AIGeneration {
   @@index([workspace_id, created_at])
   @@index([user_id])
   @@map("ai_generations")
+}
+
+// ────────────────────────────────────────────────────────────────
+// Meal-plan add-on (one-time purchase, $499 MXN by default).
+//
+// Unlocks ONE extra AI meal plan generation for users whose
+// membership tier doesn't include that feature (or who already
+// burned their plan-included quota for the period). Lifecycle:
+//   PENDING  → payment created but MP hasn't approved yet
+//   ACTIVE   → paid, ready to be consumed
+//   CONSUMED → user generated a meal plan that drew from this addon
+//   EXPIRED  → optional manual sweep when expires_at is set
+//   REFUNDED → MP refund/chargeback
+// ────────────────────────────────────────────────────────────────
+enum MealPlanAddonStatus {
+  PENDING
+  ACTIVE
+  CONSUMED
+  EXPIRED
+  REFUNDED
+}
+
+model MealPlanAddon {
+  id                       String              @id @default(cuid())
+  workspace_id             String
+  user_id                  String
+  payment_id               String?             @unique
+  price_mxn                Int
+  paid_mxn                 Int
+  promo_code_id            String?
+  status                   MealPlanAddonStatus @default(PENDING)
+  activated_at             DateTime?
+  consumed_at              DateTime?
+  consumed_by_meal_plan_id String?
+  expires_at               DateTime?
+  created_at               DateTime            @default(now())
+  updated_at               DateTime            @updatedAt
+
+  workspace Workspace @relation(fields: [workspace_id], references: [id])
+  user      User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, status])
+  @@index([workspace_id, status])
+  @@map("meal_plan_addons")
 }

@@ -127,9 +127,15 @@ export async function getUserAIQuota(prisma, userId) {
 
     const plan = getPlanByCode(membership.plan);
     const periodStart = currentPeriodStart(membership);
-    const [routinesUsed, mealsUsed] = await Promise.all([
+    const [routinesUsed, mealsUsed, activeAddons] = await Promise.all([
         countInPeriod(prisma, { userId, kind: 'ROUTINE', periodStart }),
         countInPeriod(prisma, { userId, kind: 'MEAL_PLAN', periodStart }),
+        // Count of meal-plan add-ons the user has paid for and not
+        // yet consumed. Each one grants ONE additional AI meal plan
+        // generation on top of (or instead of) the plan's quota.
+        prisma.mealPlanAddon.count({
+            where: { user_id: userId, status: 'ACTIVE' },
+        }),
     ]);
 
     const routineLimit = limitFor(plan, 'ROUTINE');
@@ -139,6 +145,58 @@ export async function getUserAIQuota(prisma, userId) {
     // daysRemaining() helper so this matches the "Vence en X días"
     // readout rendered on the dashboard and membership page.
     const membershipDaysRemaining = daysRemaining(membership.expires_at);
+
+    // ── Meal-plan slot, with add-on stacking ────────────────────────
+    //
+    //   • ELITE (mealLimit === null)  → unlimited, addons irrelevant.
+    //   • STARTER (mealLimit === 0)   → addons fully replace the limit.
+    //                                    Used counter resets to 0 since
+    //                                    the period quota is "off".
+    //   • PRO    (mealLimit > 0)      → addons stack ON TOP of the
+    //                                    monthly quota.
+    //
+    // `from_addon` is exposed so the UI can copy "Disponible gracias a
+    // tu add-on" instead of "incluido en tu plan PRO".
+    let mealSlot;
+    if (mealLimit === null) {
+        mealSlot = {
+            used: mealsUsed,
+            limit: null,
+            allowed: true,
+            unlimited: true,
+            addons_active: activeAddons,
+            from_addon: false,
+        };
+    } else if (mealLimit === 0 && activeAddons > 0) {
+        mealSlot = {
+            used: 0,
+            limit: activeAddons,
+            allowed: true,
+            unlimited: false,
+            addons_active: activeAddons,
+            from_addon: true,
+        };
+    } else if (mealLimit > 0) {
+        const totalLimit = mealLimit + activeAddons;
+        mealSlot = {
+            used: mealsUsed,
+            limit: totalLimit,
+            allowed: mealsUsed < totalLimit,
+            unlimited: false,
+            addons_active: activeAddons,
+            from_addon: false,
+        };
+    } else {
+        // mealLimit === 0 and no addons → feature locked.
+        mealSlot = {
+            used: 0,
+            limit: 0,
+            allowed: false,
+            unlimited: false,
+            addons_active: 0,
+            from_addon: false,
+        };
+    }
 
     return {
         plan: membership.plan,
@@ -153,12 +211,7 @@ export async function getUserAIQuota(prisma, userId) {
             allowed: routineLimit === null ? true : routinesUsed < routineLimit,
             unlimited: routineLimit === null,
         },
-        meal_plan: {
-            used: mealsUsed,
-            limit: mealLimit,
-            allowed: mealLimit === null ? true : mealsUsed < mealLimit,
-            unlimited: mealLimit === null,
-        },
+        meal_plan: mealSlot,
     };
 }
 
@@ -183,9 +236,15 @@ export async function assertAIQuota(prisma, userId, kind) {
             'FEATURE_NOT_IN_PLAN',
             kind === 'ROUTINE'
                 ? 'Tu plan no incluye generación de rutinas con IA.'
-                : 'Tu plan no incluye plan alimenticio con IA. Mejora a PRO o Élite.',
+                : 'Tu plan no incluye plan alimenticio con IA. Mejora a PRO o Élite, o compra el add-on por $499.',
             403,
-            { kind, plan: quota.plan }
+            {
+                kind,
+                plan: quota.plan,
+                // Frontend uses this to decide whether to surface the
+                // "Comprar add-on $499" CTA instead of the upgrade-plan one.
+                can_buy_addon: kind === 'MEAL_PLAN',
+            }
         );
     }
 
