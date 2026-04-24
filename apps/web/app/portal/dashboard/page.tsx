@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { QrCode, Calendar, ChevronRight, Activity, Dumbbell, Apple } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { planDisplayName } from '@/lib/utils';
 import { MembershipPaywallModal } from '@/components/portal/membership-paywall-modal';
 import { PlansModal } from '@/components/portal/plans-modal';
 
@@ -86,7 +87,7 @@ export default function PortalDashboardPage() {
           {membership?.plan ? (
             <div className="mt-3 space-y-2">
               <div className="flex items-baseline justify-between">
-                <span className="text-xl font-bold text-slate-900 sm:text-2xl">{membership.plan}</span>
+                <span className="text-xl font-bold text-slate-900 sm:text-2xl">{planDisplayName(membership.plan)}</span>
                 <span className="text-xs text-slate-500 sm:text-sm">{membership.status}</span>
               </div>
               <div className="text-sm text-slate-600">

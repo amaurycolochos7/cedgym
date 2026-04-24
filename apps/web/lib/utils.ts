@@ -56,3 +56,16 @@ export function formatMMSS(seconds: number): string {
   const ss = String(s % 60).padStart(2, '0');
   return `${mm}:${ss}`;
 }
+
+// Friendly plan names shown to members. Must match the landing copy —
+// the enum codes (STARTER/PRO/ELITE) are internal only.
+const PLAN_DISPLAY_NAMES: Record<string, string> = {
+  STARTER: 'Básico',
+  PRO: 'Pro',
+  ELITE: 'Élite',
+};
+
+export function planDisplayName(code?: string | null): string {
+  if (!code) return '—';
+  return PLAN_DISPLAY_NAMES[code] ?? code;
+}

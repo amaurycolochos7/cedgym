@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { Snowflake, RefreshCw, Calendar, Camera } from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
 import { PlansModal } from '@/components/portal/plans-modal';
+import { planDisplayName } from '@/lib/utils';
 
 const BTN_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
@@ -105,7 +106,7 @@ export default function PortalMembershipPage() {
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
                 <div className="text-xs uppercase tracking-wider text-white/80 font-semibold">Plan</div>
-                <div className="font-display text-3xl font-bold">{membership.plan}</div>
+                <div className="font-display text-3xl font-bold">{planDisplayName(membership.plan)}</div>
                 <div className="text-sm text-white/80 mt-1">
                   {membership.sport ?? 'General'} ·{' '}
                   {membership.billing_cycle === 'MONTHLY'
