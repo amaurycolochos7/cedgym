@@ -132,14 +132,6 @@ enum DiscountType {
   FIXED_AMOUNT
 }
 
-enum BookingStatus {
-  CONFIRMED
-  WAITLIST
-  CANCELED
-  NO_SHOW
-  ATTENDED
-}
-
 enum MuscleGroup {
   CHEST
   BACK
@@ -449,42 +441,6 @@ model Course {
   @@map("courses")
 }
 
-model ClassSchedule {
-  id           String          @id @default(cuid())
-  workspace_id String
-  name         String
-  sport        Sport
-  trainer_id   String
-  starts_at    DateTime
-  duration_min Int
-  capacity     Int
-  booked       Int             @default(0)
-  location     String
-  min_plan     MembershipPlan?
-  created_at   DateTime        @default(now())
-
-  bookings ClassBooking[]
-
-  @@index([workspace_id, starts_at])
-  @@map("class_schedules")
-}
-
-model ClassBooking {
-  id          String        @id @default(cuid())
-  class_id    String
-  user_id     String
-  status      BookingStatus @default(CONFIRMED)
-  booked_at   DateTime      @default(now())
-  attended_at DateTime?
-  canceled_at DateTime?
-
-  class ClassSchedule @relation(fields: [class_id], references: [id], onDelete: Cascade)
-
-  @@unique([class_id, user_id])
-  @@index([user_id])
-  @@map("class_bookings")
-}
-
 // ────────────────────────────────────────────────────────────────
 // Payments (Mercado Pago)
 // ────────────────────────────────────────────────────────────────
@@ -695,7 +651,6 @@ model UserProgress {
   longest_streak_days Int       @default(0)
   last_checkin_date   DateTime?
   total_checkins      Int       @default(0)
-  total_classes       Int       @default(0)
 
   badges UserBadge[]
 

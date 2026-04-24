@@ -8,7 +8,6 @@
  *   - /products/me/authored    lives in apps/api/src/routes/products.js
  *   - POST /products           lives in apps/api/src/routes/products.js
  *   - PATCH /products/:id      lives in apps/api/src/routes/products.js
- *   - /classes/:id/attendance  lives in apps/api/src/routes/classes.js
  */
 import { api } from './api';
 
@@ -23,14 +22,6 @@ export interface TrainerDashboardResponse {
   pending_payout_mxn: number;
   athletes_count: number;
   sales_last_30_days: { day: string; amount_mxn: number; count: number }[];
-  upcoming_classes: {
-    id: string;
-    name: string;
-    starts_at: string;
-    location?: string;
-    capacity: number;
-    booked: number;
-  }[];
 }
 
 export interface TrainerProduct {
@@ -93,25 +84,6 @@ export interface TrainerSalesResponse {
   }[];
 }
 
-export interface TrainerClass {
-  id: string;
-  name: string;
-  sport: string;
-  starts_at: string;
-  duration_min: number;
-  capacity: number;
-  booked: number;
-  location: string;
-  bookings?: {
-    id: string;
-    user_id: string;
-    user_name: string;
-    user_avatar?: string;
-    status: string;
-    attended_at?: string | null;
-  }[];
-}
-
 export interface TrainerAthlete {
   id: string;
   name: string;
@@ -119,7 +91,7 @@ export interface TrainerAthlete {
   email: string;
   phone?: string | null;
   avatar_url?: string | null;
-  source: 'product' | 'class' | 'both';
+  source: 'product';
   last_interaction_at?: string | null;
   total_spent_mxn: number;
 }
@@ -172,16 +144,6 @@ export const trainerApi = {
       .get<TrainerSalesResponse>('/trainer/me/sales', { params })
       .then((r) => r.data),
 
-  classes: (params?: { from?: string; to?: string }) =>
-    api
-      .get<{ classes: TrainerClass[] }>('/trainer/me/classes', { params })
-      .then((r) => r.data.classes),
-
-  classDetail: (id: string) =>
-    api
-      .get<{ class: TrainerClass }>(`/trainer/me/classes/${id}`)
-      .then((r) => r.data.class),
-
   athletes: () =>
     api
       .get<{ athletes: TrainerAthlete[] }>('/trainer/me/athletes')
@@ -196,15 +158,4 @@ export const trainerApi = {
     api
       .patch<{ product: TrainerProduct }>(`/products/${id}`, body)
       .then((r) => r.data.product),
-
-  /** Marks a booking ATTENDED / NO_SHOW. */
-  markAttendance: (
-    classId: string,
-    records: { booking_id: string; status: 'ATTENDED' | 'NO_SHOW' }[],
-  ) =>
-    api
-      .post<{ updated_count: number }>(`/classes/${classId}/attendance`, {
-        records,
-      })
-      .then((r) => r.data),
 };

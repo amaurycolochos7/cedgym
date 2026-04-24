@@ -37,9 +37,6 @@ export const BADGE_RULES = [
     { code: 'LEVEL_10', predicate: (ctx) => ctx.progress.level >= 10 },
     { code: 'LEVEL_25', predicate: (ctx) => ctx.progress.level >= 25 },
     { code: 'LEVEL_50', predicate: (ctx) => ctx.progress.level >= 50 },
-
-    // Classes
-    { code: 'CLASSES_10', predicate: (ctx) => ctx.progress.total_classes >= 10 },
 ];
 
 // Describe progress toward a badge the user hasn't yet earned. Used
@@ -68,8 +65,6 @@ export function badgeProgress(code, ctx) {
             return { current: p.level, target: 25 };
         case 'LEVEL_50':
             return { current: p.level, target: 50 };
-        case 'CLASSES_10':
-            return { current: p.total_classes, target: 10 };
         default:
             return null;
     }

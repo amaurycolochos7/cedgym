@@ -213,11 +213,8 @@ export async function topSports(workspaceId, period = '30d') {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Top coaches.
-//
-// "Coach attendance" = confirmed ClassBooking rows whose class
-// trainer_id = coach. We count ATTENDED first; if that's sparse,
-// fall back to CONFIRMED so new deployments still show something.
+// Top coaches — ranked by unique athletes that bought a product
+// they authored in the period (since we no longer track classes).
 // ──────────────────────────────────────────────────────────────
 export async function topCoaches(workspaceId, period = '30d') {
     const { from, to } = periodRange(period);
@@ -225,16 +222,15 @@ export async function topCoaches(workspaceId, period = '30d') {
     const rows = await prisma.$queryRawUnsafe(
         `
         SELECT
-          cs.trainer_id                     AS trainer_id,
-          COUNT(b.id)::bigint               AS attendance,
-          COUNT(DISTINCT b.user_id)::bigint AS unique_members
-        FROM class_bookings b
-        JOIN class_schedules cs ON cs.id = b.class_id
-        WHERE cs.workspace_id = $1
-          AND b.status IN ('ATTENDED', 'CONFIRMED')
-          AND b.booked_at >= $2
-          AND b.booked_at <  $3
-        GROUP BY cs.trainer_id
+          p.author_id                       AS trainer_id,
+          COUNT(pp.id)::bigint              AS attendance,
+          COUNT(DISTINCT pp.user_id)::bigint AS unique_members
+        FROM product_purchases pp
+        JOIN digital_products p ON p.id = pp.product_id
+        WHERE p.workspace_id = $1
+          AND pp.access_granted_at >= $2
+          AND pp.access_granted_at <  $3
+        GROUP BY p.author_id
         ORDER BY attendance DESC
         LIMIT 10
         `,

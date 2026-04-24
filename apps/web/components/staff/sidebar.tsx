@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { QrCode, Users, ShoppingCart, Clipboard, LogOut, UserPlus } from 'lucide-react';
+import { QrCode, Users, ShoppingCart, LogOut, UserPlus } from 'lucide-react';
 import { Logo } from '@/components/ui/logo';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
@@ -12,7 +12,6 @@ const NAV = [
   { href: '/staff/members',    label: 'Socios',        icon: Users },
   { href: '/staff/walk-in',    label: 'Inscribir socio', icon: UserPlus },
   { href: '/staff/pos',        label: 'Cobrar',        icon: ShoppingCart },
-  { href: '/staff/attendance', label: 'Asistencia',    icon: Clipboard },
 ];
 
 export function StaffSidebar() {

@@ -115,18 +115,6 @@ const TEMPLATES = [
         body: `🔥 {nombre}, tu racha de {days} días está en peligro. ¡Entrena hoy!`,
     },
     {
-        code: 'class.reminder_2h',
-        name: 'Recordatorio clase 2h antes',
-        channel: 'WHATSAPP',
-        body: `🏃 Tu clase *{clase}* con {coach} empieza en 2h. ¡Te esperamos!`,
-    },
-    {
-        code: 'class.cancellation_alert',
-        name: 'Alerta cancelación clase',
-        channel: 'WHATSAPP',
-        body: `❌ La clase *{clase}* fue cancelada.\nTu cupo se libera automáticamente.`,
-    },
-    {
         code: 'measurement.reminder',
         name: 'Recordatorio mediciones',
         channel: 'WHATSAPP',
@@ -264,22 +252,6 @@ const AUTOMATIONS = [
         delay_minutes: 0,
         action: 'push.notify',
         template_code: 'gamification.streak_break_warning',
-    },
-    {
-        name: 'Recordatorio clase 2h antes',
-        trigger: 'class.reminder_2h',
-        filter: null,
-        delay_minutes: -120, // 2h antes del evento
-        action: 'whatsapp.send_template',
-        template_code: 'class.reminder_2h',
-    },
-    {
-        name: 'Clase cancelada',
-        trigger: 'class.cancellation_alert',
-        filter: null,
-        delay_minutes: 0,
-        action: 'whatsapp.send_template',
-        template_code: 'class.cancellation_alert',
     },
     {
         name: 'Medición mensual',

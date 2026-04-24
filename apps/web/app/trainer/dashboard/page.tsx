@@ -9,8 +9,6 @@ import {
   Wallet,
   Users,
   Plus,
-  CalendarClock,
-  MapPin,
 } from 'lucide-react';
 import { KpiCard } from '@/components/admin/kpi-card';
 import { ChartBar } from '@/components/admin/chart-bar';
@@ -26,14 +24,6 @@ const DAY_FMT = new Intl.DateTimeFormat('es-MX', {
   weekday: 'short',
   day: 'numeric',
   month: 'short',
-});
-
-const DATETIME_FMT = new Intl.DateTimeFormat('es-MX', {
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
 });
 
 export default function TrainerDashboardPage() {
@@ -58,7 +48,7 @@ export default function TrainerDashboardPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Mi dashboard</h1>
           <p className="text-sm text-slate-600">
-            Resumen de tus rutinas, ventas y clases.
+            Resumen de tus rutinas y ventas.
           </p>
         </div>
         <Link
@@ -101,80 +91,25 @@ export default function TrainerDashboardPage() {
           icon={Users}
           label="Mis atletas"
           value={d?.athletes_count ?? '—'}
-          hint="Con mis rutinas o clases"
+          hint="Con mis rutinas"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 xl:col-span-2">
-          <div className="mb-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
-              Ventas últimos 30 días
-            </h3>
-            <p className="text-xs text-slate-500">
-              Monto bruto cobrado por día (MXN)
-            </p>
-          </div>
-          <ChartBar
-            data={chartData}
-            xKey="label"
-            yKey="amount_mxn"
-            formatter={(v) => MXN.format(v)}
-          />
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="mb-4">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+            Ventas últimos 30 días
+          </h3>
+          <p className="text-xs text-slate-500">
+            Monto bruto cobrado por día (MXN)
+          </p>
         </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
-                Próximas clases
-              </h3>
-              <p className="text-xs text-slate-500">
-                Las que impartes esta semana
-              </p>
-            </div>
-            <Link
-              href="/trainer/classes"
-              className="text-xs font-semibold text-blue-600 hover:underline"
-            >
-              Ver todas
-            </Link>
-          </div>
-          <ul className="space-y-2">
-            {(d?.upcoming_classes ?? []).slice(0, 5).map((c) => (
-              <li
-                key={c.id}
-                className="rounded-lg border border-slate-200 bg-slate-50 p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-900">
-                      {c.name}
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
-                      <CalendarClock className="h-3 w-3" />
-                      {DATETIME_FMT.format(new Date(c.starts_at))}
-                    </div>
-                    {c.location && (
-                      <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
-                        <MapPin className="h-3 w-3" />
-                        {c.location}
-                      </div>
-                    )}
-                  </div>
-                  <div className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                    {c.booked}/{c.capacity}
-                  </div>
-                </div>
-              </li>
-            ))}
-            {d?.upcoming_classes && d.upcoming_classes.length === 0 && (
-              <li className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-500">
-                Sin clases próximas.
-              </li>
-            )}
-          </ul>
-        </div>
+        <ChartBar
+          data={chartData}
+          xKey="label"
+          yKey="amount_mxn"
+          formatter={(v) => MXN.format(v)}
+        />
       </div>
     </div>
   );

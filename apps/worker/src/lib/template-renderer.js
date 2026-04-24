@@ -97,16 +97,6 @@ async function buildVars(body, context = {}) {
         out.coach = context.coach || '';
     }
 
-    if (context.class_id && groupReferenced(body, ['clase'])) {
-        const cls = await prisma.classSchedule.findUnique({
-            where: { id: context.class_id },
-            select: { name: true },
-        }).catch(() => null);
-        out.clase = cls?.name || context.clase || '';
-    } else {
-        out.clase = context.clase || '';
-    }
-
     if (context.course_id && groupReferenced(body, ['curso'])) {
         const course = await prisma.course.findUnique({
             where: { id: context.course_id },

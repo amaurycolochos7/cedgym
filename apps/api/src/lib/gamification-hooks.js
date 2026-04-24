@@ -1,7 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 // Gamification hooks — called by other tracks (payments webhook,
-// reviews, classes) so every gamification side-effect lives behind
-// one import.
+// reviews) so every gamification side-effect lives behind one import.
 //
 // Each helper:
 //   • applies XP via awardXP()
@@ -20,9 +19,6 @@
 //
 //   // routes/reviews.js (after creating ProductReview)
 //   await onReviewPosted(prisma, userId);
-//
-//   // routes/classes.js (after attendance marked)
-//   await onClassAttended(prisma, userId);
 // ─────────────────────────────────────────────────────────────────
 
 import { awardXP } from './xp.js';
@@ -83,17 +79,8 @@ export async function onReviewPosted(prisma, userId) {
     await fireEvent('gamification.review_posted', { workspaceId, userId });
 }
 
-// Called after attendance is marked for a ClassBooking.
-export async function onClassAttended(prisma, userId) {
-    const workspaceId = await getWsId(prisma, userId);
-    await awardXP(prisma, userId, 'CLASS_ATTENDED');
-    await checkAndAwardBadges(prisma, userId);
-    await fireEvent('gamification.class_attended', { workspaceId, userId });
-}
-
 export default {
     onMembershipActivated,
     onProductPurchased,
     onReviewPosted,
-    onClassAttended,
 };

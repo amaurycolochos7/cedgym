@@ -19,7 +19,6 @@ const TITLES: Record<string, string> = {
   '/admin/memberships': 'Membresías',
   '/admin/courses': 'Cursos',
   '/admin/ejercicios': 'Ejercicios',
-  '/admin/classes': 'Clases',
   '/admin/payments': 'Pagos',
   '/admin/products': 'Marketplace',
   '/admin/inventory': 'Inventario',

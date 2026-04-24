@@ -9,7 +9,6 @@ import {
   UserCog,
   CreditCard,
   GraduationCap,
-  CalendarClock,
   Dumbbell,
   Receipt,
   ShoppingBag,
@@ -44,7 +43,6 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Vencidas / Campañas', href: '/admin/memberships/expired', icon: AlarmClock, group: 'Membresías' },
   { label: 'Cursos', href: '/admin/courses', icon: GraduationCap, group: 'Operación' },
   { label: 'Ejercicios', href: '/admin/ejercicios', icon: Dumbbell, group: 'Operación' },
-  { label: 'Clases', href: '/admin/classes', icon: CalendarClock, group: 'Operación' },
   { label: 'Pagos', href: '/admin/payments', icon: Receipt, group: 'Finanzas' },
   { label: 'Marketplace', href: '/admin/products', icon: ShoppingBag, group: 'Comercio' },
   { label: 'Inventario', href: '/admin/inventory', icon: Boxes, group: 'Comercio' },
@@ -59,7 +57,6 @@ const STAFF_NAV: NavItem[] = [
   { label: 'Escanear', href: '/staff/scan', icon: LayoutDashboard },
   { label: 'Socios', href: '/staff/members', icon: Users },
   { label: 'Punto de venta', href: '/staff/pos', icon: ShoppingBag },
-  { label: 'Asistencia', href: '/staff/attendance', icon: CalendarClock },
 ];
 
 interface SidebarProps {

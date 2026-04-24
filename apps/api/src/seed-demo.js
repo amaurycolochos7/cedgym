@@ -11,7 +11,6 @@
 //   • 5 memberships (varied plans / billing cycles / statuses)
 //   • 5 published courses
 //   • 8 digital products (routines, nutrition, ebook, video, bundle)
-//   • 4 weekly class schedules expanded across the next 4 weeks
 //   • 10 inventory items (Redis-backed; see routes/inventory.js)
 //   • 5 promo codes
 //   • Check-ins for heatmap seeding (Diego & María, last 20 days)
@@ -43,7 +42,6 @@ const counters = {
     memberships: 0,
     courses: 0,
     products: 0,
-    classes: 0,
     inventory: 0,
     promos: 0,
     checkins: 0,
@@ -507,75 +505,7 @@ async function main() {
         video_urls: [], published: true, featured: true,
     });
 
-    // 6) Class schedules ──────────────────────────────────────
-    // `ClassSchedule` is a single slot row; recurring classes map
-    // to N rows (one per instance). We generate 4 weeks of instances.
-    const CLASS_TEMPLATES = [
-        {
-            name: 'Spinning 6am', sport: 'GENERAL_FITNESS', trainer_id: recep1.id,
-            hour: 6, minute: 0, duration_min: 45, capacity: 20,
-            location: 'Sala de Cardio', min_plan: null,
-            // 1=Mon, 3=Wed, 5=Fri
-            days: [1, 3, 5],
-        },
-        {
-            name: 'CrossFit Masters', sport: 'CROSSFIT', trainer_id: trainerFootball.id,
-            hour: 19, minute: 0, duration_min: 60, capacity: 15,
-            location: 'Box CrossFit', min_plan: 'PRO',
-            days: [2, 4], // Tue, Thu
-        },
-        {
-            name: 'Boxeo Cardio', sport: 'BOXING', trainer_id: trainerBoxing.id,
-            hour: 19, minute: 0, duration_min: 50, capacity: 20,
-            location: 'Ring Principal', min_plan: null,
-            days: [1, 3], // Mon, Wed
-        },
-        {
-            name: 'Powerlifting Técnica', sport: 'POWERLIFTING', trainer_id: trainerPower.id,
-            hour: 10, minute: 0, duration_min: 90, capacity: 10,
-            location: 'Zona de Fuerza', min_plan: 'PRO',
-            days: [6], // Sat
-        },
-    ];
-
-    // Skip generation if any instance of this template exists — a
-    // crude but safe idempotency check (name + workspace is enough).
-    for (const tmpl of CLASS_TEMPLATES) {
-        const existing = await prisma.classSchedule.findFirst({
-            where: { workspace_id: WS, name: tmpl.name },
-        });
-        if (existing) continue;
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        // Walk through the next 28 days and materialize an instance
-        // whenever the weekday matches the template's `days` set.
-        for (let offset = 0; offset < 28; offset++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + offset);
-            if (!tmpl.days.includes(date.getDay())) continue;
-            const starts_at = atTime(date, tmpl.hour, tmpl.minute);
-            if (starts_at < new Date()) continue; // skip past slots today
-
-            await prisma.classSchedule.create({
-                data: {
-                    workspace_id: WS,
-                    name: tmpl.name,
-                    sport: tmpl.sport,
-                    trainer_id: tmpl.trainer_id,
-                    starts_at,
-                    duration_min: tmpl.duration_min,
-                    capacity: tmpl.capacity,
-                    booked: 0,
-                    location: tmpl.location,
-                    min_plan: tmpl.min_plan,
-                },
-            });
-            counters.classes++;
-        }
-    }
-
-    // 7) Inventory (Redis) ────────────────────────────────────
+    // 6) Inventory (Redis) ────────────────────────────────────
     const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
         lazyConnect: false,
         maxRetriesPerRequest: 3,
@@ -755,7 +685,6 @@ async function main() {
     console.log(`  Memberships created:  ${counters.memberships}`);
     console.log(`  Courses created:      ${counters.courses}`);
     console.log(`  Digital products:     ${counters.products}`);
-    console.log(`  Class instances:      ${counters.classes}`);
     console.log(`  Inventory items:      ${counters.inventory}`);
     console.log(`  Promo codes:          ${counters.promos}`);
     console.log(`  Check-ins seeded:     ${counters.checkins}`);

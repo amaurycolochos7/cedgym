@@ -358,7 +358,6 @@ export default async function adminMembersRoutes(fastify) {
     await safeDelete(() => prisma.payment.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.productPurchase.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.productReview.deleteMany({ where: { user_id: uid } }));
-    await safeDelete(() => prisma.classBooking.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.userBadge.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.userProgress.deleteMany({ where: { user_id: uid } }));
     await safeDelete(() => prisma.bodyMeasurement.deleteMany({ where: { user_id: uid } }));

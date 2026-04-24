@@ -23,7 +23,6 @@ import { fireEvent } from './events.js';
 export const XP_REWARDS = {
     CHECKIN: 10,
     FIRST_CHECKIN_OF_WEEK: 15,
-    CLASS_ATTENDED: 25,
     PRODUCT_PURCHASED: 50,
     REVIEW_POSTED: 15,
     MEMBERSHIP_RENEWED: 75,
@@ -114,9 +113,6 @@ export async function awardXP(prisma, userId, action, metadata = {}) {
     const counterUpdates = {};
     if (action === 'CHECKIN' || action === 'FIRST_CHECKIN_OF_WEEK') {
         counterUpdates.total_checkins = { increment: 1 };
-    }
-    if (action === 'CLASS_ATTENDED') {
-        counterUpdates.total_classes = { increment: 1 };
     }
 
     const updated = await prisma.userProgress.update({

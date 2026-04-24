@@ -139,15 +139,6 @@ export const measurementSchema = z.object({
 export type Measurement = z.infer<typeof measurementSchema>;
 
 /* =========================================================================
- * Class booking schema
- * =========================================================================*/
-
-export const classBookingSchema = z.object({
-  classId: z.string().min(1),
-});
-export type ClassBookingInput = z.infer<typeof classBookingSchema>;
-
-/* =========================================================================
  * Review schema
  * =========================================================================*/
 
