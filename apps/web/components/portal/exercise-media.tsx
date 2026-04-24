@@ -3,48 +3,40 @@
 /* -------------------------------------------------------------------------
  * ExerciseMedia — YouTube thumbnail + inline embed, brand-styled.
  *
- * Why this design:
- *   - The previous stick-figure SVGs felt cheap; real-person photos clashed
- *     with the glass/slate/blue aesthetic. A real YouTube thumbnail frames
- *     like an editorial card and the inline embed keeps the user inside
- *     the app (no "abrir en YouTube" jumps).
+ * Three sources of video, in priority order:
+ *   1. `videoUrl` prop — set by the API at routine-generation time
+ *      (apps/api/src/lib/youtube.js resolves every AI-generated
+ *      exercise against YouTube search and stores the watch URL on
+ *      the RoutineExercise row). Zero network from the client for
+ *      new routines.
+ *   2. `GET /exercises/video?q={name}` — the same server-side search
+ *      called on-demand for older routines where video_url is null.
+ *      Result cached in-memory server-side.
+ *   3. Curated hardcoded fallback for a handful of common lifts —
+ *      useful if the backend is down or the exercise is too obscure
+ *      for YouTube to surface a demo.
  *
- * How it works:
- *   - Each exercise name is matched (Spanish-first keyword rules) to a
- *     curated YouTube video ID. All IDs in EXERCISE_VIDEOS were verified
- *     via the ytimg thumbnail (HTTP 200 = video exists).
- *   - The small `sm` tile is used inline in the collapsed card → just a
- *     rounded thumbnail with a play glyph overlay.
- *   - The `lg` tile in the expanded card starts as a thumbnail; on click
- *     it swaps to an <iframe> that autoplays with YouTube's chrome
- *     minimized (modestbranding, rel=0, iv_load_policy=3).
- *   - If the exercise has no mapped video, the tile renders a branded
- *     placeholder (Dumbbell + first word of the name). No external link.
- *
- * Public API (unchanged):
- *   <ExerciseMedia name="Press banca" size="sm" />
- *   useExerciseMedia("Sentadilla") → { videoId?, thumbUrl?, isLoading, isError }
+ * If all three miss, we render a branded placeholder (Dumbbell +
+ * first word) so nothing looks broken — no external links, no
+ * "search on YouTube" bail-out that drops the user out of the app.
  * -------------------------------------------------------------------------*/
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Dumbbell, Play } from 'lucide-react';
+import { api } from '@/lib/api';
 
 type Size = 'sm' | 'md' | 'lg';
 
-const SIZE_MAP: Record<Size, { box: string; thumb: number; iconBig: string; iconSm: string }> = {
-  sm: { box: 'w-20 h-20',    thumb: 2,  iconBig: 'w-6 h-6',  iconSm: 'w-5 h-5' },
-  md: { box: 'w-48 h-48',    thumb: 3,  iconBig: 'w-10 h-10', iconSm: 'w-8 h-8' },
-  lg: { box: 'w-full aspect-video', thumb: 3, iconBig: 'w-14 h-14', iconSm: 'w-12 h-12' },
+const SIZE_MAP: Record<Size, { box: string }> = {
+  sm: { box: 'w-20 h-20' },
+  md: { box: 'w-48 h-48' },
+  lg: { box: 'w-full aspect-video' },
 };
 
 /* ------------------------------------------------------------------ */
-/* Curated YouTube demo videos.
- *
- * Each videoId has been verified via HTTP 200 on its hqdefault
- * thumbnail. Keeps the list short on purpose — would rather show a
- * clean "no video" tile than gamble on a clip that might be the wrong
- * exercise or taken down.
- * ------------------------------------------------------------------ */
+/* Hardcoded fallback — small curated set, all ids verified HTTP 200. */
+/* ------------------------------------------------------------------ */
 
 type VideoKey =
   | 'bench-press'
@@ -75,9 +67,6 @@ const EXERCISE_VIDEOS: Record<VideoKey, string> = {
   'goblet-squat':      'CFBZ4jN1CMI',
 };
 
-// Spanish-first keyword rules. Order matters — "press militar" must
-// resolve to overhead-press before plain "press" falls through to
-// bench-press.
 const RULES: Array<{ key: VideoKey; keywords: string[] }> = [
   { key: 'overhead-press',    keywords: ['press militar', 'press de hombros', 'shoulder press', 'overhead', 'arnold press'] },
   { key: 'bench-press',       keywords: ['press banca', 'press banco', 'bench', 'press de pecho'] },
@@ -103,14 +92,20 @@ function normalize(s: string): string {
     .trim();
 }
 
-function classify(name: string): VideoKey | null {
+function classifyFallback(name: string): string | null {
   const n = normalize(name);
   for (const { key, keywords } of RULES) {
     for (const kw of keywords) {
-      if (n.includes(kw)) return key;
+      if (n.includes(kw)) return EXERCISE_VIDEOS[key];
     }
   }
   return null;
+}
+
+function extractVideoId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/)([A-Za-z0-9_-]{6,20})/);
+  return m ? m[1] : null;
 }
 
 function thumbUrl(videoId: string): string {
@@ -130,24 +125,55 @@ function embedUrl(videoId: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Hook + component                                                    */
+/* Hook                                                                */
 /* ------------------------------------------------------------------ */
 
-export function useExerciseMedia(name: string): {
-  videoId: string | null;
-  thumbUrl: string | null;
-  isLoading: boolean;
-  isError: boolean;
-} {
-  const key = classify(name);
-  const videoId = key ? EXERCISE_VIDEOS[key] : null;
+/**
+ * Resolves an exercise name + optional pre-baked URL into a YouTube
+ * video id. Never throws; returns { videoId: null } when we simply
+ * couldn't find anything.
+ */
+export function useExerciseMedia(
+  name: string,
+  videoUrl?: string | null,
+): { videoId: string | null; isLoading: boolean } {
+  // 1. Caller passed a URL — parse it and we're done.
+  const fromProp = useMemo(() => extractVideoId(videoUrl), [videoUrl]);
+
+  // 2. Fallback keyword match — synchronous, zero network.
+  const fromMap = useMemo(() => (fromProp ? null : classifyFallback(name)), [fromProp, name]);
+
+  // 3. Ask the backend. Only fires when the prior two missed so
+  //    routines already populated with a video_url don't hit the
+  //    network at all.
+  const shouldQueryBackend = !fromProp && !fromMap && !!name;
+  const q = useQuery<{ videoId: string; url: string; title: string | null } | null>({
+    queryKey: ['exercise-video', normalize(name)],
+    queryFn: async () => {
+      const res = await api.get('/exercises/video', {
+        params: { q: name },
+        validateStatus: (s) => s === 200 || s === 204,
+      });
+      if (res.status === 204) return null;
+      return res.data;
+    },
+    enabled: shouldQueryBackend,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+  });
+
+  const fromBackend = q.data?.videoId ?? null;
+
   return {
-    videoId,
-    thumbUrl: videoId ? thumbUrl(videoId) : null,
-    isLoading: false,
-    isError: false,
+    videoId: fromProp ?? fromMap ?? fromBackend ?? null,
+    isLoading: shouldQueryBackend && q.isLoading,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Visual parts                                                        */
+/* ------------------------------------------------------------------ */
 
 function FallbackTile({ name, size }: { name: string; size: Size }) {
   const sz = SIZE_MAP[size];
@@ -171,6 +197,20 @@ function FallbackTile({ name, size }: { name: string; size: Size }) {
         </span>
       )}
     </div>
+  );
+}
+
+function LoadingTile({ size }: { size: Size }) {
+  const sz = SIZE_MAP[size];
+  return (
+    <div
+      className={[
+        'relative overflow-hidden rounded-xl ring-1 ring-slate-200',
+        'bg-gradient-to-br from-slate-100 to-slate-50 animate-pulse',
+        sz.box,
+      ].join(' ')}
+      aria-label="Cargando video"
+    />
   );
 }
 
@@ -199,7 +239,6 @@ function Thumbnail({
       ].join(' ')}
       aria-label={interactive ? `Reproducir demostración: ${name}` : `Demostración: ${name}`}
     >
-      {/* Thumbnail image — hqdefault is always 480x360 JPEG */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={thumbUrl(videoId)}
@@ -207,11 +246,7 @@ function Thumbnail({
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         loading="lazy"
       />
-
-      {/* Subtle dark gradient so the play glyph stays readable */}
       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/55 via-slate-900/15 to-transparent" />
-
-      {/* Play glyph */}
       <div
         className={[
           'absolute inset-0 flex items-center justify-center transition-transform duration-300',
@@ -231,19 +266,34 @@ function Thumbnail({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Public component                                                    */
+/* ------------------------------------------------------------------ */
+
 export function ExerciseMedia({
   name,
   size = 'sm',
+  videoUrl,
   className = '',
 }: {
   name: string;
   size?: Size;
+  /** Watch URL the backend stored on the exercise row, if any. */
+  videoUrl?: string | null;
   className?: string;
 }) {
   const [playing, setPlaying] = useState(false);
-  const media = useExerciseMedia(name);
+  const { videoId, isLoading } = useExerciseMedia(name, videoUrl);
 
-  if (!media.videoId) {
+  if (isLoading) {
+    return (
+      <div className={className}>
+        <LoadingTile size={size} />
+      </div>
+    );
+  }
+
+  if (!videoId) {
     return (
       <div className={className}>
         <FallbackTile name={name} size={size} />
@@ -264,7 +314,7 @@ export function ExerciseMedia({
         ].join(' ')}
       >
         <iframe
-          src={embedUrl(media.videoId)}
+          src={embedUrl(videoId)}
           title={`Demostración: ${name}`}
           className="absolute inset-0 h-full w-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
@@ -278,7 +328,7 @@ export function ExerciseMedia({
   return (
     <div className={className}>
       <Thumbnail
-        videoId={media.videoId}
+        videoId={videoId}
         size={size}
         name={name}
         onPlay={size === 'lg' ? () => setPlaying(true) : undefined}

@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { generateJSON } from '../lib/openai.js';
 import { assertAIQuota } from '../lib/ai-quota.js';
+import { searchExerciseVideosBatch } from '../lib/youtube.js';
 
 export const autoPrefix = '/ai/routines';
 
@@ -358,6 +359,35 @@ export default async function aiRoutinesRoutes(fastify) {
             const libIds = new Set(library.map((e) => e.id));
             const libById = new Map(library.map((e) => [e.id, e]));
 
+            // 3b. Resolve a YouTube demo video for every exercise in
+            //     parallel, BEFORE opening the DB transaction. Avoids
+            //     holding a transaction open on a flaky scraper call.
+            //     youtube-sr caches in-memory so repeats are free.
+            const exerciseNames = [];
+            for (const d of data.days) {
+                for (const ex of d.exercises) {
+                    if (ex.exercise_name) exerciseNames.push(ex.exercise_name);
+                }
+            }
+            let videoMap = new Map();
+            try {
+                videoMap = await searchExerciseVideosBatch(exerciseNames);
+            } catch (e) {
+                req.log.warn({ err: e.message }, '[ai-routines] video lookup batch failed');
+            }
+            const resolveVideoUrl = (exerciseName) => {
+                if (!exerciseName) return null;
+                const key = exerciseName
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[̀-ͯ]/g, '')
+                    .replace(/[^a-z0-9\s-]/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                const hit = videoMap.get(key);
+                return hit?.url ?? null;
+            };
+
             // 4. Transaction: deactivate previous active routines +
             //    create the new one with its days/exercises.
             const routine = await prisma.$transaction(async (tx) => {
@@ -397,11 +427,16 @@ export default async function aiRoutinesRoutes(fastify) {
                             ? ex.exercise_id
                             : null;
                         const libRow = realId ? libById.get(realId) : null;
+                        // Priority for video_url:
+                        //   1. resolved YouTube demo from the batch search
+                        //   2. what the AI returned (usually null anyway)
+                        //   3. curated video on the matched library row
+                        const resolved = resolveVideoUrl(ex.exercise_name);
                         return {
                             routine_day_id: day.id,
                             exercise_id: realId,
                             exercise_name_snapshot: ex.exercise_name,
-                            video_url: ex.video_url ?? libRow?.video_url ?? null,
+                            video_url: resolved ?? ex.video_url ?? libRow?.video_url ?? null,
                             sets: ex.sets,
                             reps: ex.reps,
                             rest_sec: ex.rest_sec,

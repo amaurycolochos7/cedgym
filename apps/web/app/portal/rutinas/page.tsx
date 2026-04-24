@@ -954,7 +954,7 @@ function ExerciseCard({
         className="w-full flex items-center gap-4 p-3 sm:p-4 text-left"
       >
         {/* Media slot */}
-        <ExerciseMedia name={name} size="sm" />
+        <ExerciseMedia name={name} size="sm" videoUrl={exercise.video_url} />
 
         {/* Main info */}
         <div className="min-w-0 flex-1">
@@ -1005,7 +1005,7 @@ function ExerciseCard({
             <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-4 border-t border-slate-100 pt-4">
               {/* Enlarged media — ExerciseMedia handles its own thumbnail
                   → inline YouTube iframe swap when the user taps play. */}
-              <ExerciseMedia name={name} size="lg" />
+              <ExerciseMedia name={name} size="lg" videoUrl={exercise.video_url} />
 
               {exercise.exercise?.description && (
                 <p className="text-sm text-slate-700 leading-relaxed">
