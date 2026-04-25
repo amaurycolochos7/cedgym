@@ -1,7 +1,9 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { Snowflake, RefreshCw, Calendar, Camera } from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
@@ -15,9 +17,39 @@ const BTN_GHOST =
 
 export default function PortalMembershipPage() {
   const qc = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [freezeOpen, setFreezeOpen] = useState(false);
   const [selfieOpen, setSelfieOpen] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
+  const mpStatus = searchParams.get('mp');
+
+  // Handle return from Mercado Pago Checkout Pro. The webhook usually
+  // beats this redirect, so by the time we re-fetch the membership it
+  // should already be active for `success`. If the webhook is still in
+  // flight (rare) the user can refresh in a few seconds.
+  useEffect(() => {
+    if (!mpStatus) return;
+    if (mpStatus === 'success') {
+      toast.success('¡Pago aprobado! Activando tu membresía…');
+      qc.invalidateQueries({ queryKey: ['memberships'] });
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    } else if (mpStatus === 'failed') {
+      toast.error('El pago no pudo completarse. Intenta de nuevo.');
+    } else if (mpStatus === 'pending') {
+      toast.message('Tu pago está pendiente de confirmación.');
+    }
+    // Clean the query params so a refresh doesn't re-fire the toast.
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('mp');
+    params.delete('payment');
+    params.delete('payment_id');
+    params.delete('status');
+    params.delete('preference_id');
+    const next = params.toString();
+    router.replace(`/portal/membership${next ? `?${next}` : ''}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mpStatus]);
 
   const { data: me } = useQuery({
     queryKey: ['auth', 'me'],

@@ -1,21 +1,18 @@
 'use client';
 
 /**
- * PlansModal — in-portal plan picker + embedded MP Card Brick checkout.
+ * PlansModal — in-portal plan picker + Mercado Pago Checkout Pro redirect.
  *
- * Flow (3 internal steps):
+ * Flow:
  *   1) 'plans'   — list plans from GET /memberships/plans, pick cycle.
- *   2) 'pay'     — mount MP <CardPayment /> brick, POST /memberships/subscribe-card.
- *   3) 'welcome' — show welcome copy + CTAs to QR / dashboard.
+ *   2) 'pay'     — POST /memberships/subscribe → window.location to MP's
+ *                  hosted checkout page. After payment MP redirects back
+ *                  to /portal/membership?mp=success|failed|pending.
+ *   3) 'welcome' — only used for the 100% off bypass (no MP redirect).
  *
  * Gates:
  *   - Requires `me.user.selfie_url` and `me.user.full_name` before "Continuar".
  *     If missing, surfaces a link to /portal/perfil.
- *
- * ENV:
- *   - NEXT_PUBLIC_MP_PUBLIC_KEY is required to mount the Card Brick.
- *     If missing (or the @mercadopago/sdk-react package isn't installed yet),
- *     we show a friendly fallback.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -56,53 +53,6 @@ function friendlyApiError(err: unknown, fallback: string): string {
   // Raw zod error (starts with "[" + has code/path). Don't expose it.
   if (s.startsWith('[') && /"code"|"path"/.test(s)) return fallback;
   return s;
-}
-
-/**
- * Maps Mercado Pago Brick error codes / status_detail strings to friendly
- * Spanish text. Covers both card-input errors (happen before charge) and
- * post-authorization decline codes. Fallback is a generic retry message —
- * never surface raw error codes to the end user.
- */
-function friendlyMpError(input: unknown): string {
-  const raw = typeof input === 'string'
-    ? input
-    : ((input as any)?.message || (input as any)?.status_detail || '');
-  const code = String(raw).toLowerCase();
-
-  // Card-input problems (fire from the Brick onError before submit)
-  if (code.includes('no_payment_method_for_provided_bin'))
-    return 'Esa tarjeta no está habilitada para esta cuenta. Si estás probando, pide al admin un código 100 % OFF.';
-  if (code.includes('invalid_card_number') || code.includes('card_number'))
-    return 'Revisa el número de tarjeta.';
-  if (code.includes('invalid_expiration_date') || code.includes('expiration'))
-    return 'La fecha de vencimiento no es válida.';
-  if (code.includes('invalid_security_code') || code.includes('security_code'))
-    return 'El código de seguridad (CVV) no es válido.';
-  if (code.includes('invalid_cardholder_name') || code.includes('cardholder'))
-    return 'Escribe el nombre tal como aparece en la tarjeta.';
-
-  // Post-authorization declines (from /subscribe-card 402 response)
-  if (code.includes('cc_rejected_insufficient_amount'))
-    return 'Fondos insuficientes.';
-  if (code.includes('cc_rejected_bad_filled_card_number'))
-    return 'El número de tarjeta está mal. Revísalo.';
-  if (code.includes('cc_rejected_bad_filled_date'))
-    return 'Fecha de vencimiento mal escrita.';
-  if (code.includes('cc_rejected_bad_filled_security_code'))
-    return 'CVV incorrecto.';
-  if (code.includes('cc_rejected_call_for_authorize'))
-    return 'Tu banco pide autorizar el pago. Llámale y vuelve a intentar.';
-  if (code.includes('cc_rejected_card_disabled'))
-    return 'Tu tarjeta está desactivada. Contacta a tu banco.';
-  if (code.includes('cc_rejected_high_risk'))
-    return 'El pago fue rechazado por seguridad. Intenta con otra tarjeta.';
-  if (code.includes('cc_rejected_max_attempts'))
-    return 'Muchos intentos fallidos. Espera unos minutos o usa otra tarjeta.';
-  if (code.includes('cc_rejected_other_reason') || code.includes('cc_rejected'))
-    return 'Tu banco rechazó el pago. Prueba con otra tarjeta.';
-
-  return 'Hubo un problema con el pago. Revisa los datos y vuelve a intentar.';
 }
 
 function reasonLabel(reason?: string | null) {
@@ -188,15 +138,7 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
     return () => document.body.classList.remove('overflow-hidden');
   }, [open]);
 
-  // Pre-warm the MP SDK as soon as the modal opens so by the time the
-  // user reaches the pay step the ~200KB bundle + CDN init are already
-  // done. Fires once per modal session, safe to no-op if unavailable.
-  useEffect(() => {
-    if (!open) return;
-    import('@mercadopago/sdk-react').catch(() => {});
-  }, [open]);
-
-  // Close on Escape, except on the pay step (don't interrupt the brick).
+  // Close on Escape, except on the pay step (don't interrupt redirect).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -597,18 +539,13 @@ function StepPay({
 }) {
   const router = useRouter();
   const qc = useQueryClient();
-  const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
 
-  const [brickReady, setBrickReady] = useState(false);
-  const [sdkAvailable, setSdkAvailable] = useState<boolean | null>(null);
-  const [mpModules, setMpModules] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
   // Promo-code preview state. We call /promocodes/validate every time
-  // the user taps "Aplicar" and render the discount/total. On success
-  // the preview amount flows into the Card Brick init (or triggers the
-  // 100%-bypass button when the final amount is 0).
+  // the user taps "Aplicar" and render the discount/total. On 100% off
+  // the modal shows the courtesy bypass button instead of the MP redirect.
   const [promoDraft, setPromoDraft] = useState(promoCode);
   const [promoPreview, setPromoPreview] = useState<{
     valid: boolean;
@@ -617,36 +554,6 @@ function StepPay({
     final_amount: number;
   } | null>(null);
   const [promoChecking, setPromoChecking] = useState(false);
-
-  // Lazy-load the MP SDK so it's code-split into its own chunk (the SDK is
-  // heavy and only needed at the pay step). Client-only — we depend on
-  // window in initMercadoPago, and the modal is a 'use client' boundary.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!publicKey) {
-        setSdkAvailable(false);
-        return;
-      }
-      try {
-        const mod = await import('@mercadopago/sdk-react');
-        if (cancelled) return;
-        try {
-          mod.initMercadoPago(publicKey, { locale: 'es-MX' });
-        } catch {
-          /* initMercadoPago is idempotent but some versions throw on re-init */
-        }
-        setMpModules(mod);
-        setSdkAvailable(true);
-      } catch (e) {
-        console.warn('[plans-modal] @mercadopago/sdk-react not available:', e);
-        setSdkAvailable(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [publicKey]);
 
   const effectiveAmount = promoPreview?.valid
     ? promoPreview.final_amount
@@ -738,59 +645,49 @@ function StepPay({
     }
   };
 
-  const handleSubmit = async (formData: any) => {
+  // Checkout Pro flow: create a preference on the backend and redirect
+  // the user to Mercado Pago's hosted checkout page. After payment, MP
+  // sends them back to /portal/membership?mp=success|failed|pending and
+  // the webhook activates the membership.
+  const startCheckoutPro = async () => {
     setSubmitting(true);
     setLastError(null);
     try {
-      // Build the body conditionally — backend schema rejects null
-      // on optional string fields, so omit keys instead of sending null.
+      const cycleEnumMap: Record<string, string> = {
+        monthly: 'MONTHLY',
+        quarterly: 'QUARTERLY',
+        annual: 'ANNUAL',
+      };
       const body: Record<string, unknown> = {
         plan: plan.id,
-        cycle,
-        token: formData.token,
-        payment_method_id: formData.payment_method_id,
-        installments: formData.installments ?? 1,
+        billing_cycle: cycleEnumMap[cycle] ?? 'MONTHLY',
       };
-      const emailFromBrick = formData.payer?.email;
-      if (emailFromBrick || payerEmail) {
-        body.payer_email = emailFromBrick || payerEmail;
-      }
       if (promoCode) body.promo_code = promoCode;
 
-      const res = await api.post('/memberships/subscribe-card', body);
-      const data = res.data;
-      if (data?.success) {
-        toast.success('¡Pago aprobado! Activando tu membresía…');
-        qc.invalidateQueries({ queryKey: ['memberships'] });
-        qc.invalidateQueries({ queryKey: ['auth', 'me'] });
-        onSuccess(data.welcome ?? {}, plan.name);
-      } else {
-        setLastError('Respuesta inesperada del servidor.');
+      const { data } = await api.post('/memberships/subscribe', body);
+      const url = data?.init_point;
+      if (!url) {
+        setLastError('No pudimos iniciar el pago. Intenta de nuevo.');
+        setSubmitting(false);
+        return;
       }
+      // Hand off to Mercado Pago. We don't reset `submitting` so the
+      // button stays disabled until the page actually navigates.
+      window.location.href = url;
     } catch (err: any) {
-      const status = err?.status ?? err?.response?.status;
       const code = err?.code ?? err?.response?.data?.error?.code;
       const message =
         err?.message ??
         err?.response?.data?.error?.message ??
-        'No pudimos procesar el pago.';
+        'No pudimos iniciar el pago.';
 
-      if (code === 'SELFIE_REQUIRED' || status === 400) {
+      if (code === 'SELFIE_REQUIRED') {
         toast.error(message);
-        if (code === 'SELFIE_REQUIRED') {
-          router.push('/portal/perfil');
-        }
-        setLastError(message);
-      } else if (status === 402 || code === 'PAYMENT_DECLINED') {
-        const friendly = friendlyMpError(message);
-        toast.error(friendly);
-        setLastError(`${friendly} Puedes intentar con otra tarjeta.`);
-      } else {
-        const friendly = friendlyMpError(message);
-        toast.error(friendly);
-        setLastError(friendly);
+        router.push('/portal/perfil');
       }
-    } finally {
+      const friendly = friendlyApiError(err, message);
+      toast.error(friendly);
+      setLastError(friendly);
       setSubmitting(false);
     }
   };
@@ -883,7 +780,7 @@ function StepPay({
         </div>
       )}
 
-      {/* 100%-off: skip Brick, show direct activation CTA */}
+      {/* 100%-off: skip MP, activate directly */}
       {is100Off ? (
         <button
           type="button"
@@ -893,48 +790,22 @@ function StepPay({
         >
           {submitting ? 'Activando…' : '✓ Activar membresía sin costo'}
         </button>
-      ) : /* Brick / fallbacks */
-      sdkAvailable === false || !publicKey ? (
-        <MpFallback publicKeyMissing={!publicKey} />
-      ) : sdkAvailable === null ? (
-        <div className="h-72 animate-pulse rounded-2xl bg-slate-100" />
       ) : (
-        <div className="rounded-2xl border border-slate-200 p-3 sm:p-4">
-          {!brickReady && (
-            <div className="mb-2 h-64 animate-pulse rounded-xl bg-slate-100" />
-          )}
-          {(() => {
-            const CardPayment: any = mpModules?.CardPayment;
-            if (!CardPayment) return null;
-            return (
-              <CardPayment
-                // key forces remount when amount changes so the brick
-                // re-initializes with the new transaction_amount.
-                key={`brick-${effectiveAmount}`}
-                initialization={{
-                  amount: effectiveAmount,
-                  payer: payerEmail ? { email: payerEmail } : undefined,
-                }}
-                customization={{
-                  paymentMethods: {
-                    minInstallments: 1,
-                    maxInstallments: 12,
-                  },
-                  visual: { style: { theme: 'default' } },
-                }}
-                onReady={() => setBrickReady(true)}
-                onSubmit={async (data: any) => {
-                  const formData = data?.formData ?? data;
-                  await handleSubmit(formData);
-                }}
-                onError={(error: any) => {
-                  console.error('[CardPayment onError]', error);
-                  setLastError(friendlyMpError(error));
-                }}
-              />
-            );
-          })()}
-        </div>
+        <>
+          <button
+            type="button"
+            onClick={startCheckoutPro}
+            disabled={submitting}
+            className="w-full rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 py-4 font-display text-lg font-bold text-white shadow-lg shadow-blue-600/25 transition hover:from-blue-700 hover:to-sky-600 disabled:opacity-60"
+          >
+            {submitting ? 'Redirigiendo a Mercado Pago…' : `Pagar $${effectiveAmount.toLocaleString('es-MX')} con Mercado Pago`}
+          </button>
+          <p className="text-center text-[11px] text-slate-500">
+            Te llevamos a Mercado Pago para completar el cobro de forma segura.
+            <br />
+            Aceptamos tarjetas, OXXO, transferencia y wallet de MP.
+          </p>
+        </>
       )}
 
       <div className="flex items-center justify-between pt-1">
@@ -951,37 +822,6 @@ function StepPay({
           <ShieldCheck className="h-4 w-4 text-blue-600" />
           Protegido · MP
         </p>
-      </div>
-    </div>
-  );
-}
-
-function MpFallback({ publicKeyMissing }: { publicKeyMissing: boolean }) {
-  return (
-    <div className="rounded-2xl bg-amber-50 p-5 ring-1 ring-amber-200">
-      <div className="flex items-start gap-3">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-          <ShieldCheck className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-amber-900">
-            Pagos con tarjeta no están habilitados todavía
-          </div>
-          <div className="mt-1 text-sm text-amber-800/90">
-            {publicKeyMissing ? (
-              <>
-                Falta configurar <code className="font-mono">NEXT_PUBLIC_MP_PUBLIC_KEY</code> en{' '}
-                <code className="font-mono">apps/web/.env.local</code>. Contacta al administrador.
-              </>
-            ) : (
-              <>
-                El paquete <code className="font-mono">@mercadopago/sdk-react</code> aún no está
-                instalado en el portal. Pídele al equipo que ejecute{' '}
-                <code className="font-mono">npm install @mercadopago/sdk-react</code>.
-              </>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );

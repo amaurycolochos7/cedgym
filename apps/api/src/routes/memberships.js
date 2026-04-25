@@ -196,9 +196,9 @@ function buildMembershipPreferenceArgs({ user, plan, billingCycle, amount, payme
         ],
         payer: { email: user.email, name: user.full_name || user.name },
         back_urls: {
-            success: `${webappPublicUrl()}/membership/success?payment=${paymentId}`,
-            failure: `${webappPublicUrl()}/membership/failed?payment=${paymentId}`,
-            pending: `${webappPublicUrl()}/membership/pending?payment=${paymentId}`,
+            success: `${webappPublicUrl()}/portal/membership?mp=success&payment=${paymentId}`,
+            failure: `${webappPublicUrl()}/portal/membership?mp=failed&payment=${paymentId}`,
+            pending: `${webappPublicUrl()}/portal/membership?mp=pending&payment=${paymentId}`,
         },
         notification_url: `${apiPublicUrl()}/webhooks/mercadopago`,
         external_reference: paymentId,
