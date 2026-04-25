@@ -270,6 +270,52 @@
   }
 }
 
+/* Kinetic discipline rotator (cycles one word at a time with slide-up).
+   10 disciplines + 1 duplicate of the first for a seamless loop =
+   11 slots. Each slot dwells for ~8% and transitions for ~2% → 20s total. */
+.discipline-rotator {
+  display: inline-block;
+  vertical-align: baseline;
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+  min-width: 6ch;
+}
+
+.discipline-rotator__list {
+  display: flex;
+  flex-direction: column;
+  animation: discipline-rotate 22s cubic-bezier(0.77, 0, 0.18, 1) infinite;
+}
+
+.discipline-rotator__word {
+  display: block;
+  height: 1em;
+  line-height: 1;
+  white-space: nowrap;
+  padding: 0 0.08em;
+}
+
+@keyframes discipline-rotate {
+  0%,   7%  { transform: translateY(calc(0 * -1em)); }
+  10%, 17%  { transform: translateY(calc(1 * -1em)); }
+  20%, 27%  { transform: translateY(calc(2 * -1em)); }
+  30%, 37%  { transform: translateY(calc(3 * -1em)); }
+  40%, 47%  { transform: translateY(calc(4 * -1em)); }
+  50%, 57%  { transform: translateY(calc(5 * -1em)); }
+  60%, 67%  { transform: translateY(calc(6 * -1em)); }
+  70%, 77%  { transform: translateY(calc(7 * -1em)); }
+  80%, 87%  { transform: translateY(calc(8 * -1em)); }
+  90%, 97%  { transform: translateY(calc(9 * -1em)); }
+  100%      { transform: translateY(calc(10 * -1em)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discipline-rotator__list {
+    animation: none;
+  }
+}
+
 @keyframes blob {
   0% {
     transform: translate(0px, 0px) scale(1);

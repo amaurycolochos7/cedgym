@@ -34,6 +34,19 @@ import { PlanCarousel } from '@/components/ui/plan-carousel';
 // let Next cache this page indefinitely.
 export const revalidate = 0;
 
+const DISCIPLINES = [
+  'Fuerza',
+  'HYROX',
+  'Powerlifting',
+  'Funcional',
+  'Football',
+  'Soccer',
+  'Básquet',
+  'Tenis',
+  'Boxeo',
+  'CrossFit',
+];
+
 type PlanId = 'STARTER' | 'PRO' | 'ELITE';
 
 interface PublicPlan {
@@ -530,37 +543,35 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Discipline marquee */}
-        <div className="mt-14">
-          <div className="mx-auto max-w-3xl px-6 text-center sm:px-8">
+        {/* Discipline word rotator — kinetic typography, no icons */}
+        <div className="mt-16">
+          <div className="mx-auto max-w-5xl px-6 text-center sm:px-8">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-600">
               Y en tu deporte
             </p>
-            <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Un coach. <span className="bg-gradient-to-r from-blue-600 to-sky-500 bg-clip-text text-transparent">Todas las disciplinas.</span>
-            </h3>
-          </div>
 
-          {/* Infinite horizontal ticker, pauses on hover */}
-          <div className="group relative mt-8 overflow-hidden py-2">
-            {/* Fade masks */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-slate-50 to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-slate-50 to-transparent" />
-
-            <div className="marquee-track flex w-max items-center gap-3 sm:gap-4">
-              {/* Duplicate the list twice so the -50% translate loops seamlessly */}
-              {[...Array(2)].flatMap((_, dup) =>
-                ['Fuerza', 'HYROX', 'Powerlifting', 'Funcional', 'Football', 'Soccer', 'Básquet', 'Tenis', 'Boxeo', 'CrossFit'].map((s, i) => (
-                  <span
-                    key={`${dup}-${i}`}
-                    className="inline-flex items-center gap-4 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm"
-                  >
-                    {s}
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
+            <h3 className="mt-5 font-display text-[44px] font-bold uppercase leading-[0.95] tracking-tight text-slate-900 sm:text-7xl lg:text-[96px]">
+              <span className="block">Un coach.</span>
+              <span className="mt-1 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 sm:gap-x-6">
+                <span className="text-slate-900">Domina</span>
+                <span
+                  aria-label={DISCIPLINES.join(', ')}
+                  className="discipline-rotator"
+                >
+                  {/* The inner list is translated up by 10% steps on each beat. */}
+                  <span className="discipline-rotator__list">
+                    {[...DISCIPLINES, DISCIPLINES[0]].map((name, i) => (
+                      <span
+                        key={i}
+                        className="discipline-rotator__word bg-gradient-to-r from-blue-600 via-sky-500 to-blue-600 bg-clip-text text-transparent"
+                      >
+                        {name}
+                      </span>
+                    ))}
                   </span>
-                ))
-              )}
-            </div>
+                </span>
+              </span>
+            </h3>
           </div>
         </div>
       </section>
