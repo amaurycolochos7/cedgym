@@ -301,6 +301,7 @@ export function applyPromoToAmount(promo, amountMxn, appliesTo) {
         appliesTo &&
         Array.isArray(promo.applies_to) &&
         promo.applies_to.length &&
+        !promo.applies_to.includes('ALL') &&
         !promo.applies_to.includes(appliesTo)
     ) {
         return { valid: false, reason: 'NOT_APPLICABLE', discount_mxn: 0, final_amount: amountMxn };
