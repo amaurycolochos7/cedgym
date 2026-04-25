@@ -13,6 +13,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { planDisplayName } from '@/lib/utils';
 import {
   staffPosApi,
   type PosMenu,
@@ -364,7 +365,7 @@ export default function StaffPOSPage() {
                   className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-blue-400 hover:shadow-md"
                 >
                   <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-blue-600">
-                    {m.plan}
+                    {planDisplayName(m.plan)}
                   </div>
                   <div className="font-semibold text-slate-900">{m.name}</div>
                   <div className="mt-2 text-lg font-bold text-blue-600">
@@ -419,7 +420,7 @@ export default function StaffPOSPage() {
                   {selectedMember.name}
                 </div>
                 <div className="truncate text-[11px] text-slate-500">
-                  {selectedMember.plan ?? 'Sin plan'}
+                  {selectedMember.plan ? planDisplayName(selectedMember.plan) : 'Sin plan'}
                   {selectedMember.days_remaining
                     ? ` — vence en ${selectedMember.days_remaining}d`
                     : selectedMember.expires_at
@@ -460,7 +461,7 @@ export default function StaffPOSPage() {
                       >
                         <div className="text-sm text-slate-900">{m.name}</div>
                         <div className="text-[11px] text-slate-500">
-                          {m.phone} · {m.plan ?? 'Sin plan'}
+                          {m.phone} · {m.plan ? planDisplayName(m.plan) : 'Sin plan'}
                         </div>
                       </button>
                     ))}

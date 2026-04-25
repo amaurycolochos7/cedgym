@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { Snowflake, RefreshCw, Calendar, Camera } from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
 import { PlansModal } from '@/components/portal/plans-modal';
-import { planDisplayName } from '@/lib/utils';
+import { planDisplayName, paymentStatusLabel } from '@/lib/utils';
 
 const BTN_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
@@ -208,7 +208,7 @@ export default function PortalMembershipPage() {
                           : 'text-slate-500 text-sm font-medium'
                       }
                     >
-                      {p.status}
+                      {paymentStatusLabel(p.status)}
                     </span>
                   </div>
                 ))}

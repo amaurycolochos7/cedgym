@@ -13,6 +13,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { planDisplayName, membershipStatusLabel } from '@/lib/utils';
 import {
   staffPosApi,
   type PaymentMethod,
@@ -143,8 +144,8 @@ export default function StaffMembersPage() {
                   />
                 </div>
                 <div className="truncate text-xs text-slate-500">
-                  {m.phone} · {m.membership?.plan ?? 'Sin plan'}
-                  {m.membership?.status ? ` · ${m.membership.status}` : ''}
+                  {m.phone} · {m.membership?.plan ? planDisplayName(m.membership.plan) : 'Sin plan'}
+                  {m.membership?.status ? ` · ${membershipStatusLabel(m.membership.status)}` : ''}
                 </div>
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">

@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
+import { planDisplayName } from '@/lib/utils';
 import { AIGenerationOverlay } from '@/components/portal/ai-generation-overlay';
 import { ExerciseMedia } from '@/components/portal/exercise-media';
 
@@ -466,7 +467,7 @@ function QuotaStatus({ quota }: { quota: AiQuota | null }) {
       <div className="flex items-center gap-2 text-sm text-slate-500">
         <Dumbbell className="w-4 h-4 text-blue-500" />
         <span>
-          Rutinas ilimitadas con tu plan {quota.plan ?? ''}.
+          Rutinas ilimitadas con tu plan {quota.plan ? planDisplayName(quota.plan) : ''}.
         </span>
       </div>
     );
@@ -555,7 +556,24 @@ function ActiveRoutineView({
     () => [...routine.days].sort((a, b) => a.day_of_week - b.day_of_week),
     [routine.days],
   );
-  const [activeDayIdx, setActiveDayIdx] = useState(0);
+
+  // Pick a sensible default tab for the member. We store
+  // day_of_week as 0=Monday…6=Sunday, but JS Date.getDay() returns
+  // 0=Sunday…6=Saturday. Shift with (+6) % 7 to match our convention.
+  // If today isn't a training day, land on the next upcoming training
+  // day (so a member opening the app on Sunday sees Monday, not Monday's
+  // stale top-of-list state).
+  const pickDefaultDayIdx = (days: RoutineDay[]): number => {
+    if (days.length === 0) return 0;
+    const today = (new Date().getDay() + 6) % 7;
+    const exact = days.findIndex((d) => d.day_of_week === today);
+    if (exact !== -1) return exact;
+    const upcoming = days.findIndex((d) => d.day_of_week > today);
+    return upcoming !== -1 ? upcoming : 0;
+  };
+  const [activeDayIdx, setActiveDayIdx] = useState(() =>
+    pickDefaultDayIdx(sortedDays),
+  );
   const [regenOpen, setRegenOpen] = useState(false);
 
   const activeDay = sortedDays[activeDayIdx];
@@ -756,6 +774,16 @@ function ActiveRoutineView({
                   key={day.id ?? `${day.day_of_week}-${idx}`}
                   type="button"
                   onClick={() => setActiveDayIdx(idx)}
+                  // On mount (or when the active idx is this pill),
+                  // pull it into view. Matters on mobile when the
+                  // default active day isn't "Lun" — without this,
+                  // someone opening the app on Thursday sees a
+                  // scrolled-off active pill.
+                  ref={(node) => {
+                    if (active && node) {
+                      node.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                    }
+                  }}
                   className={[
                     'snap-start shrink-0 relative flex items-center gap-2 pl-2 pr-4 py-2 rounded-full text-sm font-semibold transition-all',
                     active

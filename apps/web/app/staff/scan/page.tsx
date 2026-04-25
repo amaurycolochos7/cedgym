@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Camera, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
+import { planDisplayName } from '@/lib/utils';
 
 declare global { interface Window { Html5Qrcode: any } }
 
@@ -167,7 +168,7 @@ export default function StaffScanPage() {
                   {result.member?.name}
                 </div>
                 <div className="mt-1 text-sm text-slate-700">
-                  {result.member?.plan} · Vence{' '}
+                  {planDisplayName(result.member?.plan)} · Vence{' '}
                   {result.member?.expires_at?.slice(0, 10)}
                 </div>
                 <div className="mt-2 text-xs text-slate-500">

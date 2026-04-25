@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ShieldAlert, Search } from 'lucide-react';
 import { adminApi, type AuditEntry } from '@/lib/admin-api';
 import { useAuth } from '@/lib/auth';
+import { planDisplayName } from '@/lib/utils';
 
 const INPUT_CLS =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
@@ -196,7 +197,7 @@ export default function AuditPage() {
                       <div className="text-slate-600">
                         {userName && <span>{userName}</span>}
                         {userName && plan && ' · '}
-                        {plan && <span>{plan}</span>}
+                        {plan && <span>{planDisplayName(plan)}</span>}
                       </div>
                     )}
                     {!reason && !userName && !plan && meta && (
@@ -266,7 +267,7 @@ export default function AuditPage() {
                 <div className="text-xs text-slate-600">
                   {userName && <span>{userName}</span>}
                   {userName && plan && ' · '}
-                  {plan && <span>{plan}</span>}
+                  {plan && <span>{planDisplayName(plan)}</span>}
                 </div>
               )}
               {!reason && !userName && !plan && meta && (

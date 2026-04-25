@@ -31,6 +31,7 @@ import {
 import { StatusBadge } from '@/components/admin/status-badge';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminApi } from '@/lib/admin-api';
+import { planDisplayName, membershipStatusLabel } from '@/lib/utils';
 
 const BTN_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
@@ -180,9 +181,9 @@ export default function AdminMemberDetailPage() {
           <Section title="Membresía actual">
             <DetailGrid
               items={[
-                ['Plan', m?.plan_name ?? '—'],
-                ['Estado', m?.status ?? '—'],
-                ['Vence', m?.expires_at ?? '—'],
+                ['Plan', planDisplayName((m as any)?.membership?.plan ?? m?.plan_code)],
+                ['Estado', membershipStatusLabel((m as any)?.membership?.status)],
+                ['Vence', (m as any)?.membership?.expires_at ?? m?.expires_at ?? '—'],
               ]}
             />
           </Section>

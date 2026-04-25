@@ -11,6 +11,7 @@ import {
   Sparkles, ShoppingCart, Utensils, CheckCircle2, ArrowRight, Plus,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { planDisplayName } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { AIGenerationOverlay } from '@/components/portal/ai-generation-overlay';
 import { MealPlanAddonModal } from '@/components/portal/meal-plan-addon-modal';
@@ -757,7 +758,7 @@ function QuotaStatus({ quota }: { quota?: AiQuota }) {
     return (
       <div className="flex items-center gap-2 text-sm text-slate-500">
         <Apple className="w-4 h-4 text-blue-500" />
-        Planes alimenticios ilimitados con tu plan {quota.plan ?? 'actual'}.
+        Planes alimenticios ilimitados con tu plan {quota.plan ? planDisplayName(quota.plan) : 'actual'}.
       </div>
     );
   }

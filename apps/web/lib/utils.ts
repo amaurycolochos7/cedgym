@@ -69,3 +69,45 @@ export function planDisplayName(code?: string | null): string {
   if (!code) return '—';
   return PLAN_DISPLAY_NAMES[code] ?? code;
 }
+
+const MEMBERSHIP_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Activa',
+  EXPIRED: 'Vencida',
+  CANCELLED: 'Cancelada',
+  CANCELED: 'Cancelada',
+  FROZEN: 'Congelada',
+  PENDING: 'Pendiente',
+};
+
+export function membershipStatusLabel(code?: string | null): string {
+  if (!code) return '—';
+  const key = code.toUpperCase();
+  return MEMBERSHIP_STATUS_LABELS[key] ?? code;
+}
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  APPROVED: 'Pagado',
+  PENDING: 'Pendiente',
+  REJECTED: 'Rechazado',
+  REFUNDED: 'Reembolsado',
+  FAILED: 'Fallido',
+};
+
+export function paymentStatusLabel(code?: string | null): string {
+  if (!code) return '—';
+  const key = code.toUpperCase();
+  return PAYMENT_STATUS_LABELS[key] ?? code;
+}
+
+const USER_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Activo',
+  SUSPENDED: 'Suspendido',
+  INACTIVE: 'Inactivo',
+  PENDING: 'Pendiente',
+};
+
+export function userStatusLabel(code?: string | null): string {
+  if (!code) return '—';
+  const key = code.toUpperCase();
+  return USER_STATUS_LABELS[key] ?? code;
+}

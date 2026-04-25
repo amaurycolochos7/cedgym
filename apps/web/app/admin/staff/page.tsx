@@ -14,6 +14,7 @@ import {
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { userStatusLabel } from '@/lib/utils';
 
 const ROLE_LABEL: Record<string, string> = {
   SUPERADMIN: 'Super Admin',
@@ -206,7 +207,7 @@ export default function AdminStaffPage() {
                             : 'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200'
                         }
                       >
-                        {s.status}
+                        {userStatusLabel(s.status)}
                       </span>
                     </td>
                     <td className="px-4 py-3.5 text-slate-500 text-xs">
