@@ -8,6 +8,7 @@
  * marked with TODO and the call will surface as a 404 at runtime.
  */
 import { api } from './api';
+import { planDisplayName } from './utils';
 
 /* =========================================================================
  * Types (frontend-side; server is source of truth)
@@ -23,7 +24,6 @@ export interface AdminKpis {
   signups_mtd: number;
   signups_mtd_delta?: number;
   expiring_7d: number;
-  expiring_30d: number;
 }
 
 export interface RevenuePoint {
@@ -40,12 +40,6 @@ export interface CheckinHeatCell {
   day: number; // 0..6 (Mon=0)
   hour: number; // 0..23
   count: number;
-}
-
-export interface TopItem {
-  name: string;
-  value: number;
-  subtitle?: string;
 }
 
 export interface ChurnRiskMember {
@@ -378,18 +372,6 @@ export interface ExerciseBulkImportResult {
   errors: { index: number; error: string }[];
 }
 
-export interface ExpiredMember {
-  user_id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  plan: 'STARTER' | 'PRO' | 'ELITE' | string;
-  billing_cycle?: string;
-  expires_at: string;
-  days_since_expiry: number;
-  status: string;
-}
-
 export interface AuditEntry {
   id: string;
   action: string;
@@ -421,7 +403,6 @@ export const adminApi = {
         checkins_today: d.checkins_today ?? 0,
         signups_mtd: d.new_members_mtd ?? d.signups_mtd ?? 0,
         expiring_7d: d.expiring_7d ?? 0,
-        expiring_30d: d.expiring_30d ?? 0,
       } as AdminKpis;
     }),
 
@@ -470,29 +451,6 @@ export const adminApi = {
       return (matrix as CheckinHeatCell[]) ?? [];
     }),
 
-  topSports: () =>
-    api.get<any>('/admin/dashboard/top-sports').then((r) => {
-      const arr = r.data?.sports ?? [];
-      return arr.map(
-        (s: any): TopItem => ({
-          name: s.sport ?? s.name ?? '—',
-          value: Number(s.check_ins ?? s.value ?? 0),
-        }),
-      );
-    }),
-
-  topCoaches: () =>
-    api.get<any>('/admin/dashboard/top-coaches').then((r) => {
-      const arr = r.data?.coaches ?? [];
-      return arr.map(
-        (c: any): TopItem => ({
-          name: c.name ?? '—',
-          value: Number(c.attended ?? c.value ?? 0),
-          subtitle: c.trainer_id,
-        }),
-      );
-    }),
-
   churnRisk: () =>
     api.get<any>('/admin/dashboard/churn-risk').then((r) => {
       const users = r.data?.users ?? [];
@@ -505,7 +463,7 @@ export const adminApi = {
           expected_checkins: expected,
           actual_checkins: Number(u.check_ins ?? 0),
           attendance_pct: Math.round((Number(u.checkin_ratio ?? 0)) * 100),
-          plan_name: u.plan,
+          plan_name: planDisplayName(u.plan),
           expires_at: u.expires_at,
         }),
       );
@@ -524,7 +482,6 @@ export const adminApi = {
     q?: string;
     status?: string;
     plan?: string;
-    sport?: string;
     page?: number;
     page_size?: number;
   }) => {
@@ -537,7 +494,6 @@ export const adminApi = {
       ...(params.q && { search: params.q }),
       ...(params.status && { status: params.status }),
       ...(params.plan && { plan: params.plan }),
-      ...(params.sport && { sport: params.sport }),
     };
     return api
       .get<{ items: any[]; total: number; limit: number; offset: number }>(
@@ -557,7 +513,7 @@ export const adminApi = {
               | 'expired'
               | 'cancelled',
             plan_code: u.membership?.plan,
-            plan_name: u.membership?.plan,
+            plan_name: planDisplayName(u.membership?.plan),
             expires_at: u.membership?.expires_at,
             last_checkin_at: u.last_checkin_at,
             xp: u.xp,
@@ -677,7 +633,7 @@ export const adminApi = {
               | 'expired'
               | 'cancelled',
             plan_code: u.membership?.plan,
-            plan_name: u.membership?.plan,
+            plan_name: planDisplayName(u.membership?.plan),
             expires_at: u.membership?.expires_at,
             last_checkin_at: u.last_checkin_at,
             xp: u.xp,
@@ -711,27 +667,6 @@ export const adminApi = {
         expires_at: new Date().toISOString(),
         auto_renew: false,
       })
-      .then((r) => r.data),
-  listExpiredMemberships: () =>
-    api
-      .get<{
-        items: ExpiredMember[];
-        total: number;
-        template: string;
-      }>('/admin/memberships/expired')
-      .then((r) => r.data),
-  whatsappBulkCampaign: (input: {
-    user_ids: string[];
-    message_template: string;
-  }) =>
-    api
-      .post<{
-        ok: boolean;
-        campaign_id: string;
-        enqueued: number;
-        first_run_at: string;
-        last_run_at: string;
-      }>('/admin/campaigns/whatsapp-bulk', input)
       .then((r) => r.data),
   listAuditLog: (params?: {
     limit?: number;

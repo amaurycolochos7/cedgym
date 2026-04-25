@@ -18,7 +18,6 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
-  AlarmClock,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -40,7 +39,6 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Miembros', href: '/admin/miembros', icon: Users, group: 'Operación' },
   { label: 'Mi equipo', href: '/admin/staff', icon: UserCog, group: 'Operación' },
   { label: 'Membresías', href: '/admin/memberships', icon: CreditCard, group: 'Membresías' },
-  { label: 'Vencidas / Campañas', href: '/admin/memberships/expired', icon: AlarmClock, group: 'Membresías' },
   { label: 'Cursos', href: '/admin/courses', icon: GraduationCap, group: 'Operación' },
   { label: 'Ejercicios', href: '/admin/ejercicios', icon: Dumbbell, group: 'Operación' },
   { label: 'Pagos', href: '/admin/payments', icon: Receipt, group: 'Finanzas' },

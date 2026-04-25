@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────
 // Admin: members listing + quick actions.
 //
-//   GET    /admin/miembros                 — paginated list (search, status, plan, sport)
+//   GET    /admin/miembros                 — paginated list (search, status, plan)
 //   GET    /admin/miembros/:id             — full member profile
 //   POST   /admin/miembros                 — quick create (admin-initiated)
 //   PATCH  /admin/miembros/:id             — edit (name, status, notes)
@@ -27,7 +27,7 @@ export default async function adminMembersRoutes(fastify) {
   const adminOnly = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] };
 
   fastify.get('/admin/miembros', guard, async (req) => {
-    const { search, status, plan, sport, limit = 30, offset = 0 } = req.query;
+    const { search, status, plan, limit = 30, offset = 0 } = req.query;
     const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
 
     const where = {
@@ -42,11 +42,8 @@ export default async function adminMembersRoutes(fastify) {
           { phone:      { contains: search } },
         ],
       }),
-      ...((plan || sport) && {
-        membership: {
-          ...(plan  && { plan }),
-          ...(sport && { sport }),
-        },
+      ...(plan && {
+        membership: { plan },
       }),
     };
 
@@ -74,7 +71,6 @@ export default async function adminMembersRoutes(fastify) {
           ? {
               plan: u.membership.plan,
               status: u.membership.status,
-              sport: u.membership.sport,
               expires_at: u.membership.expires_at,
             }
           : null,

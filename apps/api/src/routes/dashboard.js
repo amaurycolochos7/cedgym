@@ -15,8 +15,6 @@ import {
     revenueByPeriod,
     membershipRetention,
     checkinsHeatmap,
-    topSports,
-    topCoaches,
     churnPrediction,
     overviewKpis,
 } from '../lib/analytics.js';
@@ -73,12 +71,6 @@ const heatmapQuery = z.object({
     days: z.coerce.number().int().min(1).max(180).default(30),
 });
 
-const sportsQuery = z.object({
-    period: z.enum(['7d', '30d', '90d', 'mtd']).default('30d'),
-});
-
-const coachesQuery = sportsQuery;
-
 const churnQuery = z.object({
     days: z.coerce.number().int().min(7).max(90).default(30),
     threshold: z.coerce.number().min(0.1).max(1).default(0.6),
@@ -134,28 +126,6 @@ export default async function dashboardRoutes(fastify) {
         const key = `dashboard:${ws}:heatmap:${hashParams(parsed.data)}`;
         return cached(redis, key, CACHE_TTL_SEC, () =>
             checkinsHeatmap(ws, { days: parsed.data.days })
-        );
-    });
-
-    // ─── GET /admin/dashboard/top-sports ────────────────────────
-    fastify.get('/admin/dashboard/top-sports', guard, async (req) => {
-        const parsed = sportsQuery.safeParse(req.query || {});
-        if (!parsed.success) throw err('BAD_QUERY', parsed.error.message, 400);
-        const ws = await adminWorkspace(fastify, req);
-        const key = `dashboard:${ws}:top-sports:${hashParams(parsed.data)}`;
-        return cached(redis, key, CACHE_TTL_SEC, () =>
-            topSports(ws, parsed.data.period)
-        );
-    });
-
-    // ─── GET /admin/dashboard/top-coaches ───────────────────────
-    fastify.get('/admin/dashboard/top-coaches', guard, async (req) => {
-        const parsed = coachesQuery.safeParse(req.query || {});
-        if (!parsed.success) throw err('BAD_QUERY', parsed.error.message, 400);
-        const ws = await adminWorkspace(fastify, req);
-        const key = `dashboard:${ws}:top-coaches:${hashParams(parsed.data)}`;
-        return cached(redis, key, CACHE_TTL_SEC, () =>
-            topCoaches(ws, parsed.data.period)
         );
     });
 

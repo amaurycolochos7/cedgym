@@ -176,94 +176,6 @@ export async function checkinsHeatmap(workspaceId, { days = 30 } = {}) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Top sports by check-ins.
-// We join check_ins → memberships (membership.sport) to get the
-// "sport the user is training for". Users without a sport are
-// grouped under 'UNSET'.
-// ──────────────────────────────────────────────────────────────
-export async function topSports(workspaceId, period = '30d') {
-    const { from, to } = periodRange(period);
-
-    const rows = await prisma.$queryRawUnsafe(
-        `
-        SELECT
-          COALESCE(m.sport::text, 'UNSET') AS sport,
-          COUNT(*)::bigint                 AS check_ins
-        FROM check_ins c
-        LEFT JOIN memberships m ON m.user_id = c.user_id
-        WHERE c.workspace_id = $1
-          AND c.scanned_at >= $2
-          AND c.scanned_at <  $3
-        GROUP BY sport
-        ORDER BY check_ins DESC
-        LIMIT 10
-        `,
-        workspaceId, from, to
-    );
-
-    return {
-        period,
-        from: from.toISOString(),
-        to:   to.toISOString(),
-        sports: rows.map((r) => ({
-            sport: r.sport,
-            check_ins: Number(r.check_ins || 0),
-        })),
-    };
-}
-
-// ──────────────────────────────────────────────────────────────
-// Top coaches — ranked by unique athletes that bought a product
-// they authored in the period (since we no longer track classes).
-// ──────────────────────────────────────────────────────────────
-export async function topCoaches(workspaceId, period = '30d') {
-    const { from, to } = periodRange(period);
-
-    const rows = await prisma.$queryRawUnsafe(
-        `
-        SELECT
-          p.author_id                       AS trainer_id,
-          COUNT(pp.id)::bigint              AS attendance,
-          COUNT(DISTINCT pp.user_id)::bigint AS unique_members
-        FROM product_purchases pp
-        JOIN digital_products p ON p.id = pp.product_id
-        WHERE p.workspace_id = $1
-          AND pp.access_granted_at >= $2
-          AND pp.access_granted_at <  $3
-        GROUP BY p.author_id
-        ORDER BY attendance DESC
-        LIMIT 10
-        `,
-        workspaceId, from, to
-    );
-
-    if (rows.length === 0) {
-        return { period, from: from.toISOString(), to: to.toISOString(), coaches: [] };
-    }
-
-    // Hydrate trainer names.
-    const ids = rows.map((r) => r.trainer_id).filter(Boolean);
-    const users = await prisma.user.findMany({
-        where: { id: { in: ids } },
-        select: { id: true, name: true, full_name: true, avatar_url: true },
-    });
-    const byId = new Map(users.map((u) => [u.id, u]));
-
-    return {
-        period,
-        from: from.toISOString(),
-        to:   to.toISOString(),
-        coaches: rows.map((r) => ({
-            trainer_id: r.trainer_id,
-            name: byId.get(r.trainer_id)?.full_name || byId.get(r.trainer_id)?.name || 'Desconocido',
-            avatar_url: byId.get(r.trainer_id)?.avatar_url || null,
-            attendance: Number(r.attendance || 0),
-            unique_members: Number(r.unique_members || 0),
-        })),
-    };
-}
-
-// ──────────────────────────────────────────────────────────────
 // Churn prediction — users with < 60% of "expected" check-ins.
 //
 // Heuristic:
@@ -345,7 +257,6 @@ export async function overviewKpis(workspaceId) {
     const startOfMonth = now.startOf('month').toDate();
     const startOfDay   = now.startOf('day').toDate();
     const in7          = now.add(7, 'day').toDate();
-    const in30         = now.add(30, 'day').toDate();
 
     const [
         { active_members },
@@ -353,7 +264,6 @@ export async function overviewKpis(workspaceId) {
         checkinsToday,
         newMembersMtd,
         expiring7,
-        expiring30,
     ] = await Promise.all([
         activeMembersCount(workspaceId),
         prisma.payment.aggregate({
@@ -378,13 +288,6 @@ export async function overviewKpis(workspaceId) {
                 expires_at: { gte: new Date(), lte: in7 },
             },
         }),
-        prisma.membership.count({
-            where: {
-                workspace_id: workspaceId,
-                status: 'ACTIVE',
-                expires_at: { gte: new Date(), lte: in30 },
-            },
-        }),
     ]);
 
     return {
@@ -394,7 +297,6 @@ export async function overviewKpis(workspaceId) {
         checkins_today: checkinsToday,
         new_members_mtd: newMembersMtd,
         expiring_7d: expiring7,
-        expiring_30d: expiring30,
         generated_at: new Date().toISOString(),
     };
 }
@@ -403,8 +305,6 @@ export default {
     revenueByPeriod,
     membershipRetention,
     checkinsHeatmap,
-    topSports,
-    topCoaches,
     churnPrediction,
     activeMembersCount,
     overviewKpis,

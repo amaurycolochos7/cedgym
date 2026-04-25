@@ -34,7 +34,6 @@ export default function AdminMiembrosPage() {
     q: '',
     status: '',
     plan: '',
-    sport: '',
   });
   const [modal, setModal] = React.useState(false);
   const [assignFor, setAssignFor] = React.useState<AdminMember | null>(null);
@@ -46,7 +45,6 @@ export default function AdminMiembrosPage() {
         q: filters.q || undefined,
         status: filters.status || undefined,
         plan: filters.plan || undefined,
-        sport: filters.sport || undefined,
         page: 1,
         page_size: 200,
       }),
@@ -149,7 +147,7 @@ export default function AdminMiembrosPage() {
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           className={`${INPUT_CLS} sm:max-w-xs`}
         />
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <select
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
@@ -171,20 +169,8 @@ export default function AdminMiembrosPage() {
             <option value="pro">Pro</option>
             <option value="elite">Élite</option>
           </select>
-          <select
-            value={filters.sport}
-            onChange={(e) => setFilters({ ...filters, sport: e.target.value })}
-            className={`${INPUT_CLS} sm:max-w-[160px]`}
-          >
-            <option value="">Deporte</option>
-            <option value="boxeo">Boxeo</option>
-            <option value="muaythai">Muay Thai</option>
-            <option value="mma">MMA</option>
-            <option value="crossfit">CrossFit</option>
-            <option value="funcional">Funcional</option>
-          </select>
 
-          <div className="col-span-3 mt-1 flex items-center gap-2 sm:col-span-1 sm:ml-auto sm:mt-0">
+          <div className="col-span-2 mt-1 flex items-center gap-2 sm:col-span-1 sm:ml-auto sm:mt-0">
             <button
               type="button"
               onClick={() => exportMut.mutate()}

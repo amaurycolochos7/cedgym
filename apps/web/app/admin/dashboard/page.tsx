@@ -8,7 +8,6 @@ import {
   ScanLine,
   UserPlus,
   CalendarClock,
-  AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { KpiCard } from '@/components/admin/kpi-card';
@@ -38,14 +37,6 @@ export default function AdminDashboardPage() {
   const heat = useQuery({
     queryKey: ['admin', 'heatmap'],
     queryFn: adminApi.checkinHeatmap,
-  });
-  const topSports = useQuery({
-    queryKey: ['admin', 'top-sports'],
-    queryFn: adminApi.topSports,
-  });
-  const topCoaches = useQuery({
-    queryKey: ['admin', 'top-coaches'],
-    queryFn: adminApi.topCoaches,
   });
   const churn = useQuery({
     queryKey: ['admin', 'churn'],
@@ -94,13 +85,6 @@ export default function AdminDashboardPage() {
           value={kpis.data?.expiring_7d ?? '—'}
           hint="Requiere follow-up"
           href="/admin/memberships?expiring=7d"
-        />
-        <KpiCard
-          icon={AlertTriangle}
-          label="Vencen en 30d"
-          value={kpis.data?.expiring_30d ?? '—'}
-          hint="Para campañas"
-          href="/admin/memberships/expired"
         />
       </div>
 
@@ -172,18 +156,8 @@ export default function AdminDashboardPage() {
         <Heatmap cells={heat.data ?? []} />
       </div>
 
-      {/* Tops + churn */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <TopList
-          title="Top 5 deportes"
-          subtitle="Check-ins últimos 30 días"
-          items={topSports.data ?? []}
-        />
-        <TopList
-          title="Top 5 coaches"
-          subtitle="Clases impartidas"
-          items={topCoaches.data ?? []}
-        />
+      {/* Churn */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
           <div className="mb-3 flex items-start justify-between">
             <div>
@@ -230,43 +204,3 @@ export default function AdminDashboardPage() {
   );
 }
 
-function TopList({
-  title,
-  subtitle,
-  items,
-}: {
-  title: string;
-  subtitle: string;
-  items: { name: string; value: number; subtitle?: string }[];
-}) {
-  const max = items.reduce((m, i) => Math.max(m, i.value), 1);
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="mb-3">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
-          {title}
-        </h3>
-        <p className="text-xs text-slate-500">{subtitle}</p>
-      </div>
-      <ul className="space-y-2">
-        {items.slice(0, 5).map((it) => (
-          <li key={it.name}>
-            <div className="mb-1 flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-900">{it.name}</span>
-              <span className="text-slate-600">{it.value}</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-blue-600 to-sky-500"
-                style={{ width: `${(it.value / max) * 100}%` }}
-              />
-            </div>
-          </li>
-        ))}
-        {items.length === 0 && (
-          <li className="text-xs text-slate-500">Sin datos todavía.</li>
-        )}
-      </ul>
-    </div>
-  );
-}
