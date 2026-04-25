@@ -46,7 +46,7 @@ export async function sendWhatsAppMessage({ workspaceId, phone, message, logger 
  * truncates long text and readers skim.
  */
 export function renderWelcomeMessage({ name, gymName = 'CED·GYM', appUrl }) {
-    const portal = appUrl || process.env.API_PUBLIC_URL?.replace('api.', 'cedgym.') || 'https://cedgym.187-77-11-79.sslip.io';
+    const portal = appUrl || process.env.WEBAPP_PUBLIC_URL || 'https://cedgym.mx';
     const firstName = (name || '').split(' ')[0] || '';
     const gender = detectGender(firstName);
     // Greeting adapts to detected gender; 'X' (unknown) falls back to
@@ -80,7 +80,7 @@ export function renderWelcomeMessage({ name, gymName = 'CED·GYM', appUrl }) {
  * Softer tone: "notamos que aún no eliges plan — acá tienes un código".
  */
 export function renderUpsellMessage({ name, gymName = 'CED·GYM', appUrl, promoCode }) {
-    const portal = appUrl || process.env.API_PUBLIC_URL?.replace('api.', 'cedgym.') || 'https://cedgym.187-77-11-79.sslip.io';
+    const portal = appUrl || process.env.WEBAPP_PUBLIC_URL || 'https://cedgym.mx';
     const firstName = (name || '').split(' ')[0] || 'amig@';
     const gender = detectGender(firstName);
     const listoLine =

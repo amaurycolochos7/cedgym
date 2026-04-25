@@ -60,7 +60,8 @@ services:
       API_PORT: 3001
       API_HOST: 0.0.0.0
       NODE_ENV: ${NODE_ENV:-production}
-      API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.187-77-11-79.sslip.io}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.cedgym.mx}
+      WEBAPP_PUBLIC_URL: ${WEBAPP_PUBLIC_URL:-https://cedgym.mx}
       CORS_ORIGINS: ${CORS_ORIGINS}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
@@ -140,6 +141,8 @@ services:
       REDIS_URL: redis://redis:6379
       WHATSAPP_BOT_URL: http://whatsapp-bot:3002
       WHATSAPP_BOT_KEY: ${WHATSAPP_BOT_KEY}
+      WEBAPP_PUBLIC_URL: ${WEBAPP_PUBLIC_URL:-https://cedgym.mx}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:-https://api.cedgym.mx}
       NODE_ENV: ${NODE_ENV:-production}
     depends_on:
       db:

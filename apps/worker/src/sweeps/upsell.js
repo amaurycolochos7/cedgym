@@ -30,7 +30,7 @@ async function sendWa({ workspaceId, phone, message, logger }) {
 }
 
 function renderUpsell({ name, appUrl }) {
-    const portal = appUrl || process.env.API_PUBLIC_URL?.replace('api.', 'cedgym.') || 'https://cedgym.187-77-11-79.sslip.io';
+    const portal = appUrl || process.env.WEBAPP_PUBLIC_URL || 'https://cedgym.mx';
     const firstName = (name || '').split(' ')[0] || 'amig@';
     return [
         `Hola ${firstName} 👋`,
