@@ -199,13 +199,13 @@ export default async function HomePage() {
               <h1 className="font-display text-5xl font-bold leading-[1.02] tracking-tight text-white sm:text-6xl md:text-7xl">
                 Diseñado por un{' '}
                 <span className="bg-gradient-to-r from-sky-300 to-white bg-clip-text text-transparent">
-                  campeón mundial.
+                  campeón internacional.
                 </span>
               </h1>
 
               <p className="mt-5 max-w-lg text-base leading-relaxed text-white/85 sm:text-lg">
                 Entrena con el Coach <strong className="text-white">Samuel Jeffery</strong>,
-                tricampeón mundial de powerlifting. Rutinas y plan de comidas diseñados
+                tricampeón internacional de powerlifting. Rutinas y plan de comidas diseñados
                 por el coach, listos para ti.
               </p>
 
@@ -329,7 +329,7 @@ export default async function HomePage() {
               </h2>
               <p className="mt-5 max-w-lg text-base leading-relaxed text-slate-600 sm:text-lg">
                 Recibes tu rutina semanal completa con el método del Coach Samuel —
-                el mismo sistema que lo llevó a 3 títulos mundiales. Videos, sets y
+                el mismo sistema que lo llevó a 3 títulos internacionales. Videos, sets y
                 descansos, listos para ti.
               </p>
 
@@ -713,7 +713,7 @@ export default async function HomePage() {
               </Link>
               <p className="mt-5 max-w-sm text-sm leading-relaxed text-slate-400">
                 Plataforma de preparación física para atletas. Método del Coach Samuel,
-                tricampeón mundial, puesto en tus manos.
+                tricampeón internacional, puesto en tus manos.
               </p>
               <div className="mt-5 flex gap-3">
                 <a href="https://instagram.com/ced.gym.chih" target="_blank" rel="noreferrer" aria-label="Instagram"

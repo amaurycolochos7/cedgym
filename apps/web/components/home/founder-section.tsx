@@ -40,17 +40,17 @@ const ACHIEVEMENTS: Achievement[] = [
     desc: 'Águilas de la UACH — Liga Nacional de Fut Bol Americano.' },
   { year: '2009', cat: 'football', title: 'Seleccionado Nacional',
     desc: 'Entre los mejores receptores de México.' },
-  { year: '2011', cat: 'power', title: 'Campeón Mundial — Palm Beach, FL',
+  { year: '2011', cat: 'power', title: 'Campeón Internacional — Palm Beach, FL',
     desc: 'Categoría hasta 75 kg.' },
-  { year: '2013', cat: 'power', title: 'Campeón Mundial — Richmond, VA',
+  { year: '2013', cat: 'power', title: 'Campeón Internacional — Richmond, VA',
     desc: 'Primer lugar, categoría hasta 75 kg.' },
-  { year: '2014', cat: 'power', title: '1° y 3° lugar Mundial — Las Vegas, NV',
+  { year: '2014', cat: 'power', title: '1° y 3° lugar Internacional — Las Vegas, NV',
     desc: 'Categoría hasta 83 kg.' },
   { year: '2015', cat: 'power', title: '2° lugar Panamericano — Ribeirão Preto, BR',
     desc: 'Categoría hasta 93 kg.' },
   { year: '2015', cat: 'rec', title: 'Teporaca',
     desc: 'Reconocimiento por su desempeño en competencias internacionales de Levantamiento de Potencia.' },
-  { year: '2016', cat: 'power', title: 'Mundial RAW — Killeen, TX',
+  { year: '2016', cat: 'power', title: 'Internacional RAW — Killeen, TX',
     desc: 'Categoría hasta 105 kg · lugar 15 de 50 competidores internacionales.' },
   { year: '2018', cat: 'power', title: '2° lugar Nacional — CDMX',
     desc: 'Categoría hasta 105 kg · total: 773 kg levantados.' },
@@ -61,7 +61,7 @@ const ACHIEVEMENTS: Achievement[] = [
 ];
 
 const STATS = [
-  { value: '3×', label: 'Mundial Powerlifting', Icon: Trophy },
+  { value: '3×', label: 'Internacional Powerlifting', Icon: Trophy },
   { value: '20+', label: 'Años en élite', Icon: Star },
   { value: '773kg', label: 'Total nacional 2018', Icon: Dumbbell },
   { value: '1°', label: 'TD inaugural UACH', Icon: Award },
@@ -86,7 +86,7 @@ export function FounderSection() {
             El coach detrás del método.
           </h2>
           <p className="mt-4 text-base text-slate-600 sm:text-lg">
-            M.A. Samuel Oswaldo Rodríguez Jeffery — tricampeón mundial de Powerlifting,
+            M.A. Samuel Oswaldo Rodríguez Jeffery — tricampeón internacional de Powerlifting,
             campeón nacional con las Águilas UACH y referente de preparación física
             en Chihuahua.
           </p>
@@ -123,7 +123,7 @@ export function FounderSection() {
                 </p>
               </div>
               <p className="text-[11px] font-medium uppercase tracking-widest text-blue-600">
-                3× Mundial · 20+ años
+                3× Internacional · 20+ años
               </p>
             </div>
           </div>
