@@ -1,5 +1,10 @@
 'use client';
 
+// Forces SSR per request — bypasses Next's static prerender, which
+// otherwise fails because useSearchParams() (read on MP redirect-back)
+// requires a Suspense boundary at build time.
+export const dynamic = 'force-dynamic';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
