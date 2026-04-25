@@ -194,7 +194,12 @@ function buildMembershipPreferenceArgs({ user, plan, billingCycle, amount, payme
                 unit_price: amount,
             },
         ],
-        payer: { email: user.email, name: user.full_name || user.name },
+        // No mandamos payer.email a propósito: si lo enviamos y MP detecta
+        // que ese email tiene cuenta MP, el Checkout Pro fuerza login
+        // antes de mostrar el formulario de tarjeta. Pasando solo `name`
+        // (o nada) evitamos eso. El email queda guardado en metadata para
+        // referencia interna y MP lo recolecta él mismo en el form.
+        payer: { name: user.full_name || user.name || undefined },
         back_urls: {
             success: `${webappPublicUrl()}/portal/membership?mp=success&payment=${paymentId}`,
             failure: `${webappPublicUrl()}/portal/membership?mp=failed&payment=${paymentId}`,

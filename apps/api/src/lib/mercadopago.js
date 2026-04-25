@@ -64,6 +64,7 @@ export async function createPreference({
     notification_url,
     external_reference,
     metadata,
+    payment_methods,
 }) {
     const client = getClient();
     const preference = new Preference(client);
@@ -79,6 +80,13 @@ export async function createPreference({
         payer: payer
             ? { email: payer.email, name: payer.name }
             : undefined,
+        // Excluding `account_money` (MP wallet) here is what makes Checkout
+        // Pro skip the "iniciá sesión en MP" wall and go straight to the
+        // card / OXXO form — otherwise MP recognizes the payer.email and
+        // forces the user to log in to that wallet first.
+        payment_methods: payment_methods || {
+            excluded_payment_types: [{ id: 'account_money' }],
+        },
         back_urls,
         // auto_return only works when success URL is set
         auto_return: back_urls?.success ? 'approved' : undefined,
