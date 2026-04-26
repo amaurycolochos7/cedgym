@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import {
   Apple, Flame, Dumbbell, Wheat, Droplet, Download,
   RefreshCw, ChevronDown, ChevronUp, AlertCircle, Clock, Lock,
-  Sparkles, ShoppingCart, Utensils, CheckCircle2, ArrowRight, Plus,
+  ShoppingCart, Utensils, CheckCircle2, ArrowRight, Plus,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { planDisplayName } from '@/lib/utils';
@@ -666,9 +666,8 @@ function NoPlanView({
             type="button"
             onClick={() => generate.mutate()}
             disabled={generate.isPending || disableGenerate}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold uppercase tracking-[0.12em] text-sm px-6 py-3.5 rounded-xl shadow-md shadow-blue-600/20 transition"
+            className="w-full sm:w-auto inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-base px-6 py-3.5 rounded-xl shadow-sm shadow-blue-600/15 transition"
           >
-            <Sparkles className="h-4 w-4" />
             {generate.isPending
               ? 'Generando…'
               : quotaExhausted
