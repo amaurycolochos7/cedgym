@@ -380,6 +380,188 @@ export default async function adminMembersRoutes(fastify) {
     };
   });
 
+  // ─── DELETE /admin/miembros/:id/routines/:purchaseId ───────────
+  // Revoke a member's access to a previously-granted routine. We
+  // delete the ProductPurchase row (cascade); the digital product
+  // itself stays intact for other members.
+  fastify.delete(
+    '/admin/miembros/:id/routines/:purchaseId',
+    adminOnly,
+    async (req, reply) => {
+      const workspaceId = req.user.workspace_id;
+      const purchase = await fastify.prisma.productPurchase.findFirst({
+        where: {
+          id: req.params.purchaseId,
+          user_id: req.params.id,
+          workspace_id: workspaceId,
+        },
+      });
+      if (!purchase) {
+        return reply.status(404).send({
+          error: { code: 'NOT_FOUND', message: 'Compra no encontrada' },
+        });
+      }
+      await fastify.prisma.productPurchase.delete({
+        where: { id: purchase.id },
+      });
+      return { success: true };
+    },
+  );
+
+  // ─── POST /admin/miembros/:id/routines ─────────────────────────
+  // Admin grants a routine (digital product) to a member without
+  // charging. Creates a ProductPurchase with price_paid_mxn=0 and
+  // a synthetic Payment row tagged as COMPLIMENTARY so the audit
+  // trail is consistent.
+  fastify.post('/admin/miembros/:id/routines', adminOnly, async (req, reply) => {
+    const workspaceId = req.user.workspace_id;
+    const productId = String(req.body?.product_id || '').trim();
+    if (!productId) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_BODY', message: 'product_id es requerido' },
+      });
+    }
+
+    const product = await fastify.prisma.digitalProduct.findFirst({
+      where: { id: productId, workspace_id: workspaceId },
+    });
+    if (!product) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'Producto no encontrado' },
+      });
+    }
+
+    const exists = await fastify.prisma.productPurchase.findUnique({
+      where: { user_id_product_id: { user_id: req.params.id, product_id: productId } },
+    });
+    if (exists) {
+      return reply.status(409).send({
+        error: { code: 'ALREADY_OWNED', message: 'El socio ya tiene esta rutina' },
+      });
+    }
+
+    const purchase = await fastify.prisma.productPurchase.create({
+      data: {
+        workspace_id: workspaceId,
+        user_id: req.params.id,
+        product_id: productId,
+        price_paid_mxn: 0,
+        author_payout_mxn: 0,
+        gym_revenue_mxn: 0,
+      },
+    });
+    return { success: true, purchase };
+  });
+
+  // ─── GET /admin/miembros/:id/meal-plans ────────────────────────
+  // Lista los planes alimenticios del socio (los que generó el AI o
+  // que el admin creó manualmente). Para el tab "Plan Alimenticio".
+  fastify.get('/admin/miembros/:id/meal-plans', guard, async (req) => {
+    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const items = await fastify.prisma.mealPlan.findMany({
+      where: { user_id: req.params.id, workspace_id: workspaceId },
+      orderBy: { created_at: 'desc' },
+    });
+
+    // Cuántos meals tiene cada plan, sin traer el detalle.
+    const counts = await Promise.all(
+      items.map((p) =>
+        fastify.prisma.meal
+          .count({ where: { meal_plan_id: p.id } })
+          .then((c) => [p.id, c]),
+      ),
+    );
+    const countByPlan = Object.fromEntries(counts);
+
+    return {
+      items: items.map((p) => ({
+        id: p.id,
+        name: p.name,
+        goal: p.goal,
+        calories_target: p.calories_target,
+        protein_g: p.protein_g,
+        carbs_g: p.carbs_g,
+        fats_g: p.fats_g,
+        restrictions: p.restrictions,
+        source: p.source,
+        is_active: p.is_active,
+        started_at: p.started_at,
+        ended_at: p.ended_at,
+        created_at: p.created_at,
+        meals_count: countByPlan[p.id] ?? 0,
+      })),
+      total: items.length,
+    };
+  });
+
+  // ─── DELETE /admin/miembros/:id/meal-plans/:planId ─────────────
+  // Borra completamente un plan alimenticio (cascade incluye Meals).
+  fastify.delete(
+    '/admin/miembros/:id/meal-plans/:planId',
+    adminOnly,
+    async (req, reply) => {
+      const workspaceId = req.user.workspace_id;
+      const plan = await fastify.prisma.mealPlan.findFirst({
+        where: {
+          id: req.params.planId,
+          user_id: req.params.id,
+          workspace_id: workspaceId,
+        },
+      });
+      if (!plan) {
+        return reply.status(404).send({
+          error: { code: 'NOT_FOUND', message: 'Plan no encontrado' },
+        });
+      }
+      await fastify.prisma.mealPlan.delete({ where: { id: plan.id } });
+      return { success: true };
+    },
+  );
+
+  // ─── POST /admin/miembros/:id/meal-plans/grant-addon ───────────
+  // El admin le regala el "meal plan addon" al socio (sin cobrar).
+  // Una vez con el addon, el socio puede generar un meal plan AI
+  // desde su /portal/plan-alimenticio sin pasar por checkout.
+  fastify.post(
+    '/admin/miembros/:id/meal-plans/grant-addon',
+    adminOnly,
+    async (req, reply) => {
+      const workspaceId = req.user.workspace_id;
+      const userId = req.params.id;
+
+      const user = await fastify.prisma.user.findFirst({
+        where: { id: userId, workspace_id: workspaceId },
+      });
+      if (!user) {
+        return reply.status(404).send({
+          error: { code: 'NOT_FOUND', message: 'Socio no encontrado' },
+        });
+      }
+
+      // Si ya tiene addon activo, no duplicamos.
+      const existing = await fastify.prisma.mealPlanAddon.findFirst({
+        where: { user_id: userId, status: 'ACTIVE' },
+      });
+      if (existing) {
+        return reply.status(409).send({
+          error: { code: 'ALREADY_HAS_ADDON', message: 'Ya tiene un addon activo' },
+        });
+      }
+
+      const addon = await fastify.prisma.mealPlanAddon.create({
+        data: {
+          workspace_id: workspaceId,
+          user_id: userId,
+          status: 'ACTIVE',
+          price_mxn: 0,
+          paid_mxn: 0,
+          activated_at: new Date(),
+        },
+      });
+      return { success: true, addon };
+    },
+  );
+
   // ─── DELETE /admin/miembros/:id ────────────────────────────────
   // Hard delete: cascade through all related rows in a single
   // transaction, then drop the user. Writes a best-effort audit entry.

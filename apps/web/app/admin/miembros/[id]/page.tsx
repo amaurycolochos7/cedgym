@@ -30,7 +30,9 @@ import {
 } from '@/components/ui/dialog';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { AssignPlanModal } from '@/components/admin/assign-plan-modal';
 import { adminApi } from '@/lib/admin-api';
+import { api } from '@/lib/api';
 import {
   planDisplayName,
   membershipStatusLabel,
@@ -59,6 +61,9 @@ export default function AdminMemberDetailPage() {
   const [del, setDel] = React.useState(false);
   const [waOpen, setWaOpen] = React.useState(false);
   const [waBody, setWaBody] = React.useState('');
+  const [assignOpen, setAssignOpen] = React.useState(false);
+
+  const membership = (m as any)?.membership ?? null;
 
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: ['admin', 'member', id] });
@@ -161,6 +166,7 @@ export default function AdminMemberDetailPage() {
           <TabsTrigger value="checkins">Check-ins</TabsTrigger>
           <TabsTrigger value="payments">Pagos</TabsTrigger>
           <TabsTrigger value="routines">Rutinas</TabsTrigger>
+          <TabsTrigger value="meal-plans">Plan alimenticio</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
 
@@ -188,32 +194,49 @@ export default function AdminMemberDetailPage() {
         </TabsContent>
 
         <TabsContent value="membership">
-          <Section title="Membresía actual">
-            <DetailGrid
-              items={[
-                [
-                  'Plan',
-                  planDisplayName(
-                    (m as any)?.membership?.plan ?? m?.plan_code,
-                  ),
-                ],
-                [
-                  'Estado',
-                  membershipStatusLabel((m as any)?.membership?.status),
-                ],
-                [
-                  'Inicia',
-                  formatDate((m as any)?.membership?.starts_at),
-                ],
-                [
-                  'Vence',
-                  formatDate(
-                    (m as any)?.membership?.expires_at ?? m?.expires_at,
-                  ),
-                ],
-              ]}
-            />
-          </Section>
+          {membership ? (
+            <Section title="Membresía actual">
+              <DetailGrid
+                items={[
+                  ['Plan', planDisplayName(membership.plan)],
+                  ['Estado', membershipStatusLabel(membership.status)],
+                  ['Inicia', formatDate(membership.starts_at)],
+                  ['Vence', formatDate(membership.expires_at)],
+                  ['Ciclo', membership.billing_cycle === 'MONTHLY' ? 'Mensual' : membership.billing_cycle],
+                  ['Precio', membership.price_mxn != null ? `$${Number(membership.price_mxn).toLocaleString('es-MX')} MXN` : '—'],
+                ]}
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAssignOpen(true)}
+                  className={BTN_SECONDARY}
+                >
+                  Renovar / cambiar plan
+                </button>
+              </div>
+            </Section>
+          ) : (
+            <div className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-slate-300 bg-white p-6">
+              <div>
+                <h3 className="font-display text-lg font-bold tracking-tight text-slate-900">
+                  Sin membresía activa
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Este socio no tiene membresía asignada. Asígnale una desde
+                  aquí — el flujo te deja elegir plan, fecha de inicio y
+                  método de pago (efectivo / terminal / cortesía).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssignOpen(true)}
+                className={BTN_PRIMARY}
+              >
+                Asignar membresía
+              </button>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="checkins">
@@ -224,6 +247,9 @@ export default function AdminMemberDetailPage() {
         </TabsContent>
         <TabsContent value="routines">
           <RoutinesTab memberId={id} />
+        </TabsContent>
+        <TabsContent value="meal-plans">
+          <MealPlansTab memberId={id} />
         </TabsContent>
         <TabsContent value="audit">
           <AuditTab memberId={id} />
@@ -324,6 +350,19 @@ export default function AdminMemberDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {m && (
+        <AssignPlanModal
+          open={assignOpen}
+          onClose={() => setAssignOpen(false)}
+          member={{
+            id: id,
+            name: m.full_name || m.name || '—',
+            phone: m.phone || '',
+          }}
+          onAssigned={() => invalidate()}
+        />
+      )}
     </div>
   );
 }
@@ -503,36 +542,287 @@ function PaymentsTab({ memberId }: { memberId: string }) {
 }
 
 function RoutinesTab({ memberId }: { memberId: string }) {
+  const qc = useQueryClient();
+  const [granting, setGranting] = React.useState(false);
+
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'member', memberId, 'routines'],
     queryFn: () => adminApi.memberRoutines(memberId),
     enabled: !!memberId,
   });
-  if (isLoading) return <EmptyState label="Cargando rutinas…" />;
+
+  const products = useQuery({
+    queryKey: ['admin', 'products', 'published'],
+    queryFn: async () => {
+      // Backend shape is { products: DigitalProduct[] }; published=true
+      // restricts to live catalog so we don't show drafts.
+      const r = await api.get<{ products: any[] }>(
+        '/admin/products?published=true&limit=50',
+      );
+      return Array.isArray(r.data?.products) ? r.data.products : [];
+    },
+    enabled: granting,
+    staleTime: 60_000,
+  });
+
+  const revoke = useMutation({
+    mutationFn: (purchaseId: string) =>
+      adminApi.revokeMemberRoutine(memberId, purchaseId),
+    onSuccess: () => {
+      toast.success('Acceso revocado');
+      qc.invalidateQueries({
+        queryKey: ['admin', 'member', memberId, 'routines'],
+      });
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.error?.message || 'No se pudo revocar'),
+  });
+
+  const grant = useMutation({
+    mutationFn: (productId: string) =>
+      adminApi.grantMemberRoutine(memberId, productId),
+    onSuccess: () => {
+      toast.success('Rutina asignada al socio');
+      setGranting(false);
+      qc.invalidateQueries({
+        queryKey: ['admin', 'member', memberId, 'routines'],
+      });
+    },
+    onError: (e: any) =>
+      toast.error(
+        e?.response?.data?.error?.message || 'No se pudo asignar la rutina',
+      ),
+  });
+
   const items = data?.items ?? [];
-  if (items.length === 0)
-    return <EmptyState label="Este socio no ha comprado rutinas todavía." />;
+  const productList = products.data ?? [];
+
   return (
-    <Section title={`Rutinas compradas · ${items.length}`}>
-      <ul className="divide-y divide-slate-200">
-        {items.map((r) => (
-          <li key={r.id} className="flex items-center justify-between gap-3 py-3">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-slate-900">
-                {r.title}
+    <Section title={`Rutinas asignadas · ${items.length}`}>
+      <div className="mb-3 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setGranting((v) => !v)}
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700"
+        >
+          {granting ? 'Cancelar' : '+ Asignar rutina'}
+        </button>
+      </div>
+
+      {granting && (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          {products.isLoading && (
+            <p className="text-sm text-slate-500">Cargando catálogo…</p>
+          )}
+          {!products.isLoading && productList.length === 0 && (
+            <p className="text-sm text-slate-500">
+              No hay rutinas publicadas en el catálogo.
+            </p>
+          )}
+          {!products.isLoading && productList.length > 0 && (
+            <ul className="max-h-64 space-y-1 overflow-y-auto">
+              {productList.map((p: any) => (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-slate-900">
+                      {p.title}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {[p.type, p.sport].filter(Boolean).join(' · ') || '—'} ·{' '}
+                      {MXN.format(p.price_mxn)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={grant.isPending}
+                    onClick={() => grant.mutate(p.id)}
+                    className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    Asignar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {isLoading ? (
+        <p className="text-sm text-slate-500">Cargando rutinas…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          Este socio no tiene rutinas asignadas.
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-200">
+          {items.map((r) => (
+            <li
+              key={r.id}
+              className="flex items-center justify-between gap-3 py-3"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-900">
+                  {r.title}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {[r.type, r.sport].filter(Boolean).join(' · ') || '—'} ·{' '}
+                  {formatDate(r.access_granted_at)} · {r.downloaded_times}{' '}
+                  descargas
+                </div>
               </div>
-              <div className="text-[11px] text-slate-500">
-                {[r.type, r.sport].filter(Boolean).join(' · ') || '—'} ·{' '}
-                {formatDate(r.access_granted_at)} · {r.downloaded_times}{' '}
-                descargas
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="text-sm font-bold tabular-nums text-blue-600">
+                  {r.price_paid_mxn === 0
+                    ? 'Cortesía'
+                    : MXN.format(r.price_paid_mxn)}
+                </span>
+                <button
+                  type="button"
+                  disabled={revoke.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(`¿Quitar el acceso a "${r.title}"?`)
+                    ) {
+                      revoke.mutate(r.id);
+                    }
+                  }}
+                  className="rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                  aria-label="Revocar"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
-            </div>
-            <span className="shrink-0 text-sm font-bold tabular-nums text-blue-600">
-              {MXN.format(r.price_paid_mxn)}
-            </span>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+const MEAL_GOAL_LABEL: Record<string, string> = {
+  WEIGHT_LOSS: 'Pérdida de peso',
+  MUSCLE_GAIN: 'Ganancia muscular',
+  MAINTENANCE: 'Mantenimiento',
+  PERFORMANCE: 'Rendimiento',
+};
+
+function MealPlansTab({ memberId }: { memberId: string }) {
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'member', memberId, 'meal-plans'],
+    queryFn: () => adminApi.memberMealPlans(memberId),
+    enabled: !!memberId,
+  });
+
+  const grantAddon = useMutation({
+    mutationFn: () => adminApi.grantMealPlanAddon(memberId),
+    onSuccess: () => {
+      toast.success(
+        'Addon activado. El socio ya puede generar su plan alimenticio gratis.',
+      );
+    },
+    onError: (e: any) => {
+      const code = e?.response?.data?.error?.code;
+      if (code === 'ALREADY_HAS_ADDON') {
+        toast.info('El socio ya tiene un addon activo.');
+      } else {
+        toast.error(
+          e?.response?.data?.error?.message || 'No se pudo activar el addon',
+        );
+      }
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (planId: string) =>
+      adminApi.deleteMemberMealPlan(memberId, planId),
+    onSuccess: () => {
+      toast.success('Plan eliminado');
+      qc.invalidateQueries({
+        queryKey: ['admin', 'member', memberId, 'meal-plans'],
+      });
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.error?.message || 'No se pudo eliminar'),
+  });
+
+  const items = data?.items ?? [];
+
+  return (
+    <Section title={`Planes alimenticios · ${items.length}`}>
+      <div className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-slate-700 ring-1 ring-blue-100">
+        <p>
+          <strong>Cómo funciona:</strong> los planes alimenticios los genera
+          el socio desde su portal con AI. Si quieres regalárselo (sin
+          cobrarle el addon de $499), usa el botón de abajo y queda activado.
+        </p>
+        <button
+          type="button"
+          onClick={() => grantAddon.mutate()}
+          disabled={grantAddon.isPending}
+          className="mt-2 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+        >
+          {grantAddon.isPending ? 'Activando…' : 'Activar plan alimenticio (cortesía)'}
+        </button>
+      </div>
+
+      {isLoading ? (
+        <p className="text-sm text-slate-500">Cargando planes…</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-slate-500">
+          Este socio aún no ha generado ningún plan alimenticio.
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-200">
+          {items.map((p) => (
+            <li key={p.id} className="py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="truncate text-sm font-semibold text-slate-900">
+                      {p.name}
+                    </div>
+                    {p.is_active && (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                        Activo
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-500">
+                    {MEAL_GOAL_LABEL[p.goal] ?? p.goal} ·{' '}
+                    {p.calories_target} kcal · {p.protein_g}P/{p.carbs_g}C/
+                    {p.fats_g}G · {p.meals_count} comidas ·{' '}
+                    {formatDate(p.created_at)}
+                  </div>
+                  {p.restrictions?.length > 0 && (
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      Restricciones: {p.restrictions.join(', ')}
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  disabled={remove.isPending}
+                  onClick={() => {
+                    if (window.confirm(`¿Eliminar el plan "${p.name}"?`)) {
+                      remove.mutate(p.id);
+                    }
+                  }}
+                  className="shrink-0 rounded-lg p-1.5 text-rose-600 hover:bg-rose-50"
+                  aria-label="Eliminar"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </Section>
   );
 }

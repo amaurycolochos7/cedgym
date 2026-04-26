@@ -604,6 +604,44 @@ export const adminApi = {
         total: number;
       }>(`/admin/miembros/${id}/routines`)
       .then((r) => r.data),
+  grantMemberRoutine: (memberId: string, productId: string) =>
+    api
+      .post(`/admin/miembros/${memberId}/routines`, { product_id: productId })
+      .then((r) => r.data),
+  revokeMemberRoutine: (memberId: string, purchaseId: string) =>
+    api
+      .delete(`/admin/miembros/${memberId}/routines/${purchaseId}`)
+      .then((r) => r.data),
+  memberMealPlans: (id: string) =>
+    api
+      .get<{
+        items: Array<{
+          id: string;
+          name: string;
+          goal: string;
+          calories_target: number;
+          protein_g: number;
+          carbs_g: number;
+          fats_g: number;
+          restrictions: string[];
+          source: string;
+          is_active: boolean;
+          started_at: string;
+          ended_at: string | null;
+          created_at: string;
+          meals_count: number;
+        }>;
+        total: number;
+      }>(`/admin/miembros/${id}/meal-plans`)
+      .then((r) => r.data),
+  deleteMemberMealPlan: (memberId: string, planId: string) =>
+    api
+      .delete(`/admin/miembros/${memberId}/meal-plans/${planId}`)
+      .then((r) => r.data),
+  grantMealPlanAddon: (memberId: string) =>
+    api
+      .post(`/admin/miembros/${memberId}/meal-plans/grant-addon`, {})
+      .then((r) => r.data),
   exportMembersCsv: () =>
     api
       .get<{ url: string }>('/admin/members/export.csv')
