@@ -574,7 +574,8 @@ function NoPlanView({
 
         <FormSection
           icon={<CheckCircle2 className="h-4 w-4" />}
-          title="Restricciones"
+          title="Tipo de dieta"
+          hint="Marca si sigues alguna. Si comes de todo, déjalo en blanco."
         >
           <CheckGrid
             options={RESTRICTIONS}
@@ -586,6 +587,7 @@ function NoPlanView({
         <FormSection
           icon={<AlertCircle className="h-4 w-4" />}
           title="Alergias"
+          hint="Marca lo que NO puedes comer por alergia."
         >
           <CheckGrid
             options={ALLERGIES}
