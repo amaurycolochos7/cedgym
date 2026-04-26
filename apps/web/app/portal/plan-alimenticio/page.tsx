@@ -100,19 +100,6 @@ const MEAL_ORDER: MealType[] = ['BREAKFAST', 'SNACK_AM', 'LUNCH', 'SNACK_PM', 'D
 const DAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']; // 0-indexed (0=Lun)
 const DAYS_ES_LONG = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-// Maps the canonical goal enum to a user-friendly Spanish label.
-// We render this as a separate badge instead of relying on the AI to embed
-// the goal inside plan.name (which produced odd phrasing like
-// "Mantenimiento de Jahazuel — 2309 kcal").
-const GOAL_ES: Record<string, string> = {
-  WEIGHT_LOSS: 'Bajada de grasa',
-  MUSCLE_GAIN: 'Hipertrofia',
-  MAINTENANCE: 'Mantenimiento',
-  STRENGTH: 'Fuerza',
-  ENDURANCE: 'Resistencia',
-  GENERAL_FITNESS: 'Bienestar',
-};
-
 const RESTRICTIONS = [
   { value: 'vegetarian', label: 'Vegetariano' },
   { value: 'vegan', label: 'Vegano' },
@@ -986,7 +973,6 @@ function PlanView({
   const titleText = userFirstName
     ? `Plan alimenticio de ${userFirstName}`
     : 'Tu plan alimenticio';
-  const goalLabel = plan.goal ? GOAL_ES[plan.goal] : null;
 
   const byDay = useMemo(() => {
     const map = new Map<number, Meal[]>();
@@ -1087,11 +1073,6 @@ function PlanView({
                   <Apple className="h-3 w-3" />
                   Plan activo
                 </span>
-                {goalLabel && (
-                  <span className="inline-flex items-center rounded-full bg-blue-500/15 ring-1 ring-blue-400/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-300">
-                    {goalLabel}
-                  </span>
-                )}
               </div>
               <h1 className="font-display mt-3 text-3xl sm:text-4xl lg:text-[2.6rem] leading-[1.05] text-white">
                 {titleText}
