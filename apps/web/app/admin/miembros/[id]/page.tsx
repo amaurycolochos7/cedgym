@@ -423,7 +423,7 @@ const PAYMENT_TYPE_LABEL: Record<string, string> = {
   COURSE: 'Curso',
   POS: 'POS',
   GIFT_CARD: 'Gift card',
-  MEAL_PLAN_ADDON: 'Add-on plan alimenticio',
+  MEAL_PLAN_ADDON: 'Plan extra (plan alimenticio)',
 };
 
 function CheckinsTab({ memberId }: { memberId: string }) {
@@ -709,7 +709,7 @@ function MealPlansTab({ memberId }: { memberId: string }) {
     mutationFn: () => adminApi.grantMealPlanAddon(memberId),
     onSuccess: () => {
       toast.success(
-        'Addon activado. El socio ya puede generar su plan alimenticio gratis.',
+        'Plan extra activado. El socio ya puede generar su plan alimenticio gratis.',
       );
       qc.invalidateQueries({
         queryKey: ['admin', 'member', memberId, 'meal-plans'],
@@ -719,9 +719,9 @@ function MealPlansTab({ memberId }: { memberId: string }) {
       // The api client normalizes errors to { status, code, message };
       // the raw axios shape (e.response.data.error) is no longer reachable.
       if (e?.code === 'ALREADY_HAS_ADDON') {
-        toast.info('El socio ya tiene un addon activo.');
+        toast.info('El socio ya tiene un plan extra activo.');
       } else {
-        toast.error(e?.message || 'No se pudo activar el addon');
+        toast.error(e?.message || 'No se pudo activar el plan extra');
       }
     },
   });
@@ -746,11 +746,11 @@ function MealPlansTab({ memberId }: { memberId: string }) {
       {activeAddon ? (
         <div className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-slate-700 ring-1 ring-emerald-200">
           <p className="font-semibold text-emerald-900">
-            ✓ Addon activo {activeAddon.is_courtesy ? '(cortesía)' : ''}
+            ✓ Plan extra activo {activeAddon.is_courtesy ? '(cortesía)' : ''}
           </p>
           <p className="mt-1">
             El socio ya puede entrar a su portal y generar su plan
-            alimenticio con AI. Cuando lo genere, este addon se consume y
+            alimenticio con AI. Cuando lo genere, este plan extra se consume y
             tendrá que comprar otro (o pedirte cortesía) para uno nuevo.
             {activeAddon.activated_at && (
               <span className="block text-xs text-slate-500">
@@ -768,7 +768,7 @@ function MealPlansTab({ memberId }: { memberId: string }) {
           <p>
             <strong>Cómo funciona:</strong> los planes alimenticios los
             genera el socio desde su portal con AI. Si quieres regalárselo
-            (sin cobrarle el addon de $499), usa el botón de abajo y queda
+            (sin cobrarle el plan extra de $499), usa el botón de abajo y queda
             activado.
           </p>
           <button

@@ -553,10 +553,10 @@ function MealPlanAddonEditor() {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-            Add-on
+            Plan extra
           </div>
           <h3 className="text-base font-bold text-slate-900">
-            Plan Alimenticio (Add-on)
+            Plan Alimenticio (Plan extra)
           </h3>
           <p className="mt-0.5 text-xs text-slate-500">
             Desbloqueo único del plan alimenticio para socios sin Élite.

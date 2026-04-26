@@ -104,7 +104,7 @@ function reasonLabel(reason?: string | null) {
     case 'MIN_AMOUNT':
       return 'El monto de compra no alcanza para este código.';
     case 'NOT_APPLICABLE':
-      return 'Ese código no aplica para este add-on.';
+      return 'Ese código no aplica para este plan extra.';
     case 'ERROR':
       return 'No pudimos validar el código. Intenta de nuevo.';
     default:
@@ -395,13 +395,13 @@ function StepPay({
       err?.message ?? err?.response?.data?.error?.message ?? 'No pudimos procesar el pago.';
 
     if (code === 'MEMBERSHIP_REQUIRED') {
-      toast.error('Necesitas una membresía activa para comprar este add-on.');
+      toast.error('Necesitas una membresía activa para comprar este plan extra.');
       router.push('/portal/membership');
       setLastError(message);
       return;
     }
     if (code === 'ADDON_ALREADY_ACTIVE') {
-      toast('Ya tienes un add-on activo — úsalo antes de comprar otro.', { icon: 'ℹ️' });
+      toast('Ya tienes un plan extra activo — úsalo antes de comprar otro.', { icon: 'ℹ️' });
       qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
       qc.invalidateQueries({ queryKey: ['addons', 'meal-plan', 'me'] });
       onCancel();
@@ -432,12 +432,12 @@ function StepPay({
 
       const { data } = await api.post('/addons/meal-plan/purchase-card', body);
       if (data?.success) {
-        toast.success('¡Add-on activado!');
+        toast.success('¡Plan extra activado!');
         qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
         qc.invalidateQueries({ queryKey: ['addons', 'meal-plan', 'me'] });
         onSuccess(data.welcome ?? {});
       } else {
-        setLastError('No pudimos activar el add-on. Intenta de nuevo.');
+        setLastError('No pudimos activar el plan extra. Intenta de nuevo.');
       }
     } catch (err: any) {
       handlePurchaseError(err);
@@ -463,7 +463,7 @@ function StepPay({
 
       const { data } = await api.post('/addons/meal-plan/purchase-card', body);
       if (data?.success) {
-        toast.success('¡Pago aprobado! Activando tu add-on…');
+        toast.success('¡Pago aprobado! Activando tu plan extra…');
         qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
         qc.invalidateQueries({ queryKey: ['addons', 'meal-plan', 'me'] });
         onSuccess(data.welcome ?? {});
@@ -725,7 +725,7 @@ function StepWelcome({
         <PartyPopper className="h-8 w-8" />
       </div>
       <h3 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-        {title ?? '¡Add-on activado!'}
+        {title ?? '¡Plan extra activado!'}
       </h3>
       <p className="mt-1 text-sm font-semibold uppercase tracking-[0.14em] text-blue-600">
         Plan alimenticio listo para generar

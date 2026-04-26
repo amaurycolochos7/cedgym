@@ -231,7 +231,7 @@ export default function AdminPaymentsPage() {
             onClick={() => seedDemo.mutate()}
             disabled={seedDemo.isPending}
             className={`${BTN_SECONDARY} w-full sm:w-auto`}
-            title="Crea 4 pagos demo: completo, con descuento, 100% OFF, add-on"
+            title="Crea 4 pagos demo: completo, con descuento, 100% OFF, plan extra"
           >
             <Sparkles className="h-4 w-4" />
             {seedDemo.isPending ? 'Creando…' : 'Cargar pagos demo'}

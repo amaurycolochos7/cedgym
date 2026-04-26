@@ -18,7 +18,7 @@ const LABEL_CLS = 'block text-xs font-semibold uppercase tracking-wider text-sla
 const APPLIES_OPTIONS: { value: string; label: string }[] = [
   { value: 'ALL', label: 'Todo' },
   { value: 'MEMBERSHIP', label: 'Membresía' },
-  { value: 'MEAL_PLAN_ADDON', label: 'Add-on plan alimenticio' },
+  { value: 'MEAL_PLAN_ADDON', label: 'Plan extra (plan alimenticio)' },
   { value: 'PRODUCT', label: 'Producto' },
   { value: 'COURSE', label: 'Curso' },
 ];
