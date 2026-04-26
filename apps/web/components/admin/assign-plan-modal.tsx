@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
  * =========================================================================*/
 
 type PlanId = 'STARTER' | 'PRO' | 'ELITE';
-type Cycle = 'monthly' | 'quarterly' | 'annual';
+type Cycle = 'monthly';
 type PaymentMethod = 'CASH' | 'TRANSFER' | 'TERMINAL' | 'COMPLIMENTARY';
 
 interface PublicPlan {
@@ -28,8 +28,6 @@ interface PublicPlan {
   name: string;
   tagline?: string;
   monthly_price_mxn: number;
-  quarterly_price_mxn: number;
-  annual_price_mxn: number;
   duration_days_monthly?: number;
   features: string[];
   popular?: boolean;
@@ -78,8 +76,6 @@ const PLAN_ICON: Record<PlanId, React.ComponentType<{ className?: string }>> = {
 
 const CYCLE_LABEL: Record<Cycle, string> = {
   monthly: 'Mensual',
-  quarterly: 'Trimestral',
-  annual: 'Anual',
 };
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
@@ -100,10 +96,8 @@ const METHOD_ORDER: PaymentMethod[] = [
  * Helpers
  * =========================================================================*/
 
-function priceFor(plan: PublicPlan, cycle: Cycle): number {
-  if (cycle === 'monthly') return plan.monthly_price_mxn;
-  if (cycle === 'quarterly') return plan.quarterly_price_mxn;
-  return plan.annual_price_mxn;
+function priceFor(plan: PublicPlan, _cycle: Cycle): number {
+  return plan.monthly_price_mxn;
 }
 
 /** Format a Date as `yyyy-MM-ddTHH:mm` for <input type="datetime-local">. */
@@ -303,31 +297,18 @@ export function AssignPlanModal({
           )}
         </section>
 
-        {/* ─── Cycle ────────────────────────────────────────── */}
+        {/* ─── Total ────────────────────────────────────────── */}
         <section>
-          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-            Ciclo de facturación
-          </h4>
-          <div className="flex flex-wrap items-center gap-2">
-            {(Object.keys(CYCLE_LABEL) as Cycle[]).map((c) => {
-              const active = cycle === c;
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setCycle(c)}
-                  className={cn(
-                    'rounded-full border px-4 py-1.5 text-sm font-semibold transition',
-                    active
-                      ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50',
-                  )}
-                >
-                  {CYCLE_LABEL[c]}
-                </button>
-              );
-            })}
-            <div className="ml-auto text-right">
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500">
+                Membresía mensual
+              </div>
+              <div className="text-sm font-medium text-slate-700">
+                Renovación cada 30 días
+              </div>
+            </div>
+            <div className="text-right">
               <div className="text-[11px] uppercase tracking-wider text-slate-500">
                 Total a cobrar
               </div>

@@ -53,8 +53,6 @@ interface PublicPlan {
   id: PlanId;
   name?: string;
   monthly_price_mxn: number;
-  quarterly_price_mxn?: number;
-  annual_price_mxn?: number;
   enabled?: boolean;
 }
 

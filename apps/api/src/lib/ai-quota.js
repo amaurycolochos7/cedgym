@@ -18,9 +18,9 @@ const DAY_MS = 86_400_000;
 const ACTIVE_STATUSES = new Set(['ACTIVE', 'TRIAL']);
 
 // Compute the start of the current 30-day sub-period within the
-// membership's billing cycle. For monthly plans this equals
-// `starts_at`. For quarterly/annual it walks forward in 30-day
-// chunks until it covers "now".
+// membership. For the only-monthly catalog this is essentially
+// `starts_at` (or floor(now-start)/30 for renewed memberships that
+// span multiple monthly cycles).
 function currentPeriodStart(membership, now = new Date()) {
     const start = new Date(membership.starts_at).getTime();
     const daysSince = Math.floor((now.getTime() - start) / DAY_MS);

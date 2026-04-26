@@ -38,7 +38,7 @@ type CartLine =
       kind: 'MEMBERSHIP';
       key: string;
       plan: 'STARTER' | 'PRO' | 'ELITE';
-      billing_cycle: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
+      billing_cycle: 'MONTHLY';
       name: string;
       price_mxn: number;
       qty: 1;

@@ -81,15 +81,13 @@ import { cn } from '@/lib/utils';
 /* ─── Types matching GET /memberships/plans ────────────────────────── */
 
 type PlanId = 'STARTER' | 'PRO' | 'ELITE';
-type Cycle = 'monthly' | 'quarterly' | 'annual';
+type Cycle = 'monthly';
 
 interface PlanDTO {
   id: PlanId;
   name: string;
   tagline?: string;
   monthly_price_mxn: number;
-  quarterly_price_mxn: number;
-  annual_price_mxn: number;
   duration_days_monthly?: number;
   features: string[];
   popular?: boolean;
@@ -171,12 +169,10 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
     [plansData, selectedPlan],
   );
 
-  const selectedAmount = useMemo(() => {
-    if (!selectedPlanDTO) return 0;
-    if (cycle === 'monthly') return selectedPlanDTO.monthly_price_mxn;
-    if (cycle === 'quarterly') return selectedPlanDTO.quarterly_price_mxn;
-    return selectedPlanDTO.annual_price_mxn;
-  }, [selectedPlanDTO, cycle]);
+  const selectedAmount = useMemo(
+    () => selectedPlanDTO?.monthly_price_mxn ?? 0,
+    [selectedPlanDTO],
+  );
 
   if (!open) return null;
 
@@ -408,10 +404,8 @@ function PlanCardModal({
       <Trophy className="h-5 w-5" strokeWidth={2.25} />
     );
 
-  // Monthly-only product: there's no cycle toggle anymore, so the
-  // card just shows the monthly price. `cycle` stays 'monthly' for
-  // the API contract; `quarterly_price_mxn` / `annual_price_mxn` are
-  // ignored in the UI.
+  // Monthly-only product: there's no cycle toggle, the card just
+  // shows the monthly price.
   const priceMain = plan.monthly_price_mxn;
   const popular = !!plan.popular;
 
@@ -653,14 +647,9 @@ function StepPay({
     setSubmitting(true);
     setLastError(null);
     try {
-      const cycleEnumMap: Record<string, string> = {
-        monthly: 'MONTHLY',
-        quarterly: 'QUARTERLY',
-        annual: 'ANNUAL',
-      };
       const body: Record<string, unknown> = {
         plan: plan.id,
-        billing_cycle: cycleEnumMap[cycle] ?? 'MONTHLY',
+        billing_cycle: 'MONTHLY',
       };
       if (promoCode) body.promo_code = promoCode;
 

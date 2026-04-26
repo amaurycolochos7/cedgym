@@ -308,15 +308,9 @@ function RenewModal({
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600">
                   Ciclo
                 </label>
-                <select
-                  value={cycle}
-                  onChange={(e) => setCycle(e.target.value as BillingCycle)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-                >
-                  <option value="MONTHLY">Mensual</option>
-                  <option value="QUARTERLY">Trimestral</option>
-                  <option value="ANNUAL">Anual</option>
-                </select>
+                <div className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700">
+                  Mensual
+                </div>
               </div>
               <div>
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600">
