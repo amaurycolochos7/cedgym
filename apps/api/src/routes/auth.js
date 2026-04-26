@@ -108,6 +108,14 @@ const resetSchema = z.object({
     new_password: passwordSchema,
 });
 
+// Magic-link reset: ref = OtpCode.id (cuid), token = the raw secret the
+// admin sent over WhatsApp. Both required — knowing only one is useless.
+const resetLinkSchema = z.object({
+    ref: z.string().min(8).max(40),
+    token: z.string().min(20).max(200),
+    new_password: passwordSchema,
+});
+
 const resendSchema = z.object({
     phone: phoneSchema,
     purpose: z.enum(['REGISTER', 'PASSWORD_RESET', 'LOGIN_2FA', 'PHONE_CHANGE']),
@@ -666,6 +674,67 @@ export default async function authRoutes(fastify) {
         return reply.send({ success: true });
     });
 
+    // ── POST /auth/password/reset-via-link ──────────────────
+    // Consumes the magic link the admin sent from /admin/miembros/:id/
+    // reset-password. The link carries (ref, token) — ref is the
+    // OtpCode row id, token is the raw secret. Both are validated, the
+    // password is updated, all refresh tokens revoked.
+    fastify.post('/password/reset-via-link', async (request, reply) => {
+        const parsed = resetLinkSchema.safeParse(request.body);
+        if (!parsed.success) {
+            return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
+        }
+        const { ref, token, new_password } = parsed.data;
+
+        const otp = await prisma.otpCode.findUnique({ where: { id: ref } });
+        if (!otp || otp.purpose !== 'PASSWORD_RESET_LINK') {
+            return reply.status(400).send(errPayload('LINK_INVALID', 'El enlace no es válido o ya fue usado.'));
+        }
+        if (otp.verified_at) {
+            return reply.status(400).send(errPayload('LINK_USED', 'Este enlace ya fue usado. Pídele otro al admin del gym.'));
+        }
+        if (otp.expires_at < new Date()) {
+            return reply.status(400).send(errPayload('LINK_EXPIRED', 'Este enlace expiró. Pídele otro al admin del gym.'));
+        }
+        const match = await compareOtpCode(token, otp.code_hash);
+        if (!match) {
+            return reply.status(400).send(errPayload('LINK_INVALID', 'El enlace no es válido.'));
+        }
+
+        const user = await prisma.user.findUnique({ where: { phone: otp.phone } });
+        if (!user) {
+            return reply.status(404).send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado'));
+        }
+
+        const password_hash = await bcrypt.hash(new_password, 12);
+
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: user.id },
+                data: { password_hash },
+            }),
+            prisma.otpCode.update({
+                where: { id: otp.id },
+                data: { verified_at: new Date() },
+            }),
+            prisma.refreshToken.updateMany({
+                where: { user_id: user.id, revoked_at: null },
+                data: { revoked_at: new Date() },
+            }),
+        ]);
+
+        audit(fastify, {
+            workspace_id: user.workspace_id,
+            actor_id: user.id,
+            action: 'auth.password.reset_via_link',
+            target_type: 'user',
+            target_id: user.id,
+            ...auditCtx(request),
+        });
+
+        return reply.send({ success: true });
+    });
+
     // ── POST /auth/otp/resend ───────────────────────────────
     fastify.post('/otp/resend', async (request, reply) => {
         const parsed = resendSchema.safeParse(request.body);
@@ -795,9 +864,13 @@ export default async function authRoutes(fastify) {
                 updates.email_verified_at = null;
             }
 
-            if (Object.keys(updates).length === 0) {
-                return reply.status(400).send(errPayload('NO_CHANGES', 'No hay cambios que guardar'));
-            }
+            // Any explicit save against the perfil page counts as
+            // "profile completed" — same convention as /auth/complete-profile.
+            // This silences the "Completa tu perfil" banner. Empty PATCH
+            // bodies are accepted just to flip this flag, since the
+            // perfil form may have nothing to change but the user still
+            // wants the nag to go away.
+            updates.profile_completed = true;
 
             let user;
             try {

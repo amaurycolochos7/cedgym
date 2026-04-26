@@ -135,18 +135,14 @@ export default function PortalPerfilPage() {
       if (trimmedEmail !== (currentEmail ?? '')) {
         payload.email = trimmedEmail === '' ? null : trimmedEmail;
       }
-      if (Object.keys(payload).length === 0) {
-        return { noop: true };
-      }
+      // Always send the patch — even with no field changes — so the
+      // backend can mark profile_completed=true and silence the
+      // "Completa tu perfil" banner.
       const res = await api.patch('/auth/me', payload);
       return res.data;
     },
-    onSuccess: (data) => {
-      if ((data as { noop?: boolean })?.noop) {
-        toast.info('No hubo cambios que guardar.');
-      } else {
-        toast.success('Datos guardados.');
-      }
+    onSuccess: () => {
+      toast.success('Datos guardados.');
       setEditingProfile(false);
       qc.invalidateQueries({ queryKey: ['auth', 'me'] });
       refreshMe();
