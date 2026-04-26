@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import type { ApiError } from '@/lib/schemas';
 
@@ -243,6 +244,7 @@ interface Props {
 export function FitnessProfileWizard({ initial }: Props) {
   const router = useRouter();
   const qc = useQueryClient();
+  const { refreshMe } = useAuth();
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<FitnessProfileDraft>(EMPTY_DRAFT);
 
@@ -407,6 +409,10 @@ export function FitnessProfileWizard({ initial }: Props) {
         /* ignore */
       }
       qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+      // refreshMe sincroniza el AuthContext (separado de React Query) — sin
+      // esto, el banner "Completa tu perfil" sigue saliendo aunque el flag
+      // ya esté true en el backend.
+      refreshMe();
       router.push('/portal/rutinas');
     },
     onError: (err) => {

@@ -97,12 +97,22 @@ export default async function usersRoutes(fastify) {
       });
     }
 
+    // Guardar el perfil fitness equivale a "perfil completo": el wizard
+    // recoge edad, peso y altura — exactamente lo que pide el banner del
+    // portal. Sin esto, el aviso "Completa tu perfil" se queda colgado
+    // aunque el usuario ya llenó todo.
     const updated = await fastify.prisma.user.update({
       where: { id: userId },
       data: {
         fitness_profile: parsed.data,
+        profile_completed: true,
       },
-      select: { id: true, fitness_profile: true, updated_at: true },
+      select: {
+        id: true,
+        fitness_profile: true,
+        profile_completed: true,
+        updated_at: true,
+      },
     });
 
     return { success: true, user: updated };
