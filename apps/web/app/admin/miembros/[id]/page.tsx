@@ -10,7 +10,6 @@ import {
   KeyRound,
   Pause,
   Play,
-  QrCode,
   Send,
   Trash2,
 } from 'lucide-react';
@@ -78,15 +77,6 @@ export default function AdminMemberDetailPage() {
     onError: () => toast.error('No se pudo enviar'),
   });
 
-  const openQr = async () => {
-    try {
-      const { url } = await adminApi.memberQrPng(id);
-      window.open(url, '_blank');
-    } catch {
-      toast.error('No se pudo abrir el QR');
-    }
-  };
-
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
@@ -143,10 +133,6 @@ export default function AdminMemberDetailPage() {
           >
             <Send className="h-3.5 w-3.5" />
             WhatsApp
-          </button>
-          <button type="button" onClick={openQr} className={BTN_SECONDARY}>
-            <QrCode className="h-3.5 w-3.5" />
-            Ver QR
           </button>
           <button
             type="button"
