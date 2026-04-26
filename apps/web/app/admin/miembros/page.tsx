@@ -118,7 +118,7 @@ export default function AdminMiembrosPage() {
           // "Asignar plan" solo aparece para miembros SIN membresía activa.
           // Los activos ya tienen un flujo de "Editar" en su detalle.
           const m = row.original;
-          if (m.status === 'active') return null;
+          if (m.status?.toUpperCase() === 'ACTIVE') return null;
           return (
             <button
               type="button"

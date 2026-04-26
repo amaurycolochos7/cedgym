@@ -99,7 +99,7 @@ export default function AdminMemberDetailPage() {
           </div>
         </div>
         <div className="hidden flex-wrap items-center gap-2 md:flex">
-          {m?.status === 'active' ? (
+          {m?.status?.toUpperCase() === 'ACTIVE' ? (
             <button
               type="button"
               onClick={() => setSuspend(true)}
