@@ -54,7 +54,7 @@ import { activateMembershipFromPayment } from './webhooks.js';
 // ─────────────────────────────────────────────────────────────────
 const subscribeBody = z.object({
     plan: z.enum(['STARTER', 'PRO', 'ELITE']),
-    billing_cycle: z.enum(['MONTHLY', 'QUARTERLY', 'ANNUAL']),
+    billing_cycle: z.enum(['MONTHLY']).default('MONTHLY'),
     promo_code: z.string().trim().min(1).max(64).optional(),
     sport: z.string().optional(),
 });
@@ -71,7 +71,7 @@ const subscribeBody = z.object({
 // ────────────────────────────────────────────────────────────────
 const subscribeCardBody = z.object({
     plan: z.enum(['STARTER', 'PRO', 'ELITE']),
-    cycle: z.enum(['monthly', 'quarterly', 'annual']),
+    cycle: z.enum(['monthly']).default('monthly'),
     token: z.string().min(8),
     payment_method_id: z.string().min(1).max(32),
     installments: z.number().int().min(1).max(12).default(1),
@@ -82,8 +82,6 @@ const subscribeCardBody = z.object({
 // Map Brick `cycle` → internal BillingCycle enum.
 const CYCLE_MAP = {
     monthly: 'MONTHLY',
-    quarterly: 'QUARTERLY',
-    annual: 'ANNUAL',
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -93,7 +91,7 @@ const CYCLE_MAP = {
 const adminAssignBody = z.object({
     user_id: z.string().min(1),
     plan: z.enum(['STARTER', 'PRO', 'ELITE']),
-    cycle: z.enum(['monthly', 'quarterly', 'annual']),
+    cycle: z.enum(['monthly']).default('monthly'),
     starts_at: z.string().datetime().optional(),
     note: z.string().trim().max(500).optional(),
     method: z
@@ -102,7 +100,7 @@ const adminAssignBody = z.object({
 });
 
 const renewBody = z.object({
-    billing_cycle: z.enum(['MONTHLY', 'QUARTERLY', 'ANNUAL']).optional(),
+    billing_cycle: z.enum(['MONTHLY']).optional(),
     promo_code: z.string().trim().min(1).max(64).optional(),
 });
 
@@ -240,12 +238,10 @@ export default async function membershipsRoutes(fastify) {
     // in-code PLAN_CATALOG (lib/memberships.js) is never mutated so
     // "reset to default" is as simple as clearing a field.
     //
-    // Body accepts any subset of: monthly_price_mxn, quarterly_price_mxn,
-    // annual_price_mxn, enabled. Missing keys are left untouched.
+    // Body accepts any subset of: monthly_price_mxn, enabled.
+    // Missing keys are left untouched.
     const planOverrideBody = z.object({
         monthly_price_mxn: z.number().int().min(0).max(1_000_000).optional(),
-        quarterly_price_mxn: z.number().int().min(0).max(1_000_000).optional(),
-        annual_price_mxn: z.number().int().min(0).max(1_000_000).optional(),
         enabled: z.boolean().optional(),
     });
 
@@ -442,7 +438,7 @@ export default async function membershipsRoutes(fastify) {
         {
             preHandler: [
                 fastify.authenticate,
-                fastify.requireRole('ATHLETE', 'TRAINER', 'RECEPTIONIST', 'ADMIN', 'SUPERADMIN'),
+                fastify.requireRole('ATHLETE', 'RECEPTIONIST', 'ADMIN', 'SUPERADMIN'),
             ],
         },
         async (req, reply) => {

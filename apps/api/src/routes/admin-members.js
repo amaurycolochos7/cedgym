@@ -23,7 +23,7 @@ import {
 } from '../lib/otp.js';
 
 export default async function adminMembersRoutes(fastify) {
-  const guard = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN', 'RECEPTIONIST', 'TRAINER')] };
+  const guard = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN', 'RECEPTIONIST')] };
   const adminOnly = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] };
 
   fastify.get('/admin/miembros', guard, async (req) => {

@@ -563,7 +563,7 @@ export default async function aiMealPlansRoutes(fastify) {
     // ─── GET /ai/meal-plans/:id/shopping-list ───────────────────
     fastify.get('/ai/meal-plans/:id/shopping-list', guard, async (req) => {
         const userId = req.user.sub || req.user.id;
-        const isStaff = ['TRAINER', 'ADMIN', 'SUPERADMIN'].includes(req.user.role);
+        const isStaff = ['ADMIN', 'SUPERADMIN'].includes(req.user.role);
 
         const plan = await prisma.mealPlan.findUnique({
             where: { id: req.params.id },

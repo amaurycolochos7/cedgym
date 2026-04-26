@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   UserPlus,
   Shield,
-  Dumbbell,
   UserCog,
   Trash2,
   Ban,
@@ -19,20 +18,17 @@ import { userStatusLabel } from '@/lib/utils';
 const ROLE_LABEL: Record<string, string> = {
   SUPERADMIN: 'Super Admin',
   ADMIN: 'Admin',
-  TRAINER: 'Entrenador',
   RECEPTIONIST: 'Recepción',
 };
 
 const ROLE_ICONS: Record<string, any> = {
   SUPERADMIN: Shield,
   ADMIN: UserCog,
-  TRAINER: Dumbbell,
   RECEPTIONIST: UserPlus,
 };
 
 const ROLE_DESC: Record<string, string> = {
   ADMIN: 'Gestiona todo el gym (excepto crear otros admins).',
-  TRAINER: 'Crea rutinas, imparte clases, toma mediciones.',
   RECEPTIONIST: 'Escanea QR, check-in manual, POS, asistencias.',
 };
 
@@ -100,8 +96,8 @@ export default function AdminStaffPage() {
       </div>
 
       {/* Role explanation cards */}
-      <div className="grid md:grid-cols-3 gap-3">
-        {(['ADMIN', 'TRAINER', 'RECEPTIONIST'] as const).map((r) => {
+      <div className="grid md:grid-cols-2 gap-3">
+        {(['ADMIN', 'RECEPTIONIST'] as const).map((r) => {
           const Icon = ROLE_ICONS[r];
           return (
             <div
@@ -330,11 +326,10 @@ function CreateStaffModal({
           <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Rol
           </label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
+          <div className="grid grid-cols-2 gap-2 mt-2">
             {(
               [
                 'RECEPTIONIST',
-                'TRAINER',
                 ...(isSuperAdmin ? ['ADMIN'] : []),
               ] as const
             ).map((r) => (

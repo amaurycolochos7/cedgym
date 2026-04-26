@@ -52,7 +52,7 @@ const listQuery = z.object({
 
 // ─── Helpers ─────────────────────────────────────────────────────
 function isStaffRole(role) {
-    return role === 'RECEPTIONIST' || role === 'TRAINER' || role === 'ADMIN' || role === 'SUPERADMIN';
+    return role === 'RECEPTIONIST' || role === 'ADMIN' || role === 'SUPERADMIN';
 }
 
 function apiPublicUrl() {
@@ -318,32 +318,14 @@ export default async function posRoutes(fastify) {
 
             const memberships = [];
             for (const plan of PLAN_CATALOG) {
-                memberships.push(
-                    {
-                        type: 'MEMBERSHIP',
-                        id: `${plan.code}_MONTHLY`,
-                        plan: plan.code,
-                        billing_cycle: 'MONTHLY',
-                        name: `${plan.name} · Mensual`,
-                        price_mxn: plan.monthly,
-                    },
-                    {
-                        type: 'MEMBERSHIP',
-                        id: `${plan.code}_QUARTERLY`,
-                        plan: plan.code,
-                        billing_cycle: 'QUARTERLY',
-                        name: `${plan.name} · Trimestral`,
-                        price_mxn: plan.quarterly,
-                    },
-                    {
-                        type: 'MEMBERSHIP',
-                        id: `${plan.code}_ANNUAL`,
-                        plan: plan.code,
-                        billing_cycle: 'ANNUAL',
-                        name: `${plan.name} · Anual`,
-                        price_mxn: plan.annual,
-                    }
-                );
+                memberships.push({
+                    type: 'MEMBERSHIP',
+                    id: `${plan.code}_MONTHLY`,
+                    plan: plan.code,
+                    billing_cycle: 'MONTHLY',
+                    name: `${plan.name} · Mensual`,
+                    price_mxn: plan.monthly,
+                });
             }
 
             const courses = courseRows.map((c) => ({

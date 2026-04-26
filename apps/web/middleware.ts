@@ -9,21 +9,12 @@ const AUTH_ONLY_PREFIXES = ['/dashboard', '/checkout', '/portal'];
 const ADMIN_ROLES = new Set(['ADMIN', 'SUPERADMIN']);
 
 /** Roles allowed to access /staff/*. */
-const STAFF_ROLES = new Set([
-  'RECEPTIONIST',
-  'TRAINER',
-  'ADMIN',
-  'SUPERADMIN',
-]);
+const STAFF_ROLES = new Set(['RECEPTIONIST', 'ADMIN', 'SUPERADMIN']);
 
-/** Roles allowed to access /trainer/*. */
-const TRAINER_ROLES = new Set(['TRAINER', 'ADMIN', 'SUPERADMIN']);
-
-/** /portal/* is the athlete-only experience. Anyone else who lands there
- *  (admin, trainer, receptionist) gets bounced to their own dashboard. */
+/** /portal/* is the athlete-only experience. Anyone else (admin,
+ *  receptionist) gets bounced to their own landing. */
 function landingForRole(role: string): string {
   if (role === 'SUPERADMIN' || role === 'ADMIN') return '/admin/dashboard';
-  if (role === 'TRAINER') return '/trainer/dashboard';
   if (role === 'RECEPTIONIST') return '/staff/scan';
   return '/portal/dashboard';
 }
@@ -33,10 +24,7 @@ function landingForRole(role: string): string {
  *
  * - /admin/*   → requires session + role in ADMIN_ROLES
  * - /staff/*   → requires session + role in STAFF_ROLES
- * - /trainer/* → requires session + role in TRAINER_ROLES
- * - /portal/*  → requires session AND role === 'ATHLETE' (admins/staff
- *                are redirected to their own dashboard so superadmins
- *                don't accidentally see the member-style portal UI)
+ * - /portal/*  → requires session AND role === 'ATHLETE'
  * - other protected prefixes → just require session
  *
  * Because Next.js edge middleware cannot call the API to resolve the user,
@@ -51,15 +39,12 @@ export function middleware(req: NextRequest) {
 
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
   const isStaff = pathname === '/staff' || pathname.startsWith('/staff/');
-  const isTrainer =
-    pathname === '/trainer' || pathname.startsWith('/trainer/');
   const isPortal = pathname === '/portal' || pathname.startsWith('/portal/');
   const isAuthOnly = AUTH_ONLY_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 
-  if (!isAdmin && !isStaff && !isTrainer && !isAuthOnly)
-    return NextResponse.next();
+  if (!isAdmin && !isStaff && !isAuthOnly) return NextResponse.next();
 
   const hasSession = req.cookies.get(SESSION_COOKIE)?.value === '1';
   if (!hasSession) {
@@ -72,12 +57,8 @@ export function middleware(req: NextRequest) {
 
   const role = req.cookies.get(ROLE_COOKIE)?.value ?? '';
 
-  if (isAdmin || isStaff || isTrainer) {
-    const allowed = isAdmin
-      ? ADMIN_ROLES.has(role)
-      : isTrainer
-        ? TRAINER_ROLES.has(role)
-        : STAFF_ROLES.has(role);
+  if (isAdmin || isStaff) {
+    const allowed = isAdmin ? ADMIN_ROLES.has(role) : STAFF_ROLES.has(role);
 
     if (!allowed) {
       const denyUrl = req.nextUrl.clone();
@@ -88,7 +69,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // Portal is athlete-only. Redirect non-athletes (admin/super/trainer/
+  // Portal is athlete-only. Redirect non-athletes (admin/super/
   // receptionist) to their proper landing so they never see the
   // member-style UI by mistake.
   if (isPortal && role && role !== 'ATHLETE') {
@@ -108,6 +89,5 @@ export const config = {
     '/portal/:path*',
     '/admin/:path*',
     '/staff/:path*',
-    '/trainer/:path*',
   ],
 };

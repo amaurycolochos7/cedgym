@@ -1,16 +1,16 @@
 // ─────────────────────────────────────────────────────────────────
 // Admin: staff management.
 // Allows an ADMIN/SUPERADMIN to create and manage users with
-// non-athlete roles (RECEPTIONIST, TRAINER, ADMIN).
+// non-athlete roles (RECEPTIONIST, ADMIN).
 //
 //   GET    /admin/staff
-//   POST   /admin/staff          — crear recepcionista, entrenador o admin
+//   POST   /admin/staff          — crear recepcionista o admin
 //   PATCH  /admin/staff/:id      — cambiar rol / nombre / status
 //   DELETE /admin/staff/:id      — eliminar (solo SUPERADMIN)
 // ─────────────────────────────────────────────────────────────────
 import bcrypt from 'bcryptjs';
 
-const STAFF_ROLES = ['RECEPTIONIST', 'TRAINER', 'ADMIN'];
+const STAFF_ROLES = ['RECEPTIONIST', 'ADMIN'];
 
 export default async function adminStaffRoutes(fastify) {
   const admin = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] };

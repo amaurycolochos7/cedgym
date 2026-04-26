@@ -83,9 +83,6 @@ export interface AdminMembershipPlan {
   code?: 'STARTER' | 'PRO' | 'ELITE' | string;
   name: string;
   monthly_price_mxn: number;
-  quarterly_price_mxn: number;
-  // Backend zod schema uses `annual_price_mxn` (PATCH /admin/memberships/plans/:code).
-  annual_price_mxn: number;
   features?: string[];
   enabled: boolean;
 }
@@ -303,7 +300,7 @@ export interface StaffUser {
   id: string;
   name: string;
   email: string;
-  role: 'RECEPTIONIST' | 'TRAINER' | 'ADMIN' | 'SUPERADMIN';
+  role: 'RECEPTIONIST' | 'ADMIN' | 'SUPERADMIN';
   enabled: boolean;
 }
 
@@ -573,16 +570,10 @@ export const adminApi = {
       return Array.isArray(d) ? d : (d?.plans ?? d?.items ?? []);
     }),
   updateMembershipPlan: (id: string, patch: Partial<AdminMembershipPlan>) => {
-    // Backend zod schema is strict and only accepts these four keys.
-    // The list endpoint returns extra fields (name, tagline, features…)
-    // that would fail zod's .strict() check, so we whitelist here.
+    // Backend zod schema is strict — whitelist only what the API accepts.
     const body: Record<string, unknown> = {};
     if (typeof patch.monthly_price_mxn === 'number')
       body.monthly_price_mxn = patch.monthly_price_mxn;
-    if (typeof patch.quarterly_price_mxn === 'number')
-      body.quarterly_price_mxn = patch.quarterly_price_mxn;
-    if (typeof patch.annual_price_mxn === 'number')
-      body.annual_price_mxn = patch.annual_price_mxn;
     if (typeof patch.enabled === 'boolean') body.enabled = patch.enabled;
     return api
       .patch(`/admin/memberships/plans/${id}`, body)

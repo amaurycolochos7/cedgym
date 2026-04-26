@@ -35,11 +35,12 @@ import {
 } from '../lib/memberships.js';
 import { createPreference } from '../lib/mercadopago.js';
 import { detectGender } from '../lib/gender.js';
+import { signWelcomeToken } from '../lib/jwt.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 const PAYMENT_METHODS = ['CASH', 'CARD_TERMINAL', 'MP_LINK'];
 const PLAN_ENUM = ['STARTER', 'PRO', 'ELITE'];
-const CYCLE_ENUM = ['MONTHLY', 'QUARTERLY', 'ANNUAL'];
+const CYCLE_ENUM = ['MONTHLY'];
 
 const registerBody = z.object({
     name: z.string().trim().min(2).max(200),
@@ -96,26 +97,35 @@ function generateTempPassword() {
     return out;
 }
 
-async function sendWalkinWelcome(fastify, { phone, name, tempPassword, qrDeepLink }) {
+async function sendWalkinWelcome(fastify, { phone, name, welcomeLink, planName }) {
     const url = process.env.WHATSAPP_BOT_URL;
     const key = process.env.WHATSAPP_BOT_KEY;
     if (!url || !key) return { ok: false, error: 'bot_not_configured' };
 
-    const gender = detectGender(name);
+    const firstName = (name || '').split(' ')[0] || '';
+    const gender = detectGender(firstName);
     const salutation =
         gender === 'M'
-            ? `🏋️ *¡Bienvenido a CED-GYM, ${name}!*`
+            ? `💪 ¡Hola ${firstName}! Bienvenido a *CED·GYM*.`
             : gender === 'F'
-            ? `🏋️ *¡Bienvenida a CED-GYM, ${name}!*`
-            : `🏋️ *¡Bienvenid@ a CED-GYM, ${name}!*`;
+            ? `💪 ¡Hola ${firstName}! Bienvenida a *CED·GYM*.`
+            : `💪 ¡Hola ${firstName}! Bienvenid@ a *CED·GYM*.`;
+
+    const planLine = planName
+        ? `Tu plan *${planName}* ya está activo.`
+        : `Tu membresía ya está activa.`;
 
     const message =
         `${salutation}\n\n` +
-        `Tu acceso digital está listo.\n\n` +
-        `📱 Teléfono: ${phone}\n` +
-        `🔑 Contraseña temporal: *${tempPassword}*\n\n` +
-        (qrDeepLink ? `Entra a tu portal: ${qrDeepLink}\n\n` : '') +
-        `Recuerda cambiar tu contraseña en la primera sesión. ¡Nos vemos en el gym!`;
+        `${planLine}\n\n` +
+        `Configura tu acceso (1 minuto):\n` +
+        `👉 ${welcomeLink}\n\n` +
+        `En el link vas a:\n` +
+        `🔐 Crear tu contraseña\n` +
+        `📸 Subir tu selfie\n` +
+        `🎟️ Recibir tu QR de acceso al gym\n\n` +
+        `_Importante:_ no podrás entrar al gym hasta que subas tu selfie.\n\n` +
+        `Cualquier duda, responde por aquí.`;
 
     try {
         const res = await fetch(`${url}/send-message`, {
@@ -254,7 +264,7 @@ export default async function staffRegisterRoutes(fastify) {
     const guard = {
         preHandler: [
             fastify.authenticate,
-            fastify.requireRole('RECEPTIONIST', 'TRAINER', 'ADMIN', 'SUPERADMIN'),
+            fastify.requireRole('RECEPTIONIST', 'ADMIN', 'SUPERADMIN'),
         ],
     };
 
@@ -383,19 +393,25 @@ export default async function staffRegisterRoutes(fastify) {
                 billingCycle: billing_cycle,
             });
 
+            // Welcome link — single-use signed token, valid 7 days. The
+            // socio uses this to set their password + upload selfie.
+            const welcomeToken = signWelcomeToken(fastify, user.id);
+            const welcomeLink = `${webappPublicUrl()}/welcome?t=${encodeURIComponent(welcomeToken)}`;
+            const planMeta = getPlanByCode(plan);
+
             // Fire-and-forget welcome.
             sendWalkinWelcome(fastify, {
                 phone,
                 name,
-                tempPassword,
-                qrDeepLink: `${webappPublicUrl()}/portal/qr`,
+                welcomeLink,
+                planName: planMeta?.name || plan,
             }).catch(() => {});
 
             return {
                 user_id: user.id,
                 membership_id: membership.id,
                 payment_id: payment.id,
-                temp_password: tempPassword,
+                welcome_link: welcomeLink,
                 init_point: null,
                 amount_mxn: basePrice,
             };
@@ -435,19 +451,25 @@ export default async function staffRegisterRoutes(fastify) {
             data: { mp_preference_id: mpPref.preferenceId },
         });
 
-        // Send welcome now — they get credentials and we'll wait for webhook.
+        // Welcome link — same flow as offline path. Webhook will activate
+        // the membership once MP confirms; the welcome link is independent
+        // of payment status (the socio can set password / selfie meanwhile).
+        const welcomeToken = signWelcomeToken(fastify, user.id);
+        const welcomeLink = `${webappPublicUrl()}/welcome?t=${encodeURIComponent(welcomeToken)}`;
+        const planMeta = getPlanByCode(plan);
+
         sendWalkinWelcome(fastify, {
             phone,
             name,
-            tempPassword,
-            qrDeepLink: `${webappPublicUrl()}/portal/qr`,
+            welcomeLink,
+            planName: planMeta?.name || plan,
         }).catch(() => {});
 
         return {
             user_id: user.id,
             membership_id: null,
             payment_id: payment.id,
-            temp_password: tempPassword,
+            welcome_link: welcomeLink,
             init_point: mpPref.init_point,
             sandbox_init_point: mpPref.sandbox_init_point,
             amount_mxn: basePrice,

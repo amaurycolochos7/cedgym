@@ -11,7 +11,7 @@
 //   GET  /products/me/purchases/:id         — viewer (content + ephemeral URLs)
 //   POST /products/me/purchases/:id/download — watermarked PDF
 //
-// Authors (TRAINER+):
+// Authors (ADMIN+):
 //   POST  /products                 — create (published=false, needs approval)
 //   PATCH /products/:id             — only author or admin
 //   GET   /products/me/authored     — my products as author
@@ -81,7 +81,7 @@ function isAdminRole(role) {
 }
 
 function isTrainerOrAbove(role) {
-    return role === 'TRAINER' || role === 'ADMIN' || role === 'SUPERADMIN';
+    return role === 'ADMIN' || role === 'SUPERADMIN';
 }
 
 function slugify(s) {
@@ -400,7 +400,7 @@ export default async function productsRoutes(fastify) {
     );
 
     // ═════════════════════════════════════════════════════════════
-    // Authors (TRAINER+)
+    // Authors (ADMIN+)
     // ═════════════════════════════════════════════════════════════
 
     // ─── POST /products ───────────────────────────────────────────

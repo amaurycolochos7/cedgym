@@ -30,9 +30,9 @@ const DEMO_PASSWORD = 'Demo2026!';
 
 // Mexico price anchors (MXN, integer cents-free).
 const PLAN_PRICES = {
-    STARTER: { MONTHLY: 599, QUARTERLY: 1590, ANNUAL: 5990 },
-    PRO:     { MONTHLY: 899, QUARTERLY: 2490, ANNUAL: 8990 },
-    ELITE:   { MONTHLY: 1490, QUARTERLY: 3990, ANNUAL: 14990 },
+    STARTER: { MONTHLY: 599 },
+    PRO:     { MONTHLY: 899 },
+    ELITE:   { MONTHLY: 1490 },
 };
 
 // Counters the final summary reads. Keeping them here so every
@@ -197,19 +197,19 @@ async function main() {
         workspace_id: WS, password_hash,
         email: 'coach.football@cedgym.mx',
         name: 'Carlos Ruiz', full_name: 'Carlos Alberto Ruiz Mendoza',
-        phone: '+5216141000010', role: 'TRAINER', gender: 'MALE',
+        phone: '+5216141000010', role: 'ADMIN', gender: 'MALE',
     });
     const trainerBoxing = await upsertUser({
         workspace_id: WS, password_hash,
         email: 'coach.boxing@cedgym.mx',
         name: 'Miguel Torres', full_name: 'Miguel Ángel Torres Hernández',
-        phone: '+5216141000011', role: 'TRAINER', gender: 'MALE',
+        phone: '+5216141000011', role: 'ADMIN', gender: 'MALE',
     });
     const trainerPower = await upsertUser({
         workspace_id: WS, password_hash,
         email: 'coach.powerlifting@cedgym.mx',
         name: 'Roberto Díaz', full_name: 'Roberto Iván Díaz Salazar',
-        phone: '+5216141000012', role: 'TRAINER', gender: 'MALE',
+        phone: '+5216141000012', role: 'ADMIN', gender: 'MALE',
     });
 
     // Athletes
@@ -261,7 +261,7 @@ async function main() {
     await upsertMembership(WS, maria.id, {
         plan: 'ELITE', status: 'ACTIVE',
         starts_at: daysFromNow(-30), expires_at: daysFromNow(60),
-        price_mxn: PLAN_PRICES.ELITE.QUARTERLY, billing_cycle: 'QUARTERLY',
+        price_mxn: PLAN_PRICES.ELITE.MONTHLY, billing_cycle: 'MONTHLY',
         sport: 'CROSSFIT',
     });
     await upsertMembership(WS, pedro.id, {
@@ -273,7 +273,7 @@ async function main() {
     await upsertMembership(WS, sofia.id, {
         plan: 'PRO', status: 'ACTIVE',
         starts_at: daysFromNow(-60), expires_at: daysFromNow(305),
-        price_mxn: PLAN_PRICES.PRO.ANNUAL, billing_cycle: 'ANNUAL',
+        price_mxn: PLAN_PRICES.PRO.MONTHLY, billing_cycle: 'MONTHLY',
         sport: 'GENERAL_FITNESS',
     });
     await upsertMembership(WS, jorge.id, {
@@ -649,10 +649,10 @@ async function main() {
         },
         {
             user_id: maria.id,
-            amount: PLAN_PRICES.ELITE.QUARTERLY,
+            amount: PLAN_PRICES.ELITE.MONTHLY,
             type: 'MEMBERSHIP',
             mp_payment_id: 'demo-mp-pay-0002',
-            description: 'Membresía ELITE trimestral',
+            description: 'Membresía ELITE mensual',
             paid_at: daysFromNow(-5),
         },
     ];

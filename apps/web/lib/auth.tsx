@@ -114,8 +114,6 @@ export function postLoginPathForRole(
     case 'SUPERADMIN':
     case 'ADMIN':
       return '/admin/dashboard';
-    case 'TRAINER':
-      return '/trainer/dashboard';
     case 'RECEPTIONIST':
       return '/staff/scan';
     case 'ATHLETE':

@@ -31,7 +31,7 @@ export interface NavItem {
   icon: LucideIcon;
   group?: string;
   /** Roles allowed to see this entry. If omitted, everyone in the variant sees it. */
-  roles?: ReadonlyArray<'SUPERADMIN' | 'ADMIN' | 'RECEPTIONIST' | 'TRAINER'>;
+  roles?: ReadonlyArray<'SUPERADMIN' | 'ADMIN' | 'RECEPTIONIST'>;
 }
 
 const ADMIN_NAV: NavItem[] = [

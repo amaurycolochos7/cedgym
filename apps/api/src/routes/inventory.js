@@ -61,7 +61,7 @@ const keyIndex = (ws) => `inventory:index:${ws}`;
 const keyAudit = (ws, sku) => `inventory:audit:${ws}:${sku}`;
 
 function isStaffRole(role) {
-    return role === 'RECEPTIONIST' || role === 'TRAINER' || role === 'ADMIN' || role === 'SUPERADMIN';
+    return role === 'RECEPTIONIST' || role === 'ADMIN' || role === 'SUPERADMIN';
 }
 
 // Shared internal helpers — also used from pos.js via imports.

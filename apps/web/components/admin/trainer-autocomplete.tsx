@@ -19,11 +19,7 @@ import { cn } from '@/lib/utils';
  *   />
  */
 
-type StaffRole =
-  | 'RECEPTIONIST'
-  | 'TRAINER'
-  | 'ADMIN'
-  | 'SUPERADMIN';
+type StaffRole = 'RECEPTIONIST' | 'ADMIN' | 'SUPERADMIN';
 
 export interface TrainerOption {
   id: string;
@@ -45,8 +41,8 @@ interface Props {
 export function TrainerAutocomplete({
   value,
   valueLabel,
-  placeholder = 'Buscar trainer…',
-  roles = ['TRAINER', 'ADMIN', 'SUPERADMIN'],
+  placeholder = 'Buscar staff…',
+  roles = ['ADMIN', 'SUPERADMIN'],
   onSelect,
   className,
   disabled,

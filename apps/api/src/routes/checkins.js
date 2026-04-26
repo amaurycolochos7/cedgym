@@ -8,7 +8,7 @@
 // Public scanner (no auth — a rotating QR is the only credential):
 //   POST /checkins/scan
 //
-// Staff (RECEPTIONIST/TRAINER/ADMIN/SUPERADMIN):
+// Staff (RECEPTIONIST/ADMIN/SUPERADMIN):
 //   POST /checkins/manual
 //   GET  /checkins/today
 //
@@ -259,6 +259,22 @@ export default async function checkinsRoutes(fastify) {
                 });
             }
 
+            // Selfie gate — the receptionist needs the selfie to identify
+            // the socio at the door, and the welcome onboarding makes the
+            // socio upload it as part of their first-login flow. Block QR
+            // entry until that's done so the system stays trustworthy.
+            if (!user.selfie_url) {
+                return reply.status(403).send({
+                    error: {
+                        code: 'SELFIE_MISSING',
+                        message: 'El socio aún no ha subido su selfie. Pídele que complete su onboarding desde el link de WhatsApp.',
+                        user_id: user.id,
+                        user_name: user.full_name || user.name,
+                    },
+                    statusCode: 403,
+                });
+            }
+
             const membership = user.membership;
             if (!membership) {
                 return reply.status(403).send({
@@ -343,6 +359,7 @@ export default async function checkinsRoutes(fastify) {
                     id: user.id,
                     name: user.full_name || user.name,
                     avatar_url: user.avatar_url || null,
+                    selfie_url: user.selfie_url || null,
                     plan: membership.plan,
                     expires_at: membership.expires_at,
                     current_streak_days: streakDays,
@@ -357,7 +374,7 @@ export default async function checkinsRoutes(fastify) {
         {
             preHandler: [
                 fastify.authenticate,
-                fastify.requireRole('RECEPTIONIST', 'TRAINER', 'ADMIN', 'SUPERADMIN'),
+                fastify.requireRole('RECEPTIONIST', 'ADMIN', 'SUPERADMIN'),
             ],
         },
         async (req) => {
@@ -436,7 +453,7 @@ export default async function checkinsRoutes(fastify) {
         {
             preHandler: [
                 fastify.authenticate,
-                fastify.requireRole('RECEPTIONIST', 'TRAINER', 'ADMIN', 'SUPERADMIN'),
+                fastify.requireRole('RECEPTIONIST', 'ADMIN', 'SUPERADMIN'),
             ],
         },
         async (req) => {

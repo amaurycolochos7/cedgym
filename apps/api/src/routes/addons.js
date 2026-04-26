@@ -242,7 +242,6 @@ export default async function addonsRoutes(fastify) {
                 fastify.authenticate,
                 fastify.requireRole(
                     'ATHLETE',
-                    'TRAINER',
                     'RECEPTIONIST',
                     'ADMIN',
                     'SUPERADMIN'

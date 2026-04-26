@@ -2,19 +2,19 @@
 // Body measurements routes.
 //
 // Authenticated:
-//   POST   /measurements                   (staff ≥ TRAINER OR self)
+//   POST   /measurements                   (admin/super OR self)
 //   GET    /measurements/me
 //   GET    /measurements/me/progress
 //   POST   /measurements/me/photo          (multipart → MinIO)
 //   DELETE /measurements/:id               (owner or admin)
 //
 // Staff:
-//   GET    /admin/measurements/:userId    (TRAINER / ADMIN / SUPERADMIN)
+//   GET    /admin/measurements/:userId    (ADMIN / SUPERADMIN)
 //
 // Notes:
 // - Users may record their OWN measurements from the app
 //   (self-weigh-in workflow). Recording for someone else requires
-//   TRAINER+ so we can attribute via `taken_by`.
+//   ADMIN+ so we can attribute via `taken_by`.
 // - Photo upload uses a very light-weight multipart parser so we
 //   don't have to add @fastify/multipart as a hard dependency. We
 //   simply consume the raw body into a Buffer; the UI sends a single
@@ -43,7 +43,7 @@ const createSchema = z.object({
     measured_at: z.string().datetime().optional(),
 });
 
-const STAFF_ROLES = ['TRAINER', 'ADMIN', 'SUPERADMIN'];
+const STAFF_ROLES = ['ADMIN', 'SUPERADMIN'];
 
 function isStaff(role) {
     return STAFF_ROLES.includes(role);
@@ -220,7 +220,7 @@ export default async function measurementsRoutes(fastify) {
     // ── GET /admin/measurements/:userId ───────────────────
     fastify.get(
         '/admin/measurements/:userId',
-        { preHandler: [fastify.authenticate, fastify.requireRole('TRAINER', 'ADMIN', 'SUPERADMIN')] },
+        { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] },
         async (req) => {
             const rows = await prisma.bodyMeasurement.findMany({
                 where: { user_id: req.params.userId },

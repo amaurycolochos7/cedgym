@@ -113,11 +113,7 @@ export const promocodeSchema = z.object({
 });
 export type PromocodeInput = z.infer<typeof promocodeSchema>;
 
-export const checkoutBillingCycleEnum = z.enum([
-  'monthly',
-  'quarterly',
-  'yearly',
-]);
+export const checkoutBillingCycleEnum = z.enum(['monthly']);
 export type BillingCycle = z.infer<typeof checkoutBillingCycleEnum>;
 
 /* =========================================================================
@@ -197,7 +193,6 @@ export type ChangePhoneInput = z.infer<typeof changePhoneSchema>;
 export type UserRole =
   | 'ATHLETE'
   | 'RECEPTIONIST'
-  | 'TRAINER'
   | 'ADMIN'
   | 'SUPERADMIN';
 

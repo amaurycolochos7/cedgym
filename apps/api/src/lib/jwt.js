@@ -5,7 +5,7 @@
 //
 // TTLs por rol (seguridad vs. UX):
 //   ADMIN/SUPERADMIN : 1h access / 24h refresh   (sensibilidad alta)
-//   TRAINER/RECEPTIONIST : 4h access / 3d refresh (turno operativo)
+//   RECEPTIONIST : 4h access / 3d refresh         (turno operativo)
 //   ATHLETE : 8h access / 30d refresh            (app fitness, quieren "siempre dentro")
 // ─────────────────────────────────────────────────────────────
 import crypto from 'node:crypto';
@@ -19,7 +19,6 @@ const DAY = 24 * HOUR;
 const TTL_BY_ROLE = {
     SUPERADMIN:   { access: 1 * HOUR, refresh: 24 * HOUR },
     ADMIN:        { access: 1 * HOUR, refresh: 24 * HOUR },
-    TRAINER:      { access: 4 * HOUR, refresh: 3 * DAY },
     RECEPTIONIST: { access: 4 * HOUR, refresh: 3 * DAY },
     ATHLETE:      { access: 8 * HOUR, refresh: 30 * DAY },
 };
@@ -77,3 +76,29 @@ export function refreshCookieOptions(role) {
 }
 
 export const REFRESH_COOKIE_NAME = 'cedgym_rt';
+
+// ─────────────────────────────────────────────────────────────
+// Welcome tokens — single-use, 7-day signed link a recién-inscrito
+// recibe por WhatsApp para crear su contraseña + subir selfie.
+// ─────────────────────────────────────────────────────────────
+const WELCOME_TTL_SEC = 7 * DAY;
+
+export function signWelcomeToken(fastify, userId) {
+    return fastify.jwt.sign(
+        { sub: userId, type: 'welcome' },
+        { expiresIn: WELCOME_TTL_SEC }
+    );
+}
+
+// Verifica un welcome token y devuelve el userId, o lanza err con
+// `code: WELCOME_TOKEN_INVALID` si está mal/expirado.
+export function verifyWelcomeToken(fastify, token) {
+    const decoded = fastify.jwt.verify(token); // throws on bad sig / expiry
+    if (decoded?.type !== 'welcome' || !decoded?.sub) {
+        const e = new Error('Token inválido');
+        e.code = 'WELCOME_TOKEN_INVALID';
+        e.statusCode = 401;
+        throw e;
+    }
+    return decoded.sub;
+}
