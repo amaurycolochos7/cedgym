@@ -249,31 +249,33 @@ function EditorialHero({
             className="absolute inset-0 h-full w-full object-cover"
             loading="eager"
           />
-          {/* Brand-tinted gradient — emerald → blue → dark — only on mobile */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/30 to-transparent md:hidden" />
+          {/* Heavier dark gradient on mobile so title + chips are readable
+              even when the underlying photo has light/orange tones (the
+              fruit-bowl image has bright strawberries near the top that
+              fight the eyebrow text). Goes nearly opaque at the bottom
+              where most of the text lives. */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-900/65 to-slate-900/15 md:hidden" />
 
-          {/* Mobile status chip — top-right of hero so it's visible at a glance */}
-          {statusChip && (
-            <div className="absolute top-3 right-3 md:hidden">
+          {/* Mobile title overlay. Status chip moved INSIDE this block,
+              above the eyebrow, so it never overlaps with the title or
+              competes with the eyebrow over the bright top of the image. */}
+          <div className="absolute inset-x-0 bottom-0 p-5 md:hidden">
+            {statusChip && (
               <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] shadow-sm backdrop-blur ${statusToneCls}`}
+                className={`mb-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] shadow-sm backdrop-blur ${statusToneCls}`}
               >
                 <CheckCircle2 className="h-3 w-3" />
                 {statusChip.label}
               </span>
-            </div>
-          )}
-
-          {/* Mobile title overlay */}
-          <div className="absolute inset-x-0 bottom-0 p-5 md:hidden">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85">
+            )}
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/90 [text-shadow:0_1px_4px_rgb(0_0_0/0.6)]">
               {eyebrow}
             </div>
-            <h1 className="font-display mt-1 text-3xl leading-[1.05] text-white">
+            <h1 className="font-display mt-1 text-3xl leading-[1.05] text-white [text-shadow:0_2px_8px_rgb(0_0_0/0.5)]">
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-2 max-w-md text-sm text-white/85">
+              <p className="mt-2 max-w-md text-sm text-white/90 [text-shadow:0_1px_4px_rgb(0_0_0/0.5)]">
                 {subtitle}
               </p>
             )}
@@ -282,7 +284,7 @@ function EditorialHero({
                 {chips.map((c) => (
                   <span
                     key={c}
-                    className="inline-flex items-center rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur"
+                    className="inline-flex items-center rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm"
                   >
                     {c}
                   </span>
