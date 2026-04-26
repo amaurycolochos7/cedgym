@@ -60,9 +60,9 @@ interface PublicPlan {
 // Used when the API is down so the landing still renders something sane
 // instead of an empty plan grid.
 const FALLBACK_PRICES: Record<PlanId, number> = {
-  STARTER: 599,
-  PRO: 999,
-  ELITE: 1590,
+  STARTER: 629,
+  PRO: 1049,
+  ELITE: 1659,
 };
 
 async function fetchPlans(): Promise<Record<PlanId, PublicPlan | null>> {

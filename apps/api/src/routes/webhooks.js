@@ -313,6 +313,23 @@ export async function activateMembershipFromPayment(fastify, payment) {
         }
     }
 
+    // First-time inscription: persist the timestamp on the user so we
+    // never charge it again on subsequent subscriptions / plan changes.
+    // Idempotent: if already set, leave the original timestamp.
+    if (meta.includes_inscription) {
+        try {
+            await prisma.user.updateMany({
+                where: { id: payment.user_id, inscription_paid_at: null },
+                data: { inscription_paid_at: new Date() },
+            });
+        } catch (e) {
+            fastify.log.warn(
+                { err: e, userId: payment.user_id, paymentId: payment.id },
+                '[mp-webhook] failed to mark inscription_paid_at'
+            );
+        }
+    }
+
     await fireEvent(isRenewal ? 'membership.renewed' : 'member.verified', {
         workspaceId: payment.workspace_id,
         userId: payment.user_id,

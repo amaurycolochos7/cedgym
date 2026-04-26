@@ -263,6 +263,10 @@ model User {
   profile_completed Boolean    @default(false)
   last_login_at     DateTime?
   fitness_profile   Json?
+  // Set the first time the user pays the one-time inscription fee
+  // (charged on first PRO/ELITE subscription). Existing users at
+  // cutover are backfilled to NOW() so they're exempt.
+  inscription_paid_at DateTime?
   created_at        DateTime   @default(now())
   updated_at        DateTime   @updatedAt
 

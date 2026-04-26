@@ -30,6 +30,8 @@ import {
     VALID_PLANS,
     VALID_CYCLES,
     PLAN_RANK,
+    INSCRIPTION_PRICE_MXN,
+    planRequiresInscription,
     getPlanPrice,
     getEffectivePlanPrice,
     getPlanByCode,
@@ -177,21 +179,32 @@ function welcomeCopyFor(plan) {
     };
 }
 
-// Build MP Checkout Pro arguments for a membership payment.
-function buildMembershipPreferenceArgs({ user, plan, billingCycle, amount, paymentId }) {
+// Build MP Checkout Pro arguments for a membership payment. When
+// `inscriptionAmount > 0` we attach a second line item so MP shows the
+// inscription as its own row in the checkout summary.
+function buildMembershipPreferenceArgs({ user, plan, billingCycle, amount, inscriptionAmount = 0, paymentId }) {
     const planMeta = getPlanByCode(plan);
+    const items = [
+        {
+            id: `${plan}_${billingCycle}`,
+            title: `Membresía ${planMeta?.name || plan} — ${billingCycle}`,
+            quantity: 1,
+            unit_price: amount,
+        },
+    ];
+    if (inscriptionAmount > 0) {
+        items.push({
+            id: 'INSCRIPTION_ONETIME',
+            title: 'Inscripción única',
+            quantity: 1,
+            unit_price: inscriptionAmount,
+        });
+    }
     return {
         userId: user.id,
         type: 'MEMBERSHIP',
         reference: `${plan}:${billingCycle}`,
-        items: [
-            {
-                id: `${plan}_${billingCycle}`,
-                title: `Membresía ${planMeta?.name || plan} — ${billingCycle}`,
-                quantity: 1,
-                unit_price: amount,
-            },
-        ],
+        items,
         // No mandamos payer.email a propósito: si lo enviamos y MP detecta
         // que ese email tiene cuenta MP, el Checkout Pro fuerza login
         // antes de mostrar el formulario de tarjeta. Pasando solo `name`
@@ -361,6 +374,8 @@ export default async function membershipsRoutes(fastify) {
             }
 
             // Apply promo (if any) — we still charge the discounted amount.
+            // Promo discounts the plan only; the inscription line is
+            // never reduced by promo codes.
             let amount = basePrice;
             let discount = 0;
             let promo = null;
@@ -377,13 +392,20 @@ export default async function membershipsRoutes(fastify) {
                 promo = res.promo;
             }
 
+            // Inscription: charged once on first PRO/ELITE subscription.
+            const inscriptionAmount =
+                planRequiresInscription(plan) && !user.inscription_paid_at
+                    ? INSCRIPTION_PRICE_MXN
+                    : 0;
+            const totalAmount = amount + inscriptionAmount;
+
             // Create the pending Payment first so we have a stable id
             // to use as MP's external_reference.
             const payment = await prisma.payment.create({
                 data: {
                     workspace_id: user.workspace_id,
                     user_id: user.id,
-                    amount,
+                    amount: totalAmount,
                     type: 'MEMBERSHIP',
                     reference: `${plan}:${billing_cycle}`,
                     description: `Membresía ${plan} ${billing_cycle}`,
@@ -392,9 +414,12 @@ export default async function membershipsRoutes(fastify) {
                         plan,
                         billing_cycle,
                         base_price: basePrice,
+                        plan_amount_mxn: amount,
                         discount_mxn: discount,
                         promo_code: promo?.code || null,
                         promo_id: promo?.id || null,
+                        includes_inscription: inscriptionAmount > 0,
+                        inscription_amount_mxn: inscriptionAmount,
                     },
                 },
             });
@@ -406,6 +431,7 @@ export default async function membershipsRoutes(fastify) {
                     plan,
                     billingCycle: billing_cycle,
                     amount,
+                    inscriptionAmount,
                     paymentId: payment.id,
                 })
             );
@@ -417,7 +443,9 @@ export default async function membershipsRoutes(fastify) {
 
             return {
                 payment_id: payment.id,
-                amount,
+                amount: totalAmount,
+                plan_amount_mxn: amount,
+                inscription_amount_mxn: inscriptionAmount,
                 discount_mxn: discount,
                 init_point: mpPref.init_point,
                 sandbox_init_point: mpPref.sandbox_init_point,
@@ -483,8 +511,19 @@ export default async function membershipsRoutes(fastify) {
                 'MEMBERSHIP'
             );
 
+            // Inscription: charged once on first PRO/ELITE subscription.
+            // Promo discounts the plan only; the inscription line is
+            // never reduced by promo codes.
+            const inscriptionAmount =
+                planRequiresInscription(plan) && !user.inscription_paid_at
+                    ? INSCRIPTION_PRICE_MXN
+                    : 0;
+            const totalAmount = amount + inscriptionAmount;
+
             const planMeta = getPlanByCode(plan);
-            const description = `Membresía ${planMeta?.name || plan} — ${billingCycle}`;
+            const description = inscriptionAmount > 0
+                ? `Membresía ${planMeta?.name || plan} — ${billingCycle} + Inscripción`
+                : `Membresía ${planMeta?.name || plan} — ${billingCycle}`;
             const effectivePayerEmail = payer_email || user.email || undefined;
 
             // 1) Create the local PENDING Payment first so we have a
@@ -493,7 +532,7 @@ export default async function membershipsRoutes(fastify) {
                 data: {
                     workspace_id: user.workspace_id,
                     user_id: user.id,
-                    amount,
+                    amount: totalAmount,
                     type: 'MEMBERSHIP',
                     reference: `${plan}:${billingCycle}`,
                     description,
@@ -502,9 +541,12 @@ export default async function membershipsRoutes(fastify) {
                         plan,
                         billing_cycle: billingCycle,
                         base_price: basePrice,
+                        plan_amount_mxn: amount,
                         discount_mxn: discount,
                         promo_code: promo?.code || null,
                         promo_id: promo?.id || null,
+                        includes_inscription: inscriptionAmount > 0,
+                        inscription_amount_mxn: inscriptionAmount,
                         flow: 'card_brick',
                         payment_method_id,
                         installments,
@@ -512,15 +554,10 @@ export default async function membershipsRoutes(fastify) {
                 },
             });
 
-            // 1.5) Promo 100% bypass — if the resolved amount is 0 MXN
-            // (e.g. a courtesy/test code that wipes the whole charge)
-            // Mercado Pago will reject the transaction anyway. Mark the
-            // Payment as APPROVED ourselves, activate the membership
-            // synchronously via the shared helper, and short-circuit
-            // before touching MP. The activation helper also bumps the
-            // promo used_count via meta.promo_id, so we don't need to
-            // bump it here.
-            if (amount === 0) {
+            // 1.5) Promo 100% bypass — only triggers when the *total*
+            // (plan + inscription) is 0. A promo that wipes the plan to
+            // 0 but leaves an inscription standing still goes through MP.
+            if (totalAmount === 0) {
                 const approvedPayment = await prisma.payment.update({
                     where: { id: payment.id },
                     data: {
@@ -573,6 +610,8 @@ export default async function membershipsRoutes(fastify) {
                     payment: {
                         id: approvedPayment.id,
                         amount: approvedPayment.amount,
+                        plan_amount_mxn: amount,
+                        inscription_amount_mxn: inscriptionAmount,
                         status: approvedPayment.status,
                         mp_payment_id: null,
                         discount_mxn: discount,
@@ -582,11 +621,12 @@ export default async function membershipsRoutes(fastify) {
                 };
             }
 
-            // 2) Charge MP via the Brick token.
+            // 2) Charge MP via the Brick token. Total = plan (post-promo)
+            // + inscription (when applicable). MP sees a single charge.
             let mpResp;
             try {
                 mpResp = await createCardPayment({
-                    transaction_amount: amount,
+                    transaction_amount: totalAmount,
                     token,
                     payment_method_id,
                     installments,
@@ -598,6 +638,8 @@ export default async function membershipsRoutes(fastify) {
                         billing_cycle: billingCycle,
                         workspace_id: user.workspace_id,
                         user_id: user.id,
+                        includes_inscription: inscriptionAmount > 0,
+                        inscription_amount_mxn: inscriptionAmount,
                     },
                 });
             } catch (e) {
@@ -690,6 +732,8 @@ export default async function membershipsRoutes(fastify) {
                     payment: {
                         id: updatedPayment.id,
                         amount: updatedPayment.amount,
+                        plan_amount_mxn: amount,
+                        inscription_amount_mxn: inscriptionAmount,
                         status: updatedPayment.status,
                         mp_payment_id: updatedPayment.mp_payment_id,
                         discount_mxn: discount,

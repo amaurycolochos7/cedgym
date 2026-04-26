@@ -29,8 +29,8 @@ export const PLAN_CATALOG = [
         id: 'STARTER',
         name: 'Básico',
         tagline: 'Para empezar',
-        monthly: 599,
-        monthly_price_mxn: 599,
+        monthly: 629,
+        monthly_price_mxn: 629,
         duration_days_monthly: 30,
         ai_routines_per_month: 1,
         ai_meal_plans_per_month: 0,
@@ -46,8 +46,8 @@ export const PLAN_CATALOG = [
         id: 'PRO',
         name: 'Pro',
         tagline: 'Atleta regular',
-        monthly: 999,
-        monthly_price_mxn: 999,
+        monthly: 1049,
+        monthly_price_mxn: 1049,
         duration_days_monthly: 30,
         ai_routines_per_month: null,
         ai_meal_plans_per_month: 1,
@@ -66,8 +66,8 @@ export const PLAN_CATALOG = [
         id: 'ELITE',
         name: 'Élite',
         tagline: 'Preparación deportiva',
-        monthly: 1590,
-        monthly_price_mxn: 1590,
+        monthly: 1659,
+        monthly_price_mxn: 1659,
         duration_days_monthly: 30,
         ai_routines_per_month: null,
         ai_meal_plans_per_month: null,
@@ -161,6 +161,19 @@ export const VALID_CYCLES = ['MONTHLY'];
 
 // Plan rank for "≥ PRO" comparisons (freeze auto-approval etc.).
 export const PLAN_RANK = { STARTER: 1, PRO: 2, ELITE: 3 };
+
+// One-time inscription fee charged on the first PRO/ELITE subscription
+// per user. STARTER is exempt. Once paid (User.inscription_paid_at !=
+// null) it is never charged again, even on plan changes or re-subscribe
+// after a cancellation. Bundled into the same MP transaction as the
+// plan, so the customer sees a single charge of (plan + 109) on first
+// payment and (plan) thereafter.
+export const INSCRIPTION_PRICE_MXN = 109;
+export const PLANS_WITH_INSCRIPTION = new Set(['PRO', 'ELITE']);
+
+export function planRequiresInscription(planCode) {
+    return PLANS_WITH_INSCRIPTION.has(planCode);
+}
 
 // ────────────────────────────────────────────────────────────────
 // Pricing lookup.
@@ -259,6 +272,9 @@ export default {
     VALID_PLANS,
     VALID_CYCLES,
     PLAN_RANK,
+    INSCRIPTION_PRICE_MXN,
+    PLANS_WITH_INSCRIPTION,
+    planRequiresInscription,
     getPlanPrice,
     getEffectivePlanPrice,
     getPlanByCode,
