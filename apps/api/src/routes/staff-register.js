@@ -32,6 +32,9 @@ import {
     getPlanByCode,
     computeExpiresAt,
     daysRemaining,
+    INSCRIPTION_PRICE_MXN,
+    planRequiresInscription,
+    applyPromoToAmount,
 } from '../lib/memberships.js';
 import { createPreference } from '../lib/mercadopago.js';
 import { detectGender } from '../lib/gender.js';
@@ -49,6 +52,7 @@ const registerBody = z.object({
     plan: z.enum(PLAN_ENUM),
     billing_cycle: z.enum(CYCLE_ENUM),
     payment_method: z.enum(PAYMENT_METHODS),
+    promo_code: z.string().trim().min(1).max(64).optional(),
 });
 
 const extendBody = z.object({
@@ -56,7 +60,26 @@ const extendBody = z.object({
     plan: z.enum(PLAN_ENUM).optional(),
     billing_cycle: z.enum(CYCLE_ENUM).optional(),
     payment_method: z.enum(PAYMENT_METHODS),
+    promo_code: z.string().trim().min(1).max(64).optional(),
 });
+
+// Resolve a promo code in the staff cash flow. Throws err() on invalid
+// so the caller can `await` cleanly. Returns the discount applied to
+// the plan portion only — inscription is never discounted (matches the
+// online flow's policy).
+async function resolveCashPromo(prisma, code, basePrice) {
+    if (!code) return { amount: basePrice, discount: 0, promo: null };
+    const found = await prisma.promoCode.findUnique({ where: { code } });
+    const res = applyPromoToAmount(found, basePrice, 'MEMBERSHIP');
+    if (!res.valid) {
+        throw err('PROMO_INVALID', `Promo inválido: ${res.reason}`, 400);
+    }
+    return {
+        amount: res.final_amount,
+        discount: res.discount_mxn,
+        promo: res.promo,
+    };
+}
 
 const enrollBody = z.object({
     user_id: z.string().min(1),
@@ -194,20 +217,29 @@ async function activateMembershipNow(prisma, { user, plan, billingCycle, priceMx
     };
 }
 
-function buildMembershipPrefArgs({ user, plan, billingCycle, amount, paymentId }) {
+function buildMembershipPrefArgs({ user, plan, billingCycle, amount, inscriptionAmount = 0, paymentId }) {
     const planMeta = getPlanByCode(plan);
+    const items = [
+        {
+            id: `${plan}_${billingCycle}`,
+            title: `Membresía ${planMeta?.name || plan} — ${billingCycle}`,
+            quantity: 1,
+            unit_price: amount,
+        },
+    ];
+    if (inscriptionAmount > 0) {
+        items.push({
+            id: 'INSCRIPTION_ONETIME',
+            title: 'Inscripción única',
+            quantity: 1,
+            unit_price: inscriptionAmount,
+        });
+    }
     return {
         userId: user.id,
         type: 'MEMBERSHIP',
         reference: `${plan}:${billingCycle}`,
-        items: [
-            {
-                id: `${plan}_${billingCycle}`,
-                title: `Membresía ${planMeta?.name || plan} — ${billingCycle}`,
-                quantity: 1,
-                unit_price: amount,
-            },
-        ],
+        items,
         payer: user.email
             ? { email: user.email, name: user.full_name || user.name }
             : undefined,
@@ -223,6 +255,8 @@ function buildMembershipPrefArgs({ user, plan, billingCycle, amount, paymentId }
             billing_cycle: billingCycle,
             workspace_id: user.workspace_id,
             walkin: true,
+            includes_inscription: inscriptionAmount > 0,
+            inscription_amount_mxn: inscriptionAmount,
         },
     };
 }
@@ -311,7 +345,7 @@ export default async function staffRegisterRoutes(fastify) {
     fastify.post('/staff/register-member', guard, async (req) => {
         const parsed = registerBody.safeParse(req.body);
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
-        const { name, email, plan, billing_cycle, payment_method } = parsed.data;
+        const { name, email, plan, billing_cycle, payment_method, promo_code } = parsed.data;
         const phone = normalizePhone(parsed.data.phone);
 
         const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
@@ -319,6 +353,21 @@ export default async function staffRegisterRoutes(fastify) {
 
         const basePrice = await getEffectivePlanPrice(prisma, workspaceId, plan, billing_cycle);
         if (basePrice == null) throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
+
+        // Promo discounts plan only — inscription is never discounted.
+        const { amount: planAmount, discount, promo } = await resolveCashPromo(
+            prisma,
+            promo_code,
+            basePrice,
+        );
+
+        // Inscription on first PRO/ELITE for a user that's never paid it.
+        // For a brand-new walk-in registration the user obviously hasn't
+        // paid before, so this collapses to plan vs plan+109.
+        const inscriptionAmount = planRequiresInscription(plan)
+            ? INSCRIPTION_PRICE_MXN
+            : 0;
+        const totalAmount = planAmount + inscriptionAmount;
 
         // Duplicate check (match admin-members behaviour).
         const existing = await prisma.user.findFirst({
@@ -351,6 +400,10 @@ export default async function staffRegisterRoutes(fastify) {
                 status: 'ACTIVE',
                 phone_verified_at: new Date(), // receptionist saw them in person
                 password_hash: passwordHash,
+                // Stamp inscription_paid_at on the same call when we're
+                // about to charge the inscription, so the next renewal
+                // (cash or online) sees them as already-paid.
+                inscription_paid_at: inscriptionAmount > 0 ? new Date() : null,
             },
         });
 
@@ -362,7 +415,7 @@ export default async function staffRegisterRoutes(fastify) {
                 data: {
                     workspace_id: workspaceId,
                     user_id: user.id,
-                    amount: basePrice,
+                    amount: totalAmount,
                     type: 'MEMBERSHIP',
                     reference: `${plan}:${billing_cycle}:WALKIN`,
                     description: `Alta walk-in ${plan} ${billing_cycle}`,
@@ -374,15 +427,37 @@ export default async function staffRegisterRoutes(fastify) {
                         walkin: true,
                         payment_method,
                         cashier_id: req.user.sub || req.user.id,
+                        base_price: basePrice,
+                        plan_amount_mxn: planAmount,
+                        discount_mxn: discount,
+                        promo_code: promo?.code || null,
+                        promo_id: promo?.id || null,
+                        includes_inscription: inscriptionAmount > 0,
+                        inscription_amount_mxn: inscriptionAmount,
                     },
                 },
             });
+
+            // Bump promo usage now that the cash payment landed.
+            if (promo?.id) {
+                try {
+                    await prisma.promoCode.update({
+                        where: { id: promo.id },
+                        data: { used_count: { increment: 1 } },
+                    });
+                } catch (e) {
+                    req.log.warn(
+                        { err: e, promoId: promo.id },
+                        '[staff-register] promo used_count bump failed'
+                    );
+                }
+            }
 
             const { membership } = await activateMembershipNow(prisma, {
                 user,
                 plan,
                 billingCycle: billing_cycle,
-                priceMxn: basePrice,
+                priceMxn: planAmount,
             });
 
             await fireEvent('member.verified', {
@@ -413,7 +488,10 @@ export default async function staffRegisterRoutes(fastify) {
                 payment_id: payment.id,
                 welcome_link: welcomeLink,
                 init_point: null,
-                amount_mxn: basePrice,
+                amount_mxn: totalAmount,
+                plan_amount_mxn: planAmount,
+                inscription_amount_mxn: inscriptionAmount,
+                discount_mxn: discount,
             };
         }
 
@@ -422,7 +500,7 @@ export default async function staffRegisterRoutes(fastify) {
             data: {
                 workspace_id: workspaceId,
                 user_id: user.id,
-                amount: basePrice,
+                amount: totalAmount,
                 type: 'MEMBERSHIP',
                 reference: `${plan}:${billing_cycle}:WALKIN`,
                 description: `Alta walk-in ${plan} ${billing_cycle}`,
@@ -433,6 +511,13 @@ export default async function staffRegisterRoutes(fastify) {
                     walkin: true,
                     payment_method,
                     cashier_id: req.user.sub || req.user.id,
+                    base_price: basePrice,
+                    plan_amount_mxn: planAmount,
+                    discount_mxn: discount,
+                    promo_code: promo?.code || null,
+                    promo_id: promo?.id || null,
+                    includes_inscription: inscriptionAmount > 0,
+                    inscription_amount_mxn: inscriptionAmount,
                 },
             },
         });
@@ -442,7 +527,8 @@ export default async function staffRegisterRoutes(fastify) {
                 user,
                 plan,
                 billingCycle: billing_cycle,
-                amount: basePrice,
+                amount: planAmount,
+                inscriptionAmount,
                 paymentId: payment.id,
             })
         );
@@ -480,7 +566,7 @@ export default async function staffRegisterRoutes(fastify) {
     fastify.post('/staff/extend-membership', guard, async (req) => {
         const parsed = extendBody.safeParse(req.body);
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
-        const { user_id, payment_method } = parsed.data;
+        const { user_id, payment_method, promo_code } = parsed.data;
 
         const user = await prisma.user.findUnique({ where: { id: user_id } });
         if (!user) throw err('USER_NOT_FOUND', 'Socio no encontrado', 404);
@@ -502,12 +588,20 @@ export default async function staffRegisterRoutes(fastify) {
         const basePrice = await getEffectivePlanPrice(prisma, workspaceId, plan, billing_cycle);
         if (basePrice == null) throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
 
+        // Renovación nunca cobra inscripción — el socio ya la pagó (o
+        // está exento por backfill). Promo aplica solo al plan.
+        const { amount, discount, promo } = await resolveCashPromo(
+            prisma,
+            promo_code,
+            basePrice,
+        );
+
         if (isOffline) {
             const payment = await prisma.payment.create({
                 data: {
                     workspace_id: workspaceId,
                     user_id: user.id,
-                    amount: basePrice,
+                    amount,
                     type: 'MEMBERSHIP',
                     reference: `${plan}:${billing_cycle}:RENEW_WALKIN`,
                     description: `Renovación walk-in ${plan} ${billing_cycle}`,
@@ -520,15 +614,36 @@ export default async function staffRegisterRoutes(fastify) {
                         renewal: true,
                         payment_method,
                         cashier_id: req.user.sub || req.user.id,
+                        base_price: basePrice,
+                        plan_amount_mxn: amount,
+                        discount_mxn: discount,
+                        promo_code: promo?.code || null,
+                        promo_id: promo?.id || null,
+                        includes_inscription: false,
+                        inscription_amount_mxn: 0,
                     },
                 },
             });
+
+            if (promo?.id) {
+                try {
+                    await prisma.promoCode.update({
+                        where: { id: promo.id },
+                        data: { used_count: { increment: 1 } },
+                    });
+                } catch (e) {
+                    req.log.warn(
+                        { err: e, promoId: promo.id },
+                        '[staff-register] promo used_count bump failed'
+                    );
+                }
+            }
 
             const { membership, isRenewal } = await activateMembershipNow(prisma, {
                 user,
                 plan,
                 billingCycle: billing_cycle,
-                priceMxn: basePrice,
+                priceMxn: amount,
             });
 
             await fireEvent(isRenewal ? 'membership.renewed' : 'member.verified', {
@@ -544,7 +659,8 @@ export default async function staffRegisterRoutes(fastify) {
                 membership_id: membership.id,
                 payment_id: payment.id,
                 init_point: null,
-                amount_mxn: basePrice,
+                amount_mxn: amount,
+                discount_mxn: discount,
             };
         }
 
@@ -553,7 +669,7 @@ export default async function staffRegisterRoutes(fastify) {
             data: {
                 workspace_id: workspaceId,
                 user_id: user.id,
-                amount: basePrice,
+                amount,
                 type: 'MEMBERSHIP',
                 reference: `${plan}:${billing_cycle}:RENEW_WALKIN`,
                 description: `Renovación walk-in ${plan} ${billing_cycle}`,
@@ -565,6 +681,13 @@ export default async function staffRegisterRoutes(fastify) {
                     renewal: true,
                     payment_method,
                     cashier_id: req.user.sub || req.user.id,
+                    base_price: basePrice,
+                    plan_amount_mxn: amount,
+                    discount_mxn: discount,
+                    promo_code: promo?.code || null,
+                    promo_id: promo?.id || null,
+                    includes_inscription: false,
+                    inscription_amount_mxn: 0,
                 },
             },
         });
@@ -574,7 +697,7 @@ export default async function staffRegisterRoutes(fastify) {
                 user,
                 plan,
                 billingCycle: billing_cycle,
-                amount: basePrice,
+                amount,
                 paymentId: payment.id,
             })
         );
@@ -589,7 +712,8 @@ export default async function staffRegisterRoutes(fastify) {
             payment_id: payment.id,
             init_point: mpPref.init_point,
             sandbox_init_point: mpPref.sandbox_init_point,
-            amount_mxn: basePrice,
+            amount_mxn: amount,
+            discount_mxn: discount,
         };
     });
 

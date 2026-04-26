@@ -67,6 +67,7 @@ export interface RegisterMemberBody {
   plan: PlanCode;
   billing_cycle: BillingCycle;
   payment_method: PaymentMethod;
+  promo_code?: string;
 }
 
 export interface RegisterMemberResponse {
@@ -77,7 +78,11 @@ export interface RegisterMemberResponse {
   welcome_link: string;
   init_point: string | null;
   sandbox_init_point?: string | null;
+  /** Total charged (plan post-promo + inscription if applicable). */
   amount_mxn: number;
+  plan_amount_mxn?: number;
+  inscription_amount_mxn?: number;
+  discount_mxn?: number;
 }
 
 export interface ExtendMembershipBody {
@@ -85,6 +90,7 @@ export interface ExtendMembershipBody {
   plan?: PlanCode;
   billing_cycle?: BillingCycle;
   payment_method: PaymentMethod;
+  promo_code?: string;
 }
 
 export interface ExtendMembershipResponse {
@@ -93,6 +99,7 @@ export interface ExtendMembershipResponse {
   payment_id: string;
   init_point: string | null;
   amount_mxn: number;
+  discount_mxn?: number;
 }
 
 export interface EnrollCourseBody {

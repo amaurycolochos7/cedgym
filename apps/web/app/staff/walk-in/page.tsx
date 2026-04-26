@@ -18,11 +18,15 @@ import {
   type RegisterMemberResponse,
 } from '@/lib/staff-api';
 
+// Matches the public /memberships/plans contract — getPublicPlanCatalog
+// projects `id` (not `code`), and exposes `monthly_price_mxn` as the
+// canonical price field. `monthly` was a stale alias from an older
+// shape; we keep it optional to avoid breaking older code paths.
 interface Plan {
-  code: PlanCode;
+  id: PlanCode;
   name: string;
-  monthly: number;
-  monthly_price_mxn?: number;
+  monthly_price_mxn: number;
+  monthly?: number;
   features?: string[];
 }
 
@@ -65,13 +69,23 @@ export default function StaffWalkInPage() {
     email: '',
     plan: 'PRO' as PlanCode,
     method: 'CASH' as PaymentMethod,
+    promoCode: '',
   });
 
   const selectedPlan = useMemo(
-    () => plans.find((p) => p.code === form.plan),
+    () => plans.find((p) => p.id === form.plan),
     [plans, form.plan],
   );
-  const price = selectedPlan?.monthly ?? selectedPlan?.monthly_price_mxn ?? 0;
+  const planPrice = selectedPlan?.monthly_price_mxn ?? selectedPlan?.monthly ?? 0;
+  // Inscription is charged on first PRO/ELITE registration. STARTER never
+  // pays it. The walk-in flow is always a NEW user, so we always include
+  // it for PRO/ELITE here (the backend re-validates and ignores it for
+  // existing users). Kept in lockstep with INSCRIPTION_PRICE_MXN in
+  // apps/api/src/lib/memberships.js.
+  const INSCRIPTION_MXN = 109;
+  const inscriptionPreview =
+    form.plan === 'STARTER' ? 0 : INSCRIPTION_MXN;
+  const totalPreview = planPrice + inscriptionPreview;
 
   const [result, setResult] = useState<RegisterMemberResponse | null>(null);
 
@@ -84,10 +98,11 @@ export default function StaffWalkInPage() {
         plan: form.plan,
         billing_cycle: 'MONTHLY',
         payment_method: form.method,
+        promo_code: form.promoCode.trim() || undefined,
       }),
     onSuccess: (r) => setResult(r),
     onError: (e: any) => {
-      alert(e?.response?.data?.error?.message ?? 'Error al inscribir');
+      alert(e?.message ?? e?.response?.data?.error?.message ?? 'Error al inscribir');
     },
   });
 
@@ -171,12 +186,12 @@ export default function StaffWalkInPage() {
           </h2>
           <div className="grid grid-cols-3 gap-2">
             {plans.map((p) => {
-              const active = form.plan === p.code;
+              const active = form.plan === p.id;
               return (
                 <button
-                  key={p.code}
+                  key={p.id}
                   type="button"
-                  onClick={() => setForm({ ...form, plan: p.code })}
+                  onClick={() => setForm({ ...form, plan: p.id })}
                   className={`rounded-xl border-2 p-3 text-left transition ${
                     active
                       ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-100'
@@ -187,7 +202,7 @@ export default function StaffWalkInPage() {
                     {p.name}
                   </div>
                   <div className="mt-1 text-lg font-bold tabular-nums text-blue-600">
-                    {mxn(p.monthly ?? p.monthly_price_mxn ?? 0)}
+                    {mxn(p.monthly_price_mxn ?? p.monthly ?? 0)}
                   </div>
                   <div className="text-[10px] uppercase tracking-wider text-slate-500">
                     Mensual
@@ -241,24 +256,73 @@ export default function StaffWalkInPage() {
           </p>
         </section>
 
+        {/* ─── Cupón de descuento ──────────────────────────── */}
+        <section className="space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+            Cupón (opcional)
+          </h2>
+          <input
+            type="text"
+            value={form.promoCode}
+            onChange={(e) =>
+              setForm({ ...form, promoCode: e.target.value.toUpperCase() })
+            }
+            placeholder="Ej. AMIGOS50"
+            className={inputCls}
+            autoCapitalize="characters"
+          />
+          <p className="text-[11px] text-slate-500">
+            Si el socio trae un código, escríbelo aquí. El descuento se
+            valida al cobrar y se aplica solo al plan (la inscripción no
+            se descuenta).
+          </p>
+        </section>
+
         {/* ─── Total + CTA ─────────────────────────────────── */}
-        <section className="flex items-center justify-between gap-4 border-t border-slate-200 pt-5">
-          <div>
-            <div className="text-[11px] uppercase tracking-wider text-slate-500">
-              Total a cobrar
+        <section className="border-t border-slate-200 pt-5">
+          <div className="mb-3 space-y-1 text-sm">
+            <div className="flex justify-between text-slate-600">
+              <span>Plan {selectedPlan?.name ?? '—'}</span>
+              <span className="tabular-nums">{mxn(planPrice)}</span>
             </div>
-            <div className="font-display text-4xl font-bold tabular-nums text-blue-600">
-              {mxn(price)}
-            </div>
+            {inscriptionPreview > 0 && (
+              <div className="flex justify-between text-slate-600">
+                <span>Inscripción única</span>
+                <span className="tabular-nums">{mxn(inscriptionPreview)}</span>
+              </div>
+            )}
+            {form.promoCode.trim().length > 0 && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Cupón aplicado al cobrar</span>
+                <span className="tabular-nums italic">
+                  −{form.promoCode.trim().toUpperCase()}
+                </span>
+              </div>
+            )}
           </div>
-          <button
-            type="button"
-            disabled={!canSubmit}
-            onClick={() => register.mutate()}
-            className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 px-8 py-3 font-display text-base font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {register.isPending ? 'Inscribiendo…' : 'Cobrar e inscribir'}
-          </button>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500">
+                Total estimado
+              </div>
+              <div className="font-display text-4xl font-bold tabular-nums text-blue-600">
+                {mxn(totalPreview)}
+              </div>
+              {form.promoCode.trim().length > 0 && (
+                <div className="text-[11px] text-slate-500">
+                  Antes del descuento del cupón
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={!canSubmit}
+              onClick={() => register.mutate()}
+              className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 px-8 py-3 font-display text-base font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {register.isPending ? 'Inscribiendo…' : 'Cobrar e inscribir'}
+            </button>
+          </div>
         </section>
       </div>
 
@@ -290,7 +354,32 @@ export default function StaffWalkInPage() {
               ya tiene membresía activa.
             </p>
 
-            <div className="mt-5 rounded-xl bg-blue-50 p-4 ring-1 ring-blue-100">
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="flex justify-between text-slate-600">
+                <span>Cobrado</span>
+                <span className="font-bold tabular-nums text-slate-900">
+                  {mxn(result.amount_mxn)}
+                </span>
+              </div>
+              {(result.inscription_amount_mxn ?? 0) > 0 && (
+                <div className="mt-1 flex justify-between text-[12px] text-slate-500">
+                  <span>Incluye inscripción única</span>
+                  <span className="tabular-nums">
+                    {mxn(result.inscription_amount_mxn ?? 0)}
+                  </span>
+                </div>
+              )}
+              {(result.discount_mxn ?? 0) > 0 && (
+                <div className="mt-1 flex justify-between text-[12px] text-emerald-700">
+                  <span>Descuento aplicado</span>
+                  <span className="tabular-nums">
+                    −{mxn(result.discount_mxn ?? 0)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 rounded-xl bg-blue-50 p-4 ring-1 ring-blue-100">
               <div className="flex items-start gap-3">
                 <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
                 <div className="text-sm text-slate-700">
@@ -321,6 +410,7 @@ export default function StaffWalkInPage() {
                   email: '',
                   plan: 'PRO',
                   method: 'CASH',
+                  promoCode: '',
                 });
               }}
               className="mt-3 w-full rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
