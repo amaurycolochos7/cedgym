@@ -36,6 +36,8 @@ import {
     REFRESH_COOKIE_NAME,
     REFRESH_TTL_SEC,
     ttlForRole,
+    signWelcomeToken,
+    verifyWelcomeToken,
 } from '../lib/jwt.js';
 import { audit, auditCtx } from '../lib/audit.js';
 
@@ -992,4 +994,123 @@ export default async function authRoutes(fastify) {
             return reply.send({ success: true, user: sanitizeUser(updatedUser) });
         }
     );
+
+    // ── GET /auth/welcome/info?t=... ────────────────────────
+    // Validates a walk-in welcome token and returns the user's name +
+    // active membership snapshot, so the /welcome page can greet by
+    // name and show "tu plan Pro está activo".
+    fastify.get('/welcome/info', async (request, reply) => {
+        const token = String(request.query?.t || '').trim();
+        if (!token) {
+            return reply
+                .status(400)
+                .send(errPayload('NO_TOKEN', 'Falta el token', 400));
+        }
+        let userId;
+        try {
+            userId = verifyWelcomeToken(fastify, token);
+        } catch {
+            return reply
+                .status(401)
+                .send(errPayload('TOKEN_INVALID', 'Link inválido o expirado', 401));
+        }
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { membership: true },
+        });
+        if (!user) {
+            return reply
+                .status(404)
+                .send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
+        }
+        return reply.send({
+            user: {
+                id: user.id,
+                name: user.name,
+                full_name: user.full_name,
+                phone: user.phone,
+                has_password: Boolean(user.password_hash),
+                has_selfie: Boolean(user.selfie_url),
+            },
+            membership: user.membership
+                ? {
+                      plan: user.membership.plan,
+                      billing_cycle: user.membership.billing_cycle,
+                      status: user.membership.status,
+                      expires_at: user.membership.expires_at,
+                  }
+                : null,
+        });
+    });
+
+    // ── POST /auth/welcome/redeem ───────────────────────────
+    // Redeems the welcome token by setting the user's password (and
+    // marking the phone as verified — they were physically at the
+    // mostrador). Returns a fresh access + refresh pair so the page
+    // can immediately log them in.
+    const welcomeRedeemSchema = z.object({
+        token: z.string().min(8),
+        password: passwordSchema,
+    });
+
+    fastify.post('/welcome/redeem', async (request, reply) => {
+        const parsed = welcomeRedeemSchema.safeParse(request.body);
+        if (!parsed.success) {
+            return reply
+                .status(400)
+                .send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
+        }
+        const { token, password } = parsed.data;
+
+        let userId;
+        try {
+            userId = verifyWelcomeToken(fastify, token);
+        } catch {
+            return reply
+                .status(401)
+                .send(errPayload('TOKEN_INVALID', 'Link inválido o expirado', 401));
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            return reply
+                .status(404)
+                .send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
+        }
+
+        const password_hash = await bcrypt.hash(password, 10);
+        const updated = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password_hash,
+                status: 'ACTIVE',
+                phone_verified_at: user.phone_verified_at ?? new Date(),
+                last_login_at: new Date(),
+            },
+        });
+
+        const { access, refreshRaw } = await issueTokens(fastify, request, updated);
+
+        audit(fastify, {
+            workspace_id: updated.workspace_id,
+            actor_id: updated.id,
+            action: 'auth.welcome.redeem',
+            target_type: 'user',
+            target_id: updated.id,
+            ...auditCtx(request),
+        });
+
+        reply.setCookie(
+            REFRESH_COOKIE_NAME,
+            refreshRaw,
+            refreshCookieOptions(updated.role),
+        );
+        return reply.send({
+            success: true,
+            token: access,
+            access_token: access,
+            refresh_token: refreshRaw,
+            user: sanitizeUser(updated),
+        });
+    });
 }

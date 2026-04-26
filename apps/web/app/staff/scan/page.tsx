@@ -1,8 +1,9 @@
 'use client';
 
+/* eslint-disable @next/next/no-img-element */
 import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2, XCircle, Camera, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, XCircle, Camera, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { planDisplayName } from '@/lib/utils';
@@ -161,10 +162,23 @@ export default function StaffScanPage() {
             </div>
           )}
           {result?.ok && (
-            <div className="space-y-3">
-              <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-600" />
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-900">
+            <div className="space-y-3 text-center">
+              {result.member?.selfie_url ? (
+                <div className="mx-auto h-32 w-32 overflow-hidden rounded-2xl ring-4 ring-emerald-200">
+                  <img
+                    src={result.member.selfie_url}
+                    alt={result.member?.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-600" />
+              )}
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700">
+                  Verifica que la cara coincide
+                </p>
+                <div className="mt-1 text-2xl font-bold text-slate-900">
                   {result.member?.name}
                 </div>
                 <div className="mt-1 text-sm text-slate-700">
@@ -179,14 +193,42 @@ export default function StaffScanPage() {
           )}
           {result && !result.ok && (
             <div className="space-y-3">
-              <XCircle className="mx-auto h-16 w-16 text-rose-600" />
+              {result.error.code === 'SELFIE_MISSING' ? (
+                <AlertTriangle className="mx-auto h-16 w-16 text-amber-600" />
+              ) : (
+                <XCircle className="mx-auto h-16 w-16 text-rose-600" />
+              )}
               <div className="text-center">
                 <div className="text-lg font-semibold text-slate-900">
-                  {result.error.code}
+                  {result.error.code === 'SELFIE_MISSING'
+                    ? 'Selfie pendiente'
+                    : result.error.code === 'OUT_OF_HOURS'
+                      ? 'Fuera de horario'
+                      : result.error.code === 'INACTIVE'
+                        ? 'Membresía vencida'
+                        : result.error.code === 'NO_MEMBERSHIP'
+                          ? 'Sin membresía'
+                          : result.error.code === 'EXPIRED_QR'
+                            ? 'QR expirado'
+                            : result.error.code === 'DUPLICATE'
+                              ? 'Ya entró hace poco'
+                              : result.error.code}
                 </div>
                 <div className="mt-1 text-sm text-slate-700">
                   {result.error.message}
                 </div>
+                {result.error.code === 'SELFIE_MISSING' && result.error.user_name && (
+                  <div className="mt-3 rounded-xl bg-white p-3 text-xs text-slate-600 ring-1 ring-amber-200">
+                    <p className="font-semibold text-slate-900">
+                      {result.error.user_name}
+                    </p>
+                    <p className="mt-1">
+                      Pídele que abra el link de bienvenida que recibió por
+                      WhatsApp y suba su selfie. Después de eso, podrá entrar
+                      escaneando este mismo QR.
+                    </p>
+                  </div>
+                )}
                 {result.error.code === 'DUPLICATE' && result.error.user_name && (
                   <div className="mt-2 text-xs text-slate-500">
                     {result.error.user_name}

@@ -9,7 +9,7 @@ import { api } from './api';
 
 export type PaymentMethod = 'CASH' | 'CARD_TERMINAL' | 'MP_LINK';
 export type PlanCode = 'STARTER' | 'PRO' | 'ELITE';
-export type BillingCycle = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
+export type BillingCycle = 'MONTHLY';
 
 export interface StaffMemberSearchResult {
   id: string;
@@ -73,7 +73,8 @@ export interface RegisterMemberResponse {
   user_id: string;
   membership_id: string | null;
   payment_id: string;
-  temp_password: string;
+  /** Magic link the receptionist can resend manually if WhatsApp failed. */
+  welcome_link: string;
   init_point: string | null;
   sandbox_init_point?: string | null;
   amount_mxn: number;
