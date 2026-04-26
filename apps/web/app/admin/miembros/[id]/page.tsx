@@ -711,15 +711,17 @@ function MealPlansTab({ memberId }: { memberId: string }) {
       toast.success(
         'Addon activado. El socio ya puede generar su plan alimenticio gratis.',
       );
+      qc.invalidateQueries({
+        queryKey: ['admin', 'member', memberId, 'meal-plans'],
+      });
     },
     onError: (e: any) => {
-      const code = e?.response?.data?.error?.code;
-      if (code === 'ALREADY_HAS_ADDON') {
+      // The api client normalizes errors to { status, code, message };
+      // the raw axios shape (e.response.data.error) is no longer reachable.
+      if (e?.code === 'ALREADY_HAS_ADDON') {
         toast.info('El socio ya tiene un addon activo.');
       } else {
-        toast.error(
-          e?.response?.data?.error?.message || 'No se pudo activar el addon',
-        );
+        toast.error(e?.message || 'No se pudo activar el addon');
       }
     },
   });
@@ -733,29 +735,54 @@ function MealPlansTab({ memberId }: { memberId: string }) {
         queryKey: ['admin', 'member', memberId, 'meal-plans'],
       });
     },
-    onError: (e: any) =>
-      toast.error(e?.response?.data?.error?.message || 'No se pudo eliminar'),
+    onError: (e: any) => toast.error(e?.message || 'No se pudo eliminar'),
   });
 
   const items = data?.items ?? [];
+  const activeAddon = data?.active_addon ?? null;
 
   return (
     <Section title={`Planes alimenticios · ${items.length}`}>
-      <div className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-slate-700 ring-1 ring-blue-100">
-        <p>
-          <strong>Cómo funciona:</strong> los planes alimenticios los genera
-          el socio desde su portal con AI. Si quieres regalárselo (sin
-          cobrarle el addon de $499), usa el botón de abajo y queda activado.
-        </p>
-        <button
-          type="button"
-          onClick={() => grantAddon.mutate()}
-          disabled={grantAddon.isPending}
-          className="mt-2 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
-        >
-          {grantAddon.isPending ? 'Activando…' : 'Activar plan alimenticio (cortesía)'}
-        </button>
-      </div>
+      {activeAddon ? (
+        <div className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-slate-700 ring-1 ring-emerald-200">
+          <p className="font-semibold text-emerald-900">
+            ✓ Addon activo {activeAddon.is_courtesy ? '(cortesía)' : ''}
+          </p>
+          <p className="mt-1">
+            El socio ya puede entrar a su portal y generar su plan
+            alimenticio con AI. Cuando lo genere, este addon se consume y
+            tendrá que comprar otro (o pedirte cortesía) para uno nuevo.
+            {activeAddon.activated_at && (
+              <span className="block text-xs text-slate-500">
+                Activado el{' '}
+                {new Date(activeAddon.activated_at).toLocaleDateString(
+                  'es-MX',
+                  { day: '2-digit', month: 'short', year: 'numeric' },
+                )}
+              </span>
+            )}
+          </p>
+        </div>
+      ) : (
+        <div className="mb-4 rounded-xl bg-blue-50 p-3 text-sm text-slate-700 ring-1 ring-blue-100">
+          <p>
+            <strong>Cómo funciona:</strong> los planes alimenticios los
+            genera el socio desde su portal con AI. Si quieres regalárselo
+            (sin cobrarle el addon de $499), usa el botón de abajo y queda
+            activado.
+          </p>
+          <button
+            type="button"
+            onClick={() => grantAddon.mutate()}
+            disabled={grantAddon.isPending}
+            className="mt-2 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+          >
+            {grantAddon.isPending
+              ? 'Activando…'
+              : 'Activar plan alimenticio (cortesía)'}
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <p className="text-sm text-slate-500">Cargando planes…</p>

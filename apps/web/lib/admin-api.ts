@@ -632,6 +632,13 @@ export const adminApi = {
           meals_count: number;
         }>;
         total: number;
+        active_addon: {
+          id: string;
+          activated_at: string | null;
+          price_mxn: number;
+          paid_mxn: number;
+          is_courtesy: boolean;
+        } | null;
       }>(`/admin/miembros/${id}/meal-plans`)
       .then((r) => r.data),
   deleteMemberMealPlan: (memberId: string, planId: string) =>

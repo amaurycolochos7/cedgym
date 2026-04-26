@@ -462,12 +462,24 @@ export default async function adminMembersRoutes(fastify) {
   // ─── GET /admin/miembros/:id/meal-plans ────────────────────────
   // Lista los planes alimenticios del socio (los que generó el AI o
   // que el admin creó manualmente). Para el tab "Plan Alimenticio".
+  // Devuelve también el addon ACTIVO si lo hay, para que el UI
+  // sepa cuándo esconder el botón de "Activar (cortesía)".
   fastify.get('/admin/miembros/:id/meal-plans', guard, async (req) => {
     const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
-    const items = await fastify.prisma.mealPlan.findMany({
-      where: { user_id: req.params.id, workspace_id: workspaceId },
-      orderBy: { created_at: 'desc' },
-    });
+    const [items, activeAddon] = await Promise.all([
+      fastify.prisma.mealPlan.findMany({
+        where: { user_id: req.params.id, workspace_id: workspaceId },
+        orderBy: { created_at: 'desc' },
+      }),
+      fastify.prisma.mealPlanAddon.findFirst({
+        where: {
+          user_id: req.params.id,
+          workspace_id: workspaceId,
+          status: 'ACTIVE',
+        },
+        orderBy: { activated_at: 'desc' },
+      }),
+    ]);
 
     // Cuántos meals tiene cada plan, sin traer el detalle.
     const counts = await Promise.all(
@@ -497,6 +509,15 @@ export default async function adminMembersRoutes(fastify) {
         meals_count: countByPlan[p.id] ?? 0,
       })),
       total: items.length,
+      active_addon: activeAddon
+        ? {
+            id: activeAddon.id,
+            activated_at: activeAddon.activated_at,
+            price_mxn: activeAddon.price_mxn,
+            paid_mxn: activeAddon.paid_mxn,
+            is_courtesy: activeAddon.paid_mxn === 0,
+          }
+        : null,
     };
   });
 
