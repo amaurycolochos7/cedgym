@@ -401,18 +401,23 @@ export function FitnessProfileWizard({ initial }: Props) {
         throw err;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Perfil fitness guardado. Generando tu rutina…');
       try {
         window.localStorage.removeItem(DRAFT_KEY);
       } catch {
         /* ignore */
       }
+      // Esperamos a que el AuthContext quede con profile_completed=true ANTES
+      // de navegar. Sin el await, /portal/rutinas se monta con el user viejo
+      // y el banner "Completa tu perfil" parpadea/se queda hasta el próximo
+      // ciclo. invalidateQueries refresca los useQuery consumidores en paralelo.
       qc.invalidateQueries({ queryKey: ['auth', 'me'] });
-      // refreshMe sincroniza el AuthContext (separado de React Query) — sin
-      // esto, el banner "Completa tu perfil" sigue saliendo aunque el flag
-      // ya esté true en el backend.
-      refreshMe();
+      try {
+        await refreshMe();
+      } catch {
+        /* si falla, navegamos igual; la página re-pedirá /auth/me */
+      }
       router.push('/portal/rutinas');
     },
     onError: (err) => {
