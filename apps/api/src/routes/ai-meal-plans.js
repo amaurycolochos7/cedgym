@@ -448,17 +448,19 @@ export default async function aiMealPlansRoutes(fastify) {
         // we log loud but DO NOT throw, since the user's plan exists.
         try {
             const planMeta = getPlanByCode(quotaSnapshot.plan);
-            const planLimit = planMeta?.ai_meal_plans_per_month ?? null;
-            // The current MealPlan we just created is already counted
-            // by quotaSnapshot.meal_plan.used as part of the period total
-            // *only* if it persisted before assertAIQuota ran — it didn't,
-            // so .used here is the count BEFORE this generation. Therefore
-            // the plan covers this generation iff:
-            //   - unlimited (planLimit === null), OR
-            //   - the count BEFORE this generation was below planLimit.
-            const usedBefore = quotaSnapshot.meal_plan.used;
-            const planCoveredThisGeneration =
-                planLimit === null || usedBefore < planLimit;
+            // No membership at all → entitlement came from the addon
+            // (assertAIQuota above guarantees this), so we must consume.
+            // Otherwise check whether the membership tier actually covered
+            // this generation, or whether it spilled over to an addon.
+            let planCoveredThisGeneration;
+            if (!planMeta) {
+                planCoveredThisGeneration = false;
+            } else {
+                const planLimit = planMeta.ai_meal_plans_per_month ?? null;
+                const usedBefore = quotaSnapshot.meal_plan.used;
+                planCoveredThisGeneration =
+                    planLimit === null || usedBefore < planLimit;
+            }
 
             if (!planCoveredThisGeneration) {
                 const oldestAddon = await prisma.mealPlanAddon.findFirst({

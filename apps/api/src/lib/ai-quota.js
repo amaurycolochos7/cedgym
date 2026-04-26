@@ -112,7 +112,32 @@ function limitFor(plan, kind) {
 // 5 — the quota only actually renews if they re-up.
 export async function getUserAIQuota(prisma, userId) {
     const membership = await loadActiveMembership(prisma, userId);
+
+    // Count active addons regardless of membership — admins can grant a
+    // courtesy meal-plan addon to a prospect / inactive member as a sales
+    // hook, and that user must still be able to generate the plan.
+    const activeAddons = await prisma.mealPlanAddon.count({
+        where: { user_id: userId, status: 'ACTIVE' },
+    });
+
     if (!membership) {
+        const mealPlanSlot = activeAddons > 0
+            ? {
+                used: 0,
+                limit: activeAddons,
+                allowed: true,
+                unlimited: false,
+                addons_active: activeAddons,
+                from_addon: true,
+            }
+            : {
+                used: 0,
+                limit: 0,
+                allowed: false,
+                unlimited: false,
+                addons_active: 0,
+                from_addon: false,
+            };
         return {
             plan: null,
             has_active_membership: false,
@@ -121,21 +146,15 @@ export async function getUserAIQuota(prisma, userId) {
             membership_expires_at: null,
             membership_days_remaining: 0,
             routine: { used: 0, limit: 0, allowed: false, unlimited: false },
-            meal_plan: { used: 0, limit: 0, allowed: false, unlimited: false },
+            meal_plan: mealPlanSlot,
         };
     }
 
     const plan = getPlanByCode(membership.plan);
     const periodStart = currentPeriodStart(membership);
-    const [routinesUsed, mealsUsed, activeAddons] = await Promise.all([
+    const [routinesUsed, mealsUsed] = await Promise.all([
         countInPeriod(prisma, { userId, kind: 'ROUTINE', periodStart }),
         countInPeriod(prisma, { userId, kind: 'MEAL_PLAN', periodStart }),
-        // Count of meal-plan add-ons the user has paid for and not
-        // yet consumed. Each one grants ONE additional AI meal plan
-        // generation on top of (or instead of) the plan's quota.
-        prisma.mealPlanAddon.count({
-            where: { user_id: userId, status: 'ACTIVE' },
-        }),
     ]);
 
     const routineLimit = limitFor(plan, 'ROUTINE');
@@ -220,7 +239,13 @@ export async function getUserAIQuota(prisma, userId) {
 export async function assertAIQuota(prisma, userId, kind) {
     const quota = await getUserAIQuota(prisma, userId);
 
-    if (!quota.has_active_membership) {
+    const slot = kind === 'ROUTINE' ? quota.routine : quota.meal_plan;
+
+    // Membership gate. Bypass when the slot is entitled by an active
+    // addon (e.g. courtesy meal-plan addon granted to a prospect with
+    // no membership yet). Routines have no addon path so they always
+    // require membership.
+    if (!quota.has_active_membership && !slot.from_addon) {
         throw err(
             'MEMBERSHIP_REQUIRED',
             'Necesitas una membresía activa para generar con IA.',
@@ -228,8 +253,6 @@ export async function assertAIQuota(prisma, userId, kind) {
             { kind }
         );
     }
-
-    const slot = kind === 'ROUTINE' ? quota.routine : quota.meal_plan;
 
     if (slot.limit === 0) {
         throw err(
