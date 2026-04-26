@@ -105,6 +105,7 @@ enum JobStatus {
 enum OtpPurpose {
   REGISTER
   PASSWORD_RESET
+  PASSWORD_RESET_LINK
   LOGIN_2FA
   PHONE_CHANGE
 }

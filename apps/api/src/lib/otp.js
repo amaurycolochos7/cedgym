@@ -20,12 +20,22 @@ import bcrypt from 'bcryptjs';
 
 export const OTP_TTL_MIN = 10;
 export const OTP_MAX_ATTEMPTS = 5;
+// Magic link is single-use, sent by admin from the panel. 24 h is enough
+// runway for the member to find the WhatsApp message + open the link.
+export const RESET_LINK_TTL_HOURS = 24;
 
 export function generateOtpCode() {
     // randomInt is exclusive of the upper bound. [0, 1_000_000) →
     // 6-digit codes with full 0-padding.
     const n = crypto.randomInt(0, 1_000_000);
     return String(n).padStart(6, '0');
+}
+
+// 32 random bytes → URL-safe base64 (~43 chars). Used as the secret in
+// password-reset magic links. The URL also carries the OtpCode row id
+// (`ref`) so lookup is O(1) and even a leaked token alone is unusable.
+export function generateResetLinkToken() {
+    return crypto.randomBytes(32).toString('base64url');
 }
 
 export async function hashOtpCode(code) {
@@ -38,6 +48,10 @@ export async function compareOtpCode(code, hash) {
 
 export function otpExpiresAt() {
     return new Date(Date.now() + OTP_TTL_MIN * 60 * 1000);
+}
+
+export function resetLinkExpiresAt() {
+    return new Date(Date.now() + RESET_LINK_TTL_HOURS * 60 * 60 * 1000);
 }
 
 // ── WhatsApp templates ───────────────────────────────────────
@@ -56,6 +70,16 @@ export function renderOtpMessage(purpose, code) {
     const tpl = TEMPLATES[purpose];
     if (!tpl) throw new Error(`Unknown OTP purpose: ${purpose}`);
     return tpl(code);
+}
+
+export function renderResetLinkMessage(url) {
+    return (
+        `🔐 *Recuperación de contraseña — CED-GYM*\n\n` +
+        `Toca el enlace para crear tu nueva contraseña:\n\n` +
+        `${url}\n\n` +
+        `El enlace expira en ${RESET_LINK_TTL_HOURS} horas. ` +
+        `Si no fuiste tú, ignóralo.`
+    );
 }
 
 // Dev-only helper: emit the plaintext OTP to stdout so local devs can
@@ -86,13 +110,40 @@ export async function sendOtpViaWhatsApp({ workspaceId, phone, code, purpose, lo
     // dev can still grab the code from logs.
     logOtpForDev({ phone, purpose, code, logger });
 
+    return sendWhatsAppRaw({
+        workspaceId,
+        phone,
+        message: renderOtpMessage(purpose, code),
+        logger,
+        logTag: 'otp',
+    });
+}
+
+// Counterpart for magic-link delivery (password reset). Same transport,
+// different message body — keeps the bot-config / error-handling logic
+// in one place.
+export async function sendResetLinkViaWhatsApp({ workspaceId, phone, url, logger }) {
+    if (process.env.NODE_ENV !== 'production') {
+        logger?.info(`[reset-link DEV] phone=${phone} url=${url}`);
+        // eslint-disable-next-line no-console
+        console.log(`[reset-link DEV] phone=${phone} url=${url}`);
+    }
+    return sendWhatsAppRaw({
+        workspaceId,
+        phone,
+        message: renderResetLinkMessage(url),
+        logger,
+        logTag: 'reset-link',
+    });
+}
+
+async function sendWhatsAppRaw({ workspaceId, phone, message, logger, logTag }) {
     const url = process.env.WHATSAPP_BOT_URL;
     const key = process.env.WHATSAPP_BOT_KEY;
     if (!url || !key) {
-        logger?.warn('[otp] WHATSAPP_BOT_URL or WHATSAPP_BOT_KEY missing — OTP NOT sent');
+        logger?.warn(`[${logTag}] WHATSAPP_BOT_URL or WHATSAPP_BOT_KEY missing — message NOT sent`);
         return { ok: false, error: 'bot_not_configured' };
     }
-    const message = renderOtpMessage(purpose, code);
     try {
         const res = await fetch(`${url}/send-message`, {
             method: 'POST',
@@ -104,16 +155,12 @@ export async function sendOtpViaWhatsApp({ workspaceId, phone, code, purpose, lo
         });
         if (!res.ok) {
             const text = await res.text().catch(() => '');
-            logger?.warn({ status: res.status, text }, '[otp] bot returned non-200');
+            logger?.warn({ status: res.status, text }, `[${logTag}] bot returned non-200`);
             return { ok: false, error: `bot_status_${res.status}` };
         }
         return { ok: true };
     } catch (e) {
-        // Expected when the bot container isn't running or WhatsApp isn't
-        // paired yet. We NEVER want this to cascade to a 500 at the user
-        // — the caller decides how to surface it. The OTP row in DB is
-        // still valid; user can retry via resend.
-        logger?.warn({ err: e }, '[otp] bot fetch failed');
+        logger?.warn({ err: e }, `[${logTag}] bot fetch failed`);
         return { ok: false, error: e.message || 'fetch_failed' };
     }
 }

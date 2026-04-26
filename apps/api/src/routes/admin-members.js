@@ -16,10 +16,10 @@ import { rotateTokenForUser } from '../lib/qr.js';
 import { generateMembershipCard } from '../lib/pdf.js';
 import { sendWhatsAppMessage } from '../lib/whatsapp.js';
 import {
-  generateOtpCode,
   hashOtpCode,
-  otpExpiresAt,
-  sendOtpViaWhatsApp,
+  generateResetLinkToken,
+  resetLinkExpiresAt,
+  sendResetLinkViaWhatsApp,
 } from '../lib/otp.js';
 
 export default async function adminMembersRoutes(fastify) {
@@ -173,13 +173,14 @@ export default async function adminMembersRoutes(fastify) {
   });
 
   // ─── POST /admin/miembros/:id/reset-password ──────────────────
-  // Admin dispara un OTP al WhatsApp del socio para que arme
-  // contraseña nueva. Idéntico a /auth/password/forgot pero iniciado
-  // desde el panel sin que el socio tenga que pedirlo.
+  // Admin envía un magic-link al WhatsApp del socio. El socio toca el
+  // link, llega a /reset-password?ref=<otp_id>&token=<raw> y arma su
+  // contraseña directamente — sin tipear códigos. El token vive 24 h y
+  // es de un solo uso (verified_at lo invalida).
   fastify.post('/admin/miembros/:id/reset-password', adminOnly, async (req, reply) => {
     const user = await fastify.prisma.user.findFirst({
       where: { id: req.params.id, workspace_id: req.user.workspace_id },
-      select: { id: true, phone: true },
+      select: { id: true, phone: true, workspace_id: true },
     });
     if (!user) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' } });
@@ -187,21 +188,26 @@ export default async function adminMembersRoutes(fastify) {
     if (!user.phone) {
       return reply.status(400).send({ error: { code: 'NO_PHONE', message: 'El miembro no tiene teléfono registrado' } });
     }
-    const code = generateOtpCode();
-    const code_hash = await hashOtpCode(code);
-    await fastify.prisma.otpCode.create({
+
+    const token = generateResetLinkToken();
+    const code_hash = await hashOtpCode(token);
+    const otp = await fastify.prisma.otpCode.create({
       data: {
         phone: user.phone,
         code_hash,
-        purpose: 'PASSWORD_RESET',
-        expires_at: otpExpiresAt(),
+        purpose: 'PASSWORD_RESET_LINK',
+        expires_at: resetLinkExpiresAt(),
       },
     });
-    const send = await sendOtpViaWhatsApp({
+
+    const webBase =
+      process.env.WEBAPP_PUBLIC_URL || 'http://localhost:3000';
+    const url = `${webBase}/reset-password?ref=${otp.id}&token=${encodeURIComponent(token)}`;
+
+    const send = await sendResetLinkViaWhatsApp({
       workspaceId: user.workspace_id || req.user.workspace_id,
       phone: user.phone,
-      code,
-      purpose: 'PASSWORD_RESET',
+      url,
       logger: req.log,
     });
     return { success: true, ok: send.ok };

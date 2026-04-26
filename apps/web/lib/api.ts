@@ -281,6 +281,22 @@ export const authApi = {
       })
       .then((r) => r.data),
 
+  // Magic-link reset. Reads (ref, token) out of the URL the admin
+  // generated in /admin/miembros/:id/reset-password and asks the user
+  // for the new password — no OTP code to type.
+  resetPasswordViaLink: (input: {
+    ref: string;
+    token: string;
+    password: string;
+  }) =>
+    api
+      .post<{ success: true }>('/auth/password/reset-via-link', {
+        ref: input.ref,
+        token: input.token,
+        new_password: input.password,
+      })
+      .then((r) => r.data),
+
   // Backend mounts this at PATCH /auth/complete-profile (not POST /auth/profile).
   // Body keys on the server use snake_case; we translate here so the FE
   // form can stay in camelCase.

@@ -135,6 +135,161 @@ function LightOtpInput({
 }
 
 export default function ResetPasswordPage() {
+  const params = useSearchParams();
+  // Magic-link path: admin sends a link with ?ref=<otp_id>&token=<raw>.
+  // No OTP code to type. Detected purely by URL params, so the legacy
+  // OTP flow (?phone=...) keeps working untouched.
+  const ref = params.get('ref');
+  const token = params.get('token');
+  if (ref && token) {
+    return <MagicLinkResetForm ref_={ref} token={token} />;
+  }
+  return <OtpResetForm />;
+}
+
+function MagicLinkResetForm({
+  ref_,
+  token,
+}: {
+  ref_: string;
+  token: string;
+}) {
+  const router = useRouter();
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [showPw, setShowPw] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [pwError, setPwError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      authApi.resetPasswordViaLink({ ref: ref_, token, password }),
+    onSuccess: () => {
+      toast.success('Contraseña actualizada. Inicia sesión.');
+      router.push('/login');
+    },
+    onError: (err) => {
+      const norm = normalizeError(err) as ApiError;
+      setApiError(norm.message);
+    },
+  });
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiError(null);
+    setPwError(null);
+    if (password.length < 8) {
+      setPwError('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      setPwError('Debe incluir al menos una letra y un número.');
+      return;
+    }
+    if (password !== confirm) {
+      setPwError('Las contraseñas no coinciden.');
+      return;
+    }
+    mutation.mutate();
+  };
+
+  const labelClass =
+    'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600';
+  const inputClass =
+    'min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100';
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2 text-center">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          Nueva contraseña
+        </h1>
+        <p className="text-sm text-slate-600">
+          Crea una contraseña nueva para tu cuenta de CED-GYM.
+        </p>
+      </div>
+
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        {apiError && (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600"
+          >
+            {apiError}
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="mlpw" className={labelClass}>
+            Nueva contraseña
+          </label>
+          <div className="relative">
+            <input
+              id="mlpw"
+              type={showPw ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-11 text-sm text-slate-900 placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              className="absolute inset-y-0 right-3 flex items-center text-slate-400 transition hover:text-slate-600"
+              aria-label={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            >
+              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          <p className="mt-1.5 text-xs text-slate-500">
+            Mínimo 8 caracteres, con letra y número.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="mlconfirm" className={labelClass}>
+            Confirmar nueva contraseña
+          </label>
+          <input
+            id="mlconfirm"
+            type={showPw ? 'text' : 'password'}
+            autoComplete="new-password"
+            placeholder="••••••••"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className={inputClass}
+          />
+          {pwError && (
+            <p className="mt-1.5 text-xs text-rose-600" role="alert">
+              {pwError}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold uppercase tracking-[0.1em] text-white shadow-md shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:translate-y-0 disabled:opacity-50"
+        >
+          {mutation.isPending && <Loader2 size={16} className="animate-spin" />}
+          Guardar contraseña
+        </button>
+      </form>
+
+      <p className="text-center text-sm text-slate-600">
+        <Link
+          href="/login"
+          className="font-semibold text-blue-600 transition hover:text-blue-700"
+        >
+          ← Volver al inicio de sesión
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function OtpResetForm() {
   const router = useRouter();
   const params = useSearchParams();
   // El query `phone` ya viene en E.164 desde el flujo de registro / modal.
