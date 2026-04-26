@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
@@ -19,7 +19,7 @@ export default function LoginPage() {
   const redirect = params.get('redirect');
   const expired = params.get('expired') === '1';
   const idle = params.get('idle') === '1';
-  const { hydrateFromAuthResponse } = useAuth();
+  const { hydrateFromAuthResponse, user, loading } = useAuth();
   const [showPw, setShowPw] = useState(false);
   const [apiError, setApiError] = useState<string | null>(
     idle
@@ -28,6 +28,15 @@ export default function LoginPage() {
       ? 'Tu sesión expiró. Inicia sesión de nuevo.'
       : null,
   );
+
+  // If we land here already authenticated (e.g. opened /login in a new tab
+  // while a session is active), bounce straight to the role's landing.
+  // Skip when expired/idle so the corresponding message can render.
+  useEffect(() => {
+    if (loading || expired || idle) return;
+    if (!user) return;
+    router.replace(redirect ?? postLoginPathForRole(user.role));
+  }, [loading, user, expired, idle, redirect, router]);
 
   const { register, handleSubmit, formState } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),

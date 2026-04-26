@@ -43,10 +43,30 @@ export function middleware(req: NextRequest) {
   const isAuthOnly = AUTH_ONLY_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
+  const isLogin = pathname === '/login';
 
-  if (!isAdmin && !isStaff && !isAuthOnly) return NextResponse.next();
+  if (!isAdmin && !isStaff && !isAuthOnly && !isLogin) {
+    return NextResponse.next();
+  }
 
   const hasSession = req.cookies.get(SESSION_COOKIE)?.value === '1';
+
+  // Already logged in → /login should bounce to the role's landing instead
+  // of showing the form again. Skip when ?expired=1 or ?idle=1 so the
+  // session-expired/idle messaging the API layer sets still renders.
+  if (isLogin) {
+    if (!hasSession) return NextResponse.next();
+    const expired = req.nextUrl.searchParams.get('expired') === '1';
+    const idle = req.nextUrl.searchParams.get('idle') === '1';
+    if (expired || idle) return NextResponse.next();
+    const role = req.cookies.get(ROLE_COOKIE)?.value ?? '';
+    const redirectParam = req.nextUrl.searchParams.get('redirect');
+    const dest = req.nextUrl.clone();
+    dest.pathname = redirectParam || landingForRole(role);
+    dest.search = '';
+    return NextResponse.redirect(dest);
+  }
+
   if (!hasSession) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = '/login';
@@ -84,6 +104,7 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    '/login',
     '/dashboard/:path*',
     '/checkout/:path*',
     '/portal/:path*',
