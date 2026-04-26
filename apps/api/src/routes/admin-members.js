@@ -30,10 +30,16 @@ export default async function adminMembersRoutes(fastify) {
     const { search, status, plan, limit = 30, offset = 0 } = req.query;
     const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
 
+    // Hide soft-deleted users (status='DELETED' with anonymized email).
+    // These come from /admin/staff DELETE which demotes role→ATHLETE +
+    // status→DELETED instead of hard-deleting, to preserve payment/audit
+    // FKs. They should not appear in the athletes listing. If the caller
+    // explicitly filters by status they get exactly that status; otherwise
+    // we exclude DELETED.
     const where = {
       workspace_id: workspaceId,
       role: 'ATHLETE',
-      ...(status && { status }),
+      ...(status ? { status } : { status: { not: 'DELETED' } }),
       ...(search && {
         OR: [
           { name:       { contains: search, mode: 'insensitive' } },
