@@ -165,6 +165,11 @@ export function AssignPlanModal({
         plan,
         cycle,
         method,
+        // Entrar al modal desde "Renovar / cambiar plan" ES el
+        // consentimiento explícito para reemplazar la membresía
+        // actual si existe. Sin esto, el backend rechaza con
+        // MEMBERSHIP_ACTIVE y la UI quedaba bloqueada.
+        replace_active: true,
       };
       if (startsAt) {
         const parsed = new Date(startsAt);

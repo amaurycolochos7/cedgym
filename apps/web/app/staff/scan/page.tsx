@@ -31,6 +31,13 @@ export default function StaffScanPage() {
   // botón manual para que el usuario pueda reintentar tras corregir.
   const [cameraError, setCameraError] = useState<string | null>(null);
   const startingRef = useRef(false);
+  // Dedup de detecciones — la cámara dispara el callback ~10fps y mientras
+  // el atleta sostiene el QR frente al lector se decodifica el MISMO token
+  // en cada frame. Sin esto bombardearíamos al backend con N requests, y
+  // como el token es de un solo uso (consumeToken lo quema en Redis), las
+  // últimas N-1 vendrían como EXPIRED_QR pisando el resultado real.
+  const inFlightRef = useRef(false);
+  const lastTokenRef = useRef<{ token: string; at: number } | null>(null);
 
   useEffect(() => {
     // Reusar el script si ya está cargado (evita duplicados al navegar).
@@ -64,8 +71,18 @@ export default function StaffScanPage() {
       setHistory((h) => [{ ...data, at: Date.now() }, ...h].slice(0, 20));
     },
     onError: (err: any) => {
-      const errObj =
-        err?.response?.data?.error ?? { code: 'SCAN_ERROR', message: 'Error al validar' };
+      // The api.ts response interceptor flattens errors to
+      // { status, code, message, details } and copies the original
+      // Fastify nested error object into `details` — that's where the
+      // per-code extras (user_id, user_name, retry_after_sec) live.
+      const extras = (err?.details ?? {}) as Partial<ScanErrorData>;
+      const errObj: ScanErrorData = {
+        code: err?.code ?? 'SCAN_ERROR',
+        message: err?.message ?? 'Error al validar',
+        retry_after_sec: extras.retry_after_sec,
+        user_id: extras.user_id,
+        user_name: extras.user_name,
+      };
       setResult({ ok: false, error: errObj });
       beep(false);
     },
@@ -92,9 +109,7 @@ export default function StaffScanPage() {
       setHistory((h) => [{ member: { name: 'Override' }, at: Date.now() }, ...h].slice(0, 20));
     },
     onError: (err: any) => {
-      toast.error(
-        err?.response?.data?.error?.message || 'No se pudo autorizar el reingreso',
-      );
+      toast.error(err?.message || 'No se pudo autorizar el reingreso');
     },
   });
 
@@ -110,7 +125,24 @@ export default function StaffScanPage() {
         { facingMode: 'environment' },
         { fps: 10, qrbox: 300 },
         (decoded: string) => {
-          scan.mutate(decoded);
+          // Ignora si ya hay una petición en vuelo o si acabamos de
+          // procesar el MISMO token hace menos de 8s. La librería sigue
+          // detectando el QR en cada frame mientras está delante de la
+          // cámara, y sin este filtro le pegaríamos al backend ~10
+          // veces por escaneo (consumiendo el token en la primera y
+          // pintando EXPIRED_QR en las siguientes).
+          if (inFlightRef.current) return;
+          const last = lastTokenRef.current;
+          const now = Date.now();
+          if (last && last.token === decoded && now - last.at < 8000) return;
+
+          inFlightRef.current = true;
+          lastTokenRef.current = { token: decoded, at: now };
+          scan.mutate(decoded, {
+            onSettled: () => {
+              inFlightRef.current = false;
+            },
+          });
           setTimeout(() => setResult(null), 4000);
         },
         () => {}

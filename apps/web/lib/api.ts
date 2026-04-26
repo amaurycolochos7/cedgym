@@ -192,7 +192,13 @@ export function normalizeError(err: unknown): ApiError {
         (err.message && err.message !== 'Network Error'
           ? err.message
           : networkFallback),
-      details: body?.details,
+      // Fastify error envelopes (errPayload) often carry per-code extras
+      // alongside `code` and `message` — e.g. SELFIE_MISSING ships
+      // `user_id` + `user_name`, DUPLICATE ships `retry_after_sec`, etc.
+      // We surface the entire nested error object as `details` so callers
+      // can pull those extras without losing the strict ApiError shape.
+      // Falls back to body.details for handlers that already use it.
+      details: body?.details ?? body?.error,
     };
   }
   if (err instanceof Error) {

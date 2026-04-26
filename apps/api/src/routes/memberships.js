@@ -99,6 +99,13 @@ const adminAssignBody = z.object({
     method: z
         .enum(['CASH', 'TRANSFER', 'TERMINAL', 'COMPLIMENTARY'])
         .default('CASH'),
+    // Explicit opt-in: when true, the endpoint replaces an existing
+    // ACTIVE membership instead of refusing with MEMBERSHIP_ACTIVE.
+    // The admin UI sends this when entering through "Renovar / cambiar
+    // plan" — the button label IS the consent. Direct API callers must
+    // pass it deliberately so they don't wipe a paid membership by
+    // accident.
+    replace_active: z.boolean().optional(),
 });
 
 const renewBody = z.object({
@@ -1091,7 +1098,7 @@ export default async function membershipsRoutes(fastify) {
             if (!parsed.success) {
                 throw err('BAD_BODY', parsed.error.message, 400);
             }
-            const { user_id, plan, cycle, starts_at, note, method } = parsed.data;
+            const { user_id, plan, cycle, starts_at, note, method, replace_active } = parsed.data;
             const billingCycle = CYCLE_MAP[cycle];
 
             const user = await prisma.user.findUnique({ where: { id: user_id } });
@@ -1103,14 +1110,18 @@ export default async function membershipsRoutes(fastify) {
                 throw err('FORBIDDEN', 'El socio pertenece a otro workspace', 403);
             }
 
-            // Active membership → refuse with a clear hint.
+            // Active membership → refuse UNLESS the admin explicitly
+            // opted into replacement via `replace_active: true`. The
+            // upsert below already handles the update path correctly;
+            // this gate is just to prevent accidental overwrites from
+            // direct API hits.
             const existing = await prisma.membership.findUnique({
                 where: { user_id: user.id },
             });
-            if (existing && existing.status === 'ACTIVE') {
+            if (existing && existing.status === 'ACTIVE' && !replace_active) {
                 throw err(
                     'MEMBERSHIP_ACTIVE',
-                    'El socio ya tiene una membresía ACTIVA. Usa PATCH /admin/memberships/:id para renovar o editar.',
+                    'El socio ya tiene una membresía ACTIVA. Pasa replace_active=true para reemplazarla.',
                     409
                 );
             }
@@ -1202,6 +1213,12 @@ export default async function membershipsRoutes(fastify) {
                     amount_mxn: paymentAmount,
                     payment_id: payment.id,
                     actor_role: req.user?.role || null,
+                    // Trail for "what did this replace?" so audits can
+                    // reconstruct plan changes without joining payments.
+                    replaced_existing: !!(existing && existing.status === 'ACTIVE'),
+                    previous_plan: existing?.plan || null,
+                    previous_billing_cycle: existing?.billing_cycle || null,
+                    previous_expires_at: existing?.expires_at || null,
                 },
                 ...auditCtx(req),
             });
