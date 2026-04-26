@@ -383,6 +383,7 @@ export default async function aiMealPlansRoutes(fastify) {
         let aiResult;
         try {
             aiResult = await generateJSON({
+                prisma,
                 system,
                 user: userPrompt,
                 schema: mealPlanOutputSchema,
