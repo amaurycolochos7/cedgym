@@ -355,18 +355,31 @@ function NoPlanView({
   const [budget, setBudget] = useState<'low' | 'medium' | 'high'>('medium');
   const [restrictions, setRestrictions] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
+  const [customAllergies, setCustomAllergies] = useState<string>('');
   const [disliked, setDisliked] = useState<string>('');
   const [addonOpen, setAddonOpen] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
 
   const generate = useMutation({
     mutationFn: async () => {
+      // Las alergias del checklist + las que el usuario tipeó como "otras",
+      // dedupeadas y limpiadas. El backend acepta máx 20 strings de 40 chars
+      // c/u (ai-meal-plans.js z.array(...).max(20)) — recortamos por si acaso.
+      const extraAllergies = customAllergies
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => s.slice(0, 40));
+      const allAllergies = Array.from(
+        new Set([...allergies, ...extraAllergies]),
+      ).slice(0, 20);
+
       const body: Record<string, unknown> = {
         meals_per_day: mealsPerDay,
         budget,
         country: 'MX',
         restrictions,
-        allergies,
+        allergies: allAllergies,
       };
       if (calories) body.calories_target = Number(calories);
       const disliked_foods = disliked
@@ -594,6 +607,25 @@ function NoPlanView({
             value={allergies}
             onToggle={(v) => toggle(allergies, setAllergies, v)}
           />
+          <div className="mt-3">
+            <label
+              htmlFor="other-allergies"
+              className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500"
+            >
+              ¿Otra alergia?
+            </label>
+            <input
+              id="other-allergies"
+              type="text"
+              value={customAllergies}
+              onChange={(e) => setCustomAllergies(e.target.value)}
+              placeholder="Ej: kiwi, fresa, ajonjolí"
+              className="w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition"
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Sepáralas con comas. La IA las evitará en todo el plan.
+            </p>
+          </div>
         </FormSection>
 
         <FormSection
