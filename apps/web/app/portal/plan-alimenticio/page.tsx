@@ -203,11 +203,15 @@ function EditorialHero({
   title,
   subtitle,
   variant = 'full',
+  chips,
+  statusChip,
 }: {
   eyebrow: string;
   title: string;
   subtitle?: string;
   variant?: 'full' | 'compact';
+  chips?: string[];
+  statusChip?: { label: string; tone?: 'emerald' | 'blue' };
 }) {
   if (variant === 'compact') {
     return (
@@ -229,48 +233,101 @@ function EditorialHero({
     );
   }
 
+  const statusToneCls =
+    statusChip?.tone === 'blue'
+      ? 'bg-blue-500/95 text-white ring-1 ring-blue-400/60'
+      : 'bg-emerald-500/95 text-white ring-1 ring-emerald-400/60';
+
   return (
     <section className="relative overflow-hidden rounded-2xl ring-1 ring-slate-200 shadow-sm">
       <div className="grid md:grid-cols-2">
-        {/* Image side — full-bleed mobile, contained side-by-side on desktop */}
-        <div className="relative h-56 md:h-auto md:order-2">
-          {/* Plain <img> instead of next/image to avoid forcing layout
-              constraints on the side-by-side md split — Unsplash is on
-              the whitelist either way. */}
+        {/* Image side — shorter on mobile to keep the form near the fold */}
+        <div className="relative h-40 sm:h-48 md:h-auto md:order-2">
           <img
             src={HERO_IMAGE}
             alt="Plato saludable con vegetales y proteína"
             className="absolute inset-0 h-full w-full object-cover"
             loading="eager"
           />
-          {/* Mobile-only overlay for legibility of the title that sits over
-              the image. md+ shows text on a separate column so we drop
-              the overlay there. */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/30 to-transparent md:hidden" />
+          {/* Brand-tinted gradient — emerald → blue → dark — only on mobile */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-blue-900/40 to-emerald-900/10 md:hidden" />
+
+          {/* Mobile status chip — top-right of hero so it's visible at a glance */}
+          {statusChip && (
+            <div className="absolute top-3 right-3 md:hidden">
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] shadow-sm backdrop-blur ${statusToneCls}`}
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                {statusChip.label}
+              </span>
+            </div>
+          )}
+
           {/* Mobile title overlay */}
-          <div className="absolute inset-x-0 bottom-0 p-5 md:hidden">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85">
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:hidden">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/85">
               {eyebrow}
             </div>
-            <h1 className="font-display mt-1 text-3xl leading-[1.05] text-white">
+            <h1 className="font-display mt-1 text-[1.7rem] leading-[1.05] text-white">
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-2 max-w-md text-sm text-white/85">{subtitle}</p>
+              <p className="mt-1.5 max-w-md text-[13px] leading-snug text-white/85">
+                {subtitle}
+              </p>
+            )}
+            {chips && chips.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {chips.map((c) => (
+                  <span
+                    key={c}
+                    className="inline-flex items-center rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold text-white ring-1 ring-white/25 backdrop-blur"
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         </div>
 
         {/* Text side — desktop only */}
         <div className="hidden md:flex md:order-1 md:flex-col md:justify-center bg-white p-8 lg:p-10">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">
-            {eyebrow}
+          <div className="flex items-center gap-2">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">
+              {eyebrow}
+            </div>
+            {statusChip && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                  statusChip.tone === 'blue'
+                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+                    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                }`}
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                {statusChip.label}
+              </span>
+            )}
           </div>
           <h1 className="font-display mt-2 text-4xl lg:text-5xl leading-[1.05] text-slate-900">
             {title}
           </h1>
           {subtitle && (
             <p className="mt-3 max-w-md text-base text-slate-600">{subtitle}</p>
+          )}
+          {chips && chips.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {chips.map((c) => (
+                <span
+                  key={c}
+                  className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -402,7 +459,7 @@ function NoPlanView({
 
   /* ── 3) Form — quota available (or unlimited / addon active) ──── */
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <AIGenerationOverlay open={generate.isPending} kind="meal_plan" />
       <MealPlanAddonModal
         open={addonOpen}
@@ -411,33 +468,38 @@ function NoPlanView({
       />
 
       <EditorialHero
-        eyebrow="Nutrición personalizada"
-        title="Generar mi plan"
-        subtitle="6 comidas al día, ingredientes mexicanos, ajustado a tu objetivo y presupuesto."
+        eyebrow="Tu nutrición a medida"
+        title="Diseña tu plan en 1 minuto"
+        subtitle="Ajustamos calorías y macros a tu objetivo. Tú solo cocinas."
+        chips={['6 comidas/día', 'Ingredientes mexicanos', 'Lista de compras']}
+        statusChip={fromAddon ? { label: 'Plan extra activo', tone: 'emerald' } : undefined}
       />
 
-      {fromAddon && <AddonActiveBanner />}
-
-      {!profileCompleted && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-amber-900 font-semibold">Completa tu perfil primero</p>
-            <p className="text-amber-800/80 mt-0.5">
-              Necesitamos tu edad, peso y altura para calcular calorías óptimas.
-            </p>
-          </div>
-          <Link
-            href="/portal/perfil"
-            className="shrink-0 text-amber-700 hover:text-amber-800 font-semibold self-center"
-          >
-            Completar →
-          </Link>
-        </div>
-      )}
-
-      {/* Generate form — vertical sections with iconed headers */}
+      {/* Generate form — vertical sections with iconed headers.
+          Profile-incomplete notice and addon-active note live INSIDE the form
+          card so the no-plan view reads as one cohesive block on mobile. */}
       <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm divide-y divide-slate-100">
+        {!profileCompleted && (
+          <div className="flex items-start gap-3 bg-amber-50/70 border-b border-amber-200 px-5 py-3 text-sm">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-amber-900 font-semibold leading-tight">
+                Completa tu perfil primero
+              </p>
+              <p className="text-amber-800/80 mt-0.5 text-xs leading-snug">
+                Edad, peso y altura para calcular calorías óptimas.
+              </p>
+            </div>
+            <Link
+              href="/portal/perfil"
+              className="shrink-0 text-amber-700 hover:text-amber-800 font-semibold text-xs self-center inline-flex items-center gap-1"
+            >
+              Completar
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        )}
+
         <FormSection
           icon={<Flame className="h-4 w-4" />}
           title="Calorías objetivo"
@@ -546,11 +608,21 @@ function NoPlanView({
           />
         </FormSection>
 
-        <div className="p-5 sm:p-6 space-y-4">
+        <div className="p-5 sm:p-6 space-y-3">
           {generate.isError && (
             <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
               {(generate.error as { message?: string })?.message ??
                 'No se pudo generar el plan.'}
+            </div>
+          )}
+
+          {fromAddon && (
+            <div className="flex items-center gap-2 text-xs text-emerald-700">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>
+                <strong className="font-semibold">Plan extra listo.</strong>{' '}
+                Lo aplicamos al generar tu plan.
+              </span>
             </div>
           )}
 
@@ -725,28 +797,6 @@ function ExhaustedCountdown({
 }
 
 /* =========================================================================
- * Addon active banner — shown when the user's availability is from the addon
- * =========================================================================*/
-
-function AddonActiveBanner() {
-  return (
-    <div className="rounded-2xl bg-gradient-to-r from-emerald-50 to-blue-50 ring-1 ring-emerald-200 px-4 py-3 flex items-start gap-3 text-sm">
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-emerald-200 text-emerald-700">
-        <CheckCircle2 className="h-5 w-5" />
-      </span>
-      <div className="flex-1">
-        <p className="font-semibold text-slate-900">
-          Tu add-on está listo — genera tu plan ahora
-        </p>
-        <p className="text-slate-600 mt-0.5 text-xs">
-          Aplicaremos tu plan alimenticio al guardar el formulario.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================================
  * Quota status (inline) — for the form view
  * =========================================================================*/
 
@@ -767,7 +817,7 @@ function QuotaStatus({ quota }: { quota?: AiQuota }) {
     return (
       <div className="flex items-center gap-2 text-sm text-emerald-700">
         <CheckCircle2 className="w-4 h-4" />
-        Add-on activo — listo para generar tu plan.
+        Plan extra activo — listo para generar tu plan.
       </div>
     );
   }
