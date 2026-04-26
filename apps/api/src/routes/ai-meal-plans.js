@@ -311,7 +311,16 @@ export default async function aiMealPlansRoutes(fastify) {
     // ─── POST /ai/meal-plans/generate ────────────────────────────
     fastify.post('/ai/meal-plans/generate', guard, async (req) => {
         const parsed = generateBody.safeParse(req.body || {});
-        if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
+        if (!parsed.success) {
+            // Surface only the first issue's message instead of the full
+            // ZodError JSON, which would leak as an unreadable blob in
+            // the toast / inline error UI.
+            const first = parsed.error.issues[0];
+            const msg = first
+                ? `${first.path.join('.') || 'campo'}: ${first.message}`
+                : 'Datos inválidos';
+            throw err('BAD_BODY', msg, 400);
+        }
 
         const userId = req.user.sub || req.user.id;
 

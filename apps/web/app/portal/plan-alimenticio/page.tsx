@@ -117,11 +117,14 @@ const ALLERGIES = [
   { value: 'soy', label: 'Soja' },
 ];
 
+// Budget values are wire format — must match BudgetEnum in
+// apps/api/src/routes/ai-meal-plans.js (z.enum(['LOW','MEDIUM','HIGH'])).
 const BUDGETS = [
-  { value: 'low', label: 'Económico', hint: 'Ingredientes básicos' },
-  { value: 'medium', label: 'Balanceado', hint: 'Calidad / precio óptima' },
-  { value: 'high', label: 'Premium', hint: 'Ingredientes selectos' },
-];
+  { value: 'LOW', label: 'Económico', hint: 'Ingredientes básicos' },
+  { value: 'MEDIUM', label: 'Balanceado', hint: 'Calidad / precio óptima' },
+  { value: 'HIGH', label: 'Premium', hint: 'Ingredientes selectos' },
+] as const;
+type BudgetValue = typeof BUDGETS[number]['value'];
 
 const HERO_IMAGE =
   'https://images.unsplash.com/photo-1490818387583-1baba5e638af?q=80&w=1600';
@@ -354,7 +357,7 @@ function NoPlanView({
   const router = useRouter();
   const [calories, setCalories] = useState<string>('');
   const [mealsPerDay, setMealsPerDay] = useState<3 | 4 | 5>(5);
-  const [budget, setBudget] = useState<'low' | 'medium' | 'high'>('medium');
+  const [budget, setBudget] = useState<BudgetValue>('MEDIUM');
   const [restrictions, setRestrictions] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [customAllergies, setCustomAllergies] = useState<string>('');
@@ -571,7 +574,7 @@ function NoPlanView({
                   name="budget"
                   value={b.value}
                   checked={budget === b.value}
-                  onChange={() => setBudget(b.value as 'low' | 'medium' | 'high')}
+                  onChange={() => setBudget(b.value)}
                   className="sr-only"
                 />
                 <div className="font-semibold">{b.label}</div>
