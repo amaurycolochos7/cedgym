@@ -558,6 +558,52 @@ export const adminApi = {
     api
       .post(`/admin/miembros/${id}/whatsapp`, { message: body })
       .then((r) => r.data),
+  memberCheckins: (id: string, limit = 50) =>
+    api
+      .get<{
+        items: Array<{
+          id: string;
+          scanned_at: string;
+          method: string;
+          staff_id: string | null;
+        }>;
+        total: number;
+      }>(`/admin/miembros/${id}/checkins`, { params: { limit } })
+      .then((r) => r.data),
+  memberPayments: (id: string, limit = 50) =>
+    api
+      .get<{
+        items: Array<{
+          id: string;
+          amount: number;
+          type: string;
+          status: string;
+          description: string | null;
+          reference: string | null;
+          paid_at: string | null;
+          created_at: string;
+          method: string | null;
+        }>;
+        total: number;
+      }>(`/admin/miembros/${id}/payments`, { params: { limit } })
+      .then((r) => r.data),
+  memberRoutines: (id: string) =>
+    api
+      .get<{
+        items: Array<{
+          id: string;
+          product_id: string;
+          title: string;
+          type: string | null;
+          sport: string | null;
+          price_paid_mxn: number;
+          access_granted_at: string;
+          expires_at: string | null;
+          downloaded_times: number;
+        }>;
+        total: number;
+      }>(`/admin/miembros/${id}/routines`)
+      .then((r) => r.data),
   exportMembersCsv: () =>
     api
       .get<{ url: string }>('/admin/members/export.csv')

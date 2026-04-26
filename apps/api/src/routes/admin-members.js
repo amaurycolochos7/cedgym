@@ -296,6 +296,90 @@ export default async function adminMembersRoutes(fastify) {
     return { success: true };
   });
 
+  // ─── GET /admin/miembros/:id/checkins ──────────────────────────
+  // Histórico de check-ins del socio, paginado por fecha. Útil para el
+  // detail page del admin (tab "Check-ins").
+  fastify.get('/admin/miembros/:id/checkins', guard, async (req) => {
+    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const limit = Math.min(Number(req.query?.limit) || 50, 200);
+    const items = await fastify.prisma.checkIn.findMany({
+      where: { user_id: req.params.id, workspace_id: workspaceId },
+      orderBy: { scanned_at: 'desc' },
+      take: limit,
+    });
+    return {
+      items: items.map((c) => ({
+        id: c.id,
+        scanned_at: c.scanned_at,
+        method: c.method,
+        staff_id: c.staff_id,
+      })),
+      total: items.length,
+    };
+  });
+
+  // ─── GET /admin/miembros/:id/payments ──────────────────────────
+  // Pagos del socio (membresía, productos, etc.) ordenados por fecha
+  // de creación, con metadata útil para que el admin entienda contexto.
+  fastify.get('/admin/miembros/:id/payments', guard, async (req) => {
+    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const limit = Math.min(Number(req.query?.limit) || 50, 200);
+    const items = await fastify.prisma.payment.findMany({
+      where: { user_id: req.params.id, workspace_id: workspaceId },
+      orderBy: { created_at: 'desc' },
+      take: limit,
+    });
+    return {
+      items: items.map((p) => ({
+        id: p.id,
+        amount: p.amount,
+        type: p.type,
+        status: p.status,
+        description: p.description,
+        reference: p.reference,
+        paid_at: p.paid_at,
+        created_at: p.created_at,
+        method: p?.metadata?.payment_method ?? null,
+      })),
+      total: items.length,
+    };
+  });
+
+  // ─── GET /admin/miembros/:id/routines ──────────────────────────
+  // Rutinas / productos digitales que el socio compró (productPurchase
+  // → digitalProduct). Para el tab "Rutinas".
+  fastify.get('/admin/miembros/:id/routines', guard, async (req) => {
+    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const purchases = await fastify.prisma.productPurchase.findMany({
+      where: { user_id: req.params.id, workspace_id: workspaceId },
+      include: {
+        product: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            sport: true,
+          },
+        },
+      },
+      orderBy: { access_granted_at: 'desc' },
+    });
+    return {
+      items: purchases.map((p) => ({
+        id: p.id,
+        product_id: p.product_id,
+        title: p.product?.title ?? '—',
+        type: p.product?.type ?? null,
+        sport: p.product?.sport ?? null,
+        price_paid_mxn: p.price_paid_mxn,
+        access_granted_at: p.access_granted_at,
+        expires_at: p.expires_at,
+        downloaded_times: p.downloaded_times,
+      })),
+      total: purchases.length,
+    };
+  });
+
   // ─── DELETE /admin/miembros/:id ────────────────────────────────
   // Hard delete: cascade through all related rows in a single
   // transaction, then drop the user. Writes a best-effort audit entry.

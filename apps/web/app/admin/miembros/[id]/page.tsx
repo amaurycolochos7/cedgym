@@ -31,7 +31,11 @@ import {
 import { StatusBadge } from '@/components/admin/status-badge';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { adminApi } from '@/lib/admin-api';
-import { planDisplayName, membershipStatusLabel } from '@/lib/utils';
+import {
+  planDisplayName,
+  membershipStatusLabel,
+  paymentStatusLabel,
+} from '@/lib/utils';
 
 const BTN_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
@@ -157,9 +161,6 @@ export default function AdminMemberDetailPage() {
           <TabsTrigger value="checkins">Check-ins</TabsTrigger>
           <TabsTrigger value="payments">Pagos</TabsTrigger>
           <TabsTrigger value="routines">Rutinas</TabsTrigger>
-          <TabsTrigger value="classes">Clases</TabsTrigger>
-          <TabsTrigger value="measurements">Mediciones</TabsTrigger>
-          <TabsTrigger value="chat">Comunicaciones</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
 
@@ -168,10 +169,19 @@ export default function AdminMemberDetailPage() {
             <DetailGrid
               items={[
                 ['ID', id],
-                ['Nombre', m?.name ?? '—'],
+                ['Nombre', m?.full_name || m?.name || '—'],
                 ['Teléfono', m?.phone ?? '—'],
                 ['Email', (m?.email as string) ?? '—'],
-                ['Creado', m?.created_at ?? '—'],
+                ['Creado', formatDate(m?.created_at as string | undefined)],
+                [
+                  'Total check-ins',
+                  String((m as any)?.stats?.total_checkins ?? 0),
+                ],
+                [
+                  'Último check-in',
+                  formatDate((m as any)?.stats?.last_checkin_at),
+                ],
+                ['XP', String((m as any)?.stats?.xp ?? 0)],
               ]}
             />
           </Section>
@@ -181,34 +191,42 @@ export default function AdminMemberDetailPage() {
           <Section title="Membresía actual">
             <DetailGrid
               items={[
-                ['Plan', planDisplayName((m as any)?.membership?.plan ?? m?.plan_code)],
-                ['Estado', membershipStatusLabel((m as any)?.membership?.status)],
-                ['Vence', (m as any)?.membership?.expires_at ?? m?.expires_at ?? '—'],
+                [
+                  'Plan',
+                  planDisplayName(
+                    (m as any)?.membership?.plan ?? m?.plan_code,
+                  ),
+                ],
+                [
+                  'Estado',
+                  membershipStatusLabel((m as any)?.membership?.status),
+                ],
+                [
+                  'Inicia',
+                  formatDate((m as any)?.membership?.starts_at),
+                ],
+                [
+                  'Vence',
+                  formatDate(
+                    (m as any)?.membership?.expires_at ?? m?.expires_at,
+                  ),
+                ],
               ]}
             />
           </Section>
         </TabsContent>
 
         <TabsContent value="checkins">
-          <Placeholder label="Histórico de check-ins (consume /admin/members/:id/checkins)" />
+          <CheckinsTab memberId={id} />
         </TabsContent>
         <TabsContent value="payments">
-          <Placeholder label="Pagos asociados (consume /admin/members/:id/payments)" />
+          <PaymentsTab memberId={id} />
         </TabsContent>
         <TabsContent value="routines">
-          <Placeholder label="Rutinas compradas" />
-        </TabsContent>
-        <TabsContent value="classes">
-          <Placeholder label="Clases y asistencia" />
-        </TabsContent>
-        <TabsContent value="measurements">
-          <Placeholder label="Mediciones corporales" />
-        </TabsContent>
-        <TabsContent value="chat">
-          <Placeholder label="Historial de WhatsApp / chat" />
+          <RoutinesTab memberId={id} />
         </TabsContent>
         <TabsContent value="audit">
-          <Placeholder label="Audit log (cambios administrativos)" />
+          <AuditTab memberId={id} />
         </TabsContent>
       </Tabs>
 
@@ -342,11 +360,213 @@ function DetailGrid({ items }: { items: [string, React.ReactNode][] }) {
   );
 }
 
-function Placeholder({ label }: { label: string }) {
+function EmptyState({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
       <ChevronsLeftRight className="h-4 w-4" />
       {label}
     </div>
+  );
+}
+
+function formatDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('es-MX', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+}
+
+const MXN = new Intl.NumberFormat('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  maximumFractionDigits: 0,
+});
+
+const CHECKIN_METHOD_LABEL: Record<string, string> = {
+  QR: 'QR',
+  MANUAL: 'Manual',
+  PASS_OF_DAY: 'Pase del día',
+  STAFF: 'Staff',
+};
+
+const PAYMENT_TYPE_LABEL: Record<string, string> = {
+  MEMBERSHIP: 'Membresía',
+  DIGITAL_PRODUCT: 'Producto',
+  COURSE: 'Curso',
+  POS: 'POS',
+  GIFT_CARD: 'Gift card',
+  MEAL_PLAN_ADDON: 'Add-on plan alimenticio',
+};
+
+function CheckinsTab({ memberId }: { memberId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'member', memberId, 'checkins'],
+    queryFn: () => adminApi.memberCheckins(memberId),
+    enabled: !!memberId,
+  });
+  if (isLoading) return <EmptyState label="Cargando check-ins…" />;
+  const items = data?.items ?? [];
+  if (items.length === 0)
+    return <EmptyState label="Este socio aún no tiene check-ins." />;
+  return (
+    <Section title={`Check-ins · últimos ${items.length}`}>
+      <ul className="divide-y divide-slate-200">
+        {items.map((c) => (
+          <li
+            key={c.id}
+            className="flex items-center justify-between gap-3 py-2.5 text-sm"
+          >
+            <span className="text-slate-900">{formatDate(c.scanned_at)}</span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+              {CHECKIN_METHOD_LABEL[c.method] ?? c.method}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function PaymentsTab({ memberId }: { memberId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'member', memberId, 'payments'],
+    queryFn: () => adminApi.memberPayments(memberId),
+    enabled: !!memberId,
+  });
+  if (isLoading) return <EmptyState label="Cargando pagos…" />;
+  const items = data?.items ?? [];
+  if (items.length === 0)
+    return <EmptyState label="Este socio aún no tiene pagos." />;
+  return (
+    <Section title={`Pagos · últimos ${items.length}`}>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-sm">
+          <thead>
+            <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <th className="pb-2 pr-3">Fecha</th>
+              <th className="pb-2 pr-3">Concepto</th>
+              <th className="pb-2 pr-3">Método</th>
+              <th className="pb-2 pr-3 text-right">Monto</th>
+              <th className="pb-2 text-right">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((p) => (
+              <tr
+                key={p.id}
+                className="border-t border-slate-200 align-middle text-slate-900"
+              >
+                <td className="py-2 pr-3 text-xs text-slate-600">
+                  {formatDate(p.paid_at ?? p.created_at)}
+                </td>
+                <td className="py-2 pr-3">
+                  <div className="text-sm text-slate-900">
+                    {p.description ??
+                      PAYMENT_TYPE_LABEL[p.type] ??
+                      p.type}
+                  </div>
+                  {p.reference && (
+                    <div className="text-[11px] text-slate-500">
+                      {p.reference}
+                    </div>
+                  )}
+                </td>
+                <td className="py-2 pr-3 text-xs text-slate-600">
+                  {p.method ?? '—'}
+                </td>
+                <td className="py-2 pr-3 text-right font-semibold tabular-nums">
+                  {MXN.format(p.amount)}
+                </td>
+                <td className="py-2 text-right">
+                  <span
+                    className={
+                      p.status === 'APPROVED'
+                        ? 'inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700'
+                        : p.status === 'PENDING'
+                          ? 'inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700'
+                          : 'inline-flex rounded-full bg-rose-100 px-2.5 py-0.5 text-[11px] font-semibold text-rose-700'
+                    }
+                  >
+                    {paymentStatusLabel(p.status)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Section>
+  );
+}
+
+function RoutinesTab({ memberId }: { memberId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'member', memberId, 'routines'],
+    queryFn: () => adminApi.memberRoutines(memberId),
+    enabled: !!memberId,
+  });
+  if (isLoading) return <EmptyState label="Cargando rutinas…" />;
+  const items = data?.items ?? [];
+  if (items.length === 0)
+    return <EmptyState label="Este socio no ha comprado rutinas todavía." />;
+  return (
+    <Section title={`Rutinas compradas · ${items.length}`}>
+      <ul className="divide-y divide-slate-200">
+        {items.map((r) => (
+          <li key={r.id} className="flex items-center justify-between gap-3 py-3">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">
+                {r.title}
+              </div>
+              <div className="text-[11px] text-slate-500">
+                {[r.type, r.sport].filter(Boolean).join(' · ') || '—'} ·{' '}
+                {formatDate(r.access_granted_at)} · {r.downloaded_times}{' '}
+                descargas
+              </div>
+            </div>
+            <span className="shrink-0 text-sm font-bold tabular-nums text-blue-600">
+              {MXN.format(r.price_paid_mxn)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+function AuditTab({ memberId }: { memberId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'member', memberId, 'audit'],
+    queryFn: () => adminApi.listAuditLog({ target: memberId, limit: 100 }),
+    enabled: !!memberId,
+  });
+  if (isLoading) return <EmptyState label="Cargando auditoría…" />;
+  const items = data?.items ?? [];
+  if (items.length === 0)
+    return <EmptyState label="No hay registros de auditoría para este socio." />;
+  return (
+    <Section title={`Auditoría · ${items.length} eventos`}>
+      <ul className="divide-y divide-slate-200">
+        {items.map((a) => (
+          <li key={a.id} className="py-2.5 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-slate-700">
+                {a.action}
+              </span>
+              <span className="text-[11px] text-slate-500">
+                {formatDate(a.created_at)}
+              </span>
+            </div>
+            <div className="mt-1 text-[12px] text-slate-600">
+              {a.actor_name ?? 'sistema'}
+              {a.actor_role ? ` · ${a.actor_role}` : ''}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }
