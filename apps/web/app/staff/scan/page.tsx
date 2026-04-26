@@ -27,14 +27,32 @@ export default function StaffScanPage() {
   const [history, setHistory] = useState<any[]>([]);
   const scannerRef = useRef<any>(null);
   const [libReady, setLibReady] = useState(false);
+  // Si el auto-start falla (permiso denegado, sin cámara, etc.) mostramos el
+  // botón manual para que el usuario pueda reintentar tras corregir.
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const startingRef = useRef(false);
 
   useEffect(() => {
+    // Reusar el script si ya está cargado (evita duplicados al navegar).
+    if ((window as any).Html5Qrcode) {
+      setLibReady(true);
+      return;
+    }
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[data-html5-qrcode]'
+    );
+    if (existing) {
+      existing.addEventListener('load', () => setLibReady(true), { once: true });
+      return;
+    }
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    s.async = true;
+    s.dataset.html5Qrcode = '1';
     s.onload = () => setLibReady(true);
     s.onerror = () => console.error('No se pudo cargar html5-qrcode');
     document.body.appendChild(s);
-    return () => { s.remove(); };
+    // No removemos el script al desmontar: la librería puede dejar referencias.
   }, []);
 
   const scan = useMutation({
@@ -81,33 +99,74 @@ export default function StaffScanPage() {
   });
 
   async function startCamera() {
-    if (!libReady || !window.Html5Qrcode) {
-      alert('Cámara aún no lista, espera unos segundos.');
-      return;
+    if (!libReady || !window.Html5Qrcode) return;
+    if (startingRef.current || scannerRef.current) return;
+    startingRef.current = true;
+    setCameraError(null);
+    try {
+      const html5QrCode = new window.Html5Qrcode('qr-reader');
+      scannerRef.current = html5QrCode;
+      await html5QrCode.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: 300 },
+        (decoded: string) => {
+          scan.mutate(decoded);
+          setTimeout(() => setResult(null), 4000);
+        },
+        () => {}
+      );
+      setActive(true);
+    } catch (e: any) {
+      scannerRef.current = null;
+      const msg =
+        e?.name === 'NotAllowedError'
+          ? 'Permiso de cámara denegado. Habilítalo en el navegador.'
+          : e?.name === 'NotFoundError'
+            ? 'No se encontró ninguna cámara.'
+            : 'No se pudo iniciar la cámara.';
+      setCameraError(msg);
+    } finally {
+      startingRef.current = false;
     }
-    const html5QrCode = new window.Html5Qrcode('qr-reader');
-    scannerRef.current = html5QrCode;
-    await html5QrCode.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: 300 },
-      (decoded: string) => {
-        scan.mutate(decoded);
-        setTimeout(() => setResult(null), 4000);
-      },
-      () => {}
-    );
-    setActive(true);
   }
 
   async function stopCamera() {
-    if (scannerRef.current) {
-      try { await scannerRef.current.stop(); } catch {}
-      try { await scannerRef.current.clear(); } catch {}
+    const s = scannerRef.current;
+    scannerRef.current = null;
+    if (s) {
+      try { await s.stop(); } catch {}
+      try { await s.clear(); } catch {}
     }
     setActive(false);
   }
 
-  useEffect(() => () => { stopCamera(); }, []);
+  // Auto-iniciar la cámara cuando la librería esté lista. Si el usuario
+  // pulsa "Detener", queda inactivo hasta que vuelva a darle a "Iniciar".
+  useEffect(() => {
+    if (!libReady) return;
+    if (active || cameraError) return;
+    if (scannerRef.current || startingRef.current) return;
+    startCamera();
+    // startCamera depende de libReady/scan.mutate (estables); deps mínimas
+    // para evitar reintentos en bucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libReady, active, cameraError]);
+
+  // Limpieza al desmontar: detener la cámara sin tocar setState (componente ya
+  // no existe). Esto evita el "removeChild" cuando React intenta reconciliar
+  // los nodos que html5-qrcode inyectó en #qr-reader.
+  useEffect(() => {
+    return () => {
+      const s = scannerRef.current;
+      scannerRef.current = null;
+      if (!s) return;
+      Promise.resolve()
+        .then(() => s.stop())
+        .catch(() => {})
+        .then(() => s.clear())
+        .catch(() => {});
+    };
+  }, []);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8">
@@ -120,20 +179,37 @@ export default function StaffScanPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div
-            id="qr-reader"
-            className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-slate-500"
-          >
-            {!active && <Camera className="h-12 w-12" />}
+          {/*
+            IMPORTANTE: #qr-reader NO debe tener hijos manejados por React.
+            html5-qrcode inyecta sus propios nodos (video/canvas) ahí dentro y
+            si React también renderiza hijos en el mismo nodo, al desmontar
+            falla con "Failed to execute 'removeChild' on 'Node'". Por eso el
+            placeholder va en un overlay hermano.
+          */}
+          <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-900 text-slate-500">
+            <div id="qr-reader" className="absolute inset-0" />
+            {!active && (
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                <Camera className="h-12 w-12" />
+                {cameraError ? (
+                  <p className="text-xs text-rose-300">{cameraError}</p>
+                ) : (
+                  <p className="text-xs text-slate-400">
+                    {libReady ? 'Iniciando cámara…' : 'Cargando lector…'}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <div className="mt-3 flex gap-2">
             {!active ? (
               <button
                 type="button"
                 onClick={startCamera}
-                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700"
+                disabled={!libReady || (!cameraError && startingRef.current)}
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60"
               >
-                Iniciar cámara
+                {cameraError ? 'Reintentar cámara' : 'Iniciar cámara'}
               </button>
             ) : (
               <button
