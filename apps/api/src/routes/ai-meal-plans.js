@@ -507,7 +507,14 @@ export default async function aiMealPlansRoutes(fastify) {
     });
 
     // ─── GET /ai/meal-plans/me ──────────────────────────────────
-    // Active plan with meals grouped by day_of_week (0..6).
+    // Active plan with meals nested as `plan.meals` (the frontend
+    // groups them by day_of_week itself). The previous version also
+    // returned a `days` array that pushed the SAME meal refs into a
+    // sibling structure — fast-json-stringify treated those repeat
+    // references as already-serialized and silently elided
+    // `plan.meals` from the response, breaking the day view with
+    // "Sin comidas para este día". Returning only the nested form
+    // keeps every meal object reachable from exactly one path.
     fastify.get('/ai/meal-plans/me', guard, async (req) => {
         const userId = req.user.sub || req.user.id;
 
@@ -521,29 +528,8 @@ export default async function aiMealPlansRoutes(fastify) {
             },
         });
 
-        if (!plan) return { plan: null, days: [] };
-
-        // Group by day_of_week.
-        const days = Array.from({ length: 7 }, (_, d) => ({
-            day_of_week: d,
-            meals: [],
-            total_calories: 0,
-            total_protein_g: 0,
-            total_carbs_g: 0,
-            total_fats_g: 0,
-        }));
-        for (const m of plan.meals) {
-            const bucket = days[m.day_of_week];
-            if (!bucket) continue;
-            bucket.meals.push(m);
-            bucket.total_calories += m.calories || 0;
-            bucket.total_protein_g += m.protein_g || 0;
-            bucket.total_carbs_g += m.carbs_g || 0;
-            bucket.total_fats_g += m.fats_g || 0;
-        }
-
-        const { meals: _omit, ...planHeader } = plan;
-        return { plan: planHeader, days };
+        if (!plan) return { plan: null };
+        return { plan };
     });
 
     // ─── GET /ai/meal-plans/me/history ──────────────────────────
