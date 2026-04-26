@@ -156,6 +156,23 @@ export const staffPosApi = {
       .post<ExtendMembershipResponse>('/staff/extend-membership', body)
       .then((r) => r.data),
 
+  // Validates a promo code in the cash flow before the receptionist
+  // hits "Cobrar". Returns { valid, discount_mxn, final_amount, reason }.
+  validatePromo: (body: {
+    code: string;
+    amount_mxn: number;
+    applies_to?: string;
+  }) =>
+    api
+      .post<{
+        valid: boolean;
+        reason: string | null;
+        discount_mxn: number;
+        final_amount: number;
+        promo: { code: string; type: string; value: number } | null;
+      }>('/promocodes/validate', body)
+      .then((r) => r.data),
+
   enrollCourse: (body: EnrollCourseBody) =>
     api
       .post<EnrollCourseResponse>('/staff/enroll-course', body)

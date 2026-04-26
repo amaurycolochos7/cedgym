@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   UserPlus,
@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   X,
   MessageCircle,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
@@ -32,6 +34,25 @@ interface Plan {
 
 function mxn(n: number) {
   return `$${n.toLocaleString('es-MX')}`;
+}
+
+function promoReasonLabel(reason?: string | null) {
+  switch (reason) {
+    case 'NOT_FOUND':
+      return 'Código no existe.';
+    case 'DISABLED':
+      return 'Código deshabilitado.';
+    case 'EXPIRED':
+      return 'Código expirado.';
+    case 'EXHAUSTED':
+      return 'Código agotado.';
+    case 'MIN_AMOUNT':
+      return 'No alcanza el monto mínimo.';
+    case 'NOT_APPLICABLE':
+      return 'No aplica para membresías.';
+    default:
+      return 'Código inválido.';
+  }
 }
 
 const PAYMENT_METHODS: {
@@ -85,7 +106,41 @@ export default function StaffWalkInPage() {
   const INSCRIPTION_MXN = 109;
   const inscriptionPreview =
     form.plan === 'STARTER' ? 0 : INSCRIPTION_MXN;
-  const totalPreview = planPrice + inscriptionPreview;
+
+  // Promo validation, debounced. We hit /promocodes/validate after the
+  // receptionist stops typing for 400 ms so each keystroke isn't a round
+  // trip. The result drives both the live discount preview and the
+  // total. The actual charge happens server-side at /staff/register-member,
+  // so this is purely UX — even if validation is stale, the backend
+  // re-validates before accepting the promo.
+  const trimmedCode = form.promoCode.trim();
+  const [debouncedCode, setDebouncedCode] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedCode(trimmedCode), 400);
+    return () => clearTimeout(t);
+  }, [trimmedCode]);
+
+  const promoQ = useQuery({
+    queryKey: ['promo-validate', debouncedCode, planPrice],
+    queryFn: () =>
+      staffPosApi.validatePromo({
+        code: debouncedCode,
+        amount_mxn: planPrice,
+        applies_to: 'MEMBERSHIP',
+      }),
+    enabled: debouncedCode.length >= 1 && planPrice > 0,
+    staleTime: 30_000,
+    retry: false,
+  });
+
+  const promoChecking =
+    trimmedCode.length > 0 &&
+    (debouncedCode !== trimmedCode || promoQ.isFetching);
+  const promoValid = !!promoQ.data?.valid && trimmedCode === debouncedCode;
+  const promoDiscount = promoValid ? promoQ.data?.discount_mxn ?? 0 : 0;
+  const promoReason = !promoValid && promoQ.data ? promoQ.data.reason : null;
+
+  const totalPreview = Math.max(0, planPrice - promoDiscount) + inscriptionPreview;
 
   const [result, setResult] = useState<RegisterMemberResponse | null>(null);
 
@@ -261,21 +316,53 @@ export default function StaffWalkInPage() {
           <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
             Cupón (opcional)
           </h2>
-          <input
-            type="text"
-            value={form.promoCode}
-            onChange={(e) =>
-              setForm({ ...form, promoCode: e.target.value.toUpperCase() })
-            }
-            placeholder="Ej. AMIGOS50"
-            className={inputCls}
-            autoCapitalize="characters"
-          />
-          <p className="text-[11px] text-slate-500">
-            Si el socio trae un código, escríbelo aquí. El descuento se
-            valida al cobrar y se aplica solo al plan (la inscripción no
-            se descuenta).
-          </p>
+          <div className="relative">
+            <input
+              type="text"
+              value={form.promoCode}
+              onChange={(e) =>
+                setForm({ ...form, promoCode: e.target.value.toUpperCase() })
+              }
+              placeholder="Ej. AMIGOS50"
+              className={`${inputCls} pr-10 ${
+                trimmedCode.length === 0
+                  ? ''
+                  : promoChecking
+                    ? 'border-slate-300'
+                    : promoValid
+                      ? 'border-emerald-400 ring-emerald-100'
+                      : 'border-rose-400 ring-rose-100'
+              }`}
+              autoCapitalize="characters"
+            />
+            {trimmedCode.length > 0 && (
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                {promoChecking ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                ) : promoValid ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-rose-500" />
+                )}
+              </span>
+            )}
+          </div>
+          {trimmedCode.length === 0 ? (
+            <p className="text-[11px] text-slate-500">
+              Si el socio trae un código, escríbelo aquí. El descuento se
+              aplica solo al plan (la inscripción no se descuenta).
+            </p>
+          ) : promoChecking ? (
+            <p className="text-[11px] text-slate-500">Validando…</p>
+          ) : promoValid ? (
+            <p className="text-[11px] font-semibold text-emerald-700">
+              ✓ Cupón válido — descuenta {mxn(promoDiscount)} del plan
+            </p>
+          ) : (
+            <p className="text-[11px] font-semibold text-rose-600">
+              ✗ {promoReasonLabel(promoReason)}
+            </p>
+          )}
         </section>
 
         {/* ─── Total + CTA ─────────────────────────────────── */}
@@ -285,34 +372,29 @@ export default function StaffWalkInPage() {
               <span>Plan {selectedPlan?.name ?? '—'}</span>
               <span className="tabular-nums">{mxn(planPrice)}</span>
             </div>
+            {promoValid && promoDiscount > 0 && (
+              <div className="flex justify-between text-emerald-700">
+                <span>
+                  Cupón {trimmedCode}
+                </span>
+                <span className="tabular-nums">−{mxn(promoDiscount)}</span>
+              </div>
+            )}
             {inscriptionPreview > 0 && (
               <div className="flex justify-between text-slate-600">
                 <span>Inscripción única</span>
                 <span className="tabular-nums">{mxn(inscriptionPreview)}</span>
               </div>
             )}
-            {form.promoCode.trim().length > 0 && (
-              <div className="flex justify-between text-emerald-700">
-                <span>Cupón aplicado al cobrar</span>
-                <span className="tabular-nums italic">
-                  −{form.promoCode.trim().toUpperCase()}
-                </span>
-              </div>
-            )}
           </div>
           <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-[11px] uppercase tracking-wider text-slate-500">
-                Total estimado
+                Total a cobrar
               </div>
               <div className="font-display text-4xl font-bold tabular-nums text-blue-600">
                 {mxn(totalPreview)}
               </div>
-              {form.promoCode.trim().length > 0 && (
-                <div className="text-[11px] text-slate-500">
-                  Antes del descuento del cupón
-                </div>
-              )}
             </div>
             <button
               type="button"
