@@ -63,7 +63,7 @@ const ACHIEVEMENTS: Achievement[] = [
 const STATS = [
   { value: '3×', label: 'Internacional Powerlifting', Icon: Trophy },
   { value: '20+', label: 'Años en élite', Icon: Star },
-  { value: '773kg', label: 'Total nacional 2018', Icon: Dumbbell },
+  { value: '778kg', label: 'Total nacional 2018', Icon: Dumbbell },
   { value: '1°', label: 'TD inaugural UACH', Icon: Award },
 ];
 
