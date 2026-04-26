@@ -241,8 +241,8 @@ function EditorialHero({
   return (
     <section className="relative overflow-hidden rounded-2xl ring-1 ring-slate-200 shadow-sm">
       <div className="grid md:grid-cols-2">
-        {/* Image side — shorter on mobile to keep the form near the fold */}
-        <div className="relative h-40 sm:h-48 md:h-auto md:order-2">
+        {/* Image side — full-bleed mobile (h-56), contained on desktop */}
+        <div className="relative h-56 md:h-auto md:order-2">
           <img
             src={HERO_IMAGE}
             alt="Plato saludable con vegetales y proteína"
@@ -250,7 +250,7 @@ function EditorialHero({
             loading="eager"
           />
           {/* Brand-tinted gradient — emerald → blue → dark — only on mobile */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-blue-900/40 to-emerald-900/10 md:hidden" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/30 to-transparent md:hidden" />
 
           {/* Mobile status chip — top-right of hero so it's visible at a glance */}
           {statusChip && (
@@ -265,15 +265,15 @@ function EditorialHero({
           )}
 
           {/* Mobile title overlay */}
-          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:hidden">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/85">
+          <div className="absolute inset-x-0 bottom-0 p-5 md:hidden">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85">
               {eyebrow}
             </div>
-            <h1 className="font-display mt-1 text-[1.7rem] leading-[1.05] text-white">
+            <h1 className="font-display mt-1 text-3xl leading-[1.05] text-white">
               {title}
             </h1>
             {subtitle && (
-              <p className="mt-1.5 max-w-md text-[13px] leading-snug text-white/85">
+              <p className="mt-2 max-w-md text-sm text-white/85">
                 {subtitle}
               </p>
             )}
