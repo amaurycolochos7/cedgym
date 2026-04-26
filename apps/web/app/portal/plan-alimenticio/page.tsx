@@ -7,8 +7,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Apple, Flame, Dumbbell, Wheat, Droplet,
-  RefreshCw, ChevronDown, ChevronUp, AlertCircle, Clock, Lock,
-  ShoppingCart, Utensils, CheckCircle2, ArrowRight, Plus,
+  RefreshCw, AlertCircle, Clock, Lock,
+  ShoppingCart, Utensils, CheckCircle2, ArrowRight, Plus, Download,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { planDisplayName } from '@/lib/utils';
@@ -49,11 +49,6 @@ interface MealPlan {
   meals: Meal[];
 }
 
-interface ShoppingListItem {
-  name: string;
-  total: string;
-}
-
 interface QuotaFeature {
   used: number;
   limit: number | null;
@@ -85,14 +80,6 @@ const MEAL_TYPE_ES: Record<MealType, string> = {
   LUNCH: 'Comida',
   SNACK_PM: 'Antes de entrenar',
   DINNER: 'Cena',
-};
-
-const MEAL_IMAGES: Record<MealType, string> = {
-  BREAKFAST: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?q=80&w=800',
-  SNACK_AM: 'https://images.unsplash.com/photo-1524350876685-274059332603?q=80&w=800',
-  LUNCH: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800',
-  SNACK_PM: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?q=80&w=800',
-  DINNER: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?q=80&w=800',
 };
 
 const MEAL_ORDER: MealType[] = ['BREAKFAST', 'SNACK_AM', 'LUNCH', 'SNACK_PM', 'DINNER'];
@@ -966,7 +953,21 @@ function PlanView({
 }) {
   const router = useRouter();
   const [addonOpen, setAddonOpen] = useState(false);
-  const [shoppingOpen, setShoppingOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  async function handleDownloadPdf() {
+    if (downloadingPdf) return;
+    setDownloadingPdf(true);
+    try {
+      const { downloadMealPlanPdf } = await import('@/lib/meal-plan-pdf');
+      await downloadMealPlanPdf(plan, { firstName: userFirstName });
+    } catch (e) {
+      console.error('[meal-plan-pdf] download failed', e);
+      toast.error('No se pudo generar el PDF. Intenta de nuevo.');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
 
   // Clean, structured title (we don't trust the AI-generated plan.name to
   // be well-phrased — it tends to be "Mantenimiento de X — 2309 kcal").
@@ -1117,10 +1118,10 @@ function PlanView({
                 label={regenerate.isPending ? 'Regenerando…' : 'Regenerar'}
               />
               <DarkToolbarButton
-                onClick={() => setShoppingOpen((v) => !v)}
-                icon={<ShoppingCart className="h-4 w-4" />}
-                label={shoppingOpen ? 'Ocultar lista' : 'Lista de compras'}
-                active={shoppingOpen}
+                onClick={handleDownloadPdf}
+                disabled={downloadingPdf}
+                icon={<Download className={`h-4 w-4 ${downloadingPdf ? 'animate-pulse' : ''}`} />}
+                label={downloadingPdf ? 'Generando PDF…' : 'Descargar plan alimenticio'}
               />
               {canBuyAnother && (
                 <DarkToolbarButton
@@ -1144,14 +1145,6 @@ function PlanView({
           />
         </div>
       </section>
-
-      {/* Inline shopping list — toggled by the toolbar button */}
-      {shoppingOpen && (
-        <ShoppingListInline
-          planId={plan.id}
-          onClose={() => setShoppingOpen(false)}
-        />
-      )}
 
       {/* Day tabs */}
       {availableDays.length > 0 && (
@@ -1220,9 +1213,10 @@ function PlanView({
             compact
           />
           <ToolbarButton
-            onClick={() => setShoppingOpen((v) => !v)}
-            icon={<ShoppingCart className="h-4 w-4" />}
-            label={shoppingOpen ? 'Cerrar' : 'Lista'}
+            onClick={handleDownloadPdf}
+            disabled={downloadingPdf}
+            icon={<Download className={`h-4 w-4 ${downloadingPdf ? 'animate-pulse' : ''}`} />}
+            label={downloadingPdf ? 'Generando…' : 'Descargar plan'}
             compact
           />
           {canBuyAnother && (
@@ -1237,140 +1231,6 @@ function PlanView({
         </div>
       </div>
     </div>
-  );
-}
-
-/* =========================================================================
- * Inline shopping list — replaces the .txt download. Aggregated ingredients
- * with checkable items so the user can use it as a real shopping companion.
- * =========================================================================*/
-
-function ShoppingListInline({
-  planId,
-  onClose,
-}: {
-  planId: string;
-  onClose: () => void;
-}) {
-  const { data, isLoading, isError } = useQuery<{ items: ShoppingListItem[] }>({
-    queryKey: ['ai', 'meal-plans', planId, 'shopping-list'],
-    queryFn: async () => {
-      const r = await api.get(`/ai/meal-plans/${planId}/shopping-list`);
-      return r.data;
-    },
-  });
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-
-  const items = data?.items ?? [];
-  const checkedCount = checked.size;
-  const total = items.length;
-  const allDone = total > 0 && checkedCount === total;
-
-  function toggle(name: string) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
-  }
-
-  return (
-    <section className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
-      <header className="flex items-center justify-between gap-3 px-5 sm:px-7 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50/60 to-emerald-50/40">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/30">
-            <ShoppingCart className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <h3 className="font-display text-base sm:text-lg font-semibold text-slate-900 truncate">
-              Lista de compras
-            </h3>
-            <p className="text-xs text-slate-500">
-              {isLoading
-                ? 'Calculando ingredientes…'
-                : total > 0
-                  ? `${checkedCount}/${total} marcados`
-                  : 'Sin ingredientes'}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-          aria-label="Cerrar lista"
-        >
-          <ChevronUp className="h-4 w-4" />
-        </button>
-      </header>
-
-      <div className="px-5 sm:px-7 py-4">
-        {isLoading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-9 rounded-lg bg-slate-100 animate-pulse" />
-            ))}
-          </div>
-        ) : isError ? (
-          <p className="text-sm text-red-600">No pudimos cargar la lista de compras.</p>
-        ) : total === 0 ? (
-          <p className="text-sm text-slate-500">Aún no hay ingredientes para este plan.</p>
-        ) : (
-          <>
-            {/* Progress bar */}
-            <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300"
-                style={{ width: `${total === 0 ? 0 : (checkedCount / total) * 100}%` }}
-              />
-            </div>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {items.map((it) => {
-                const isOn = checked.has(it.name);
-                return (
-                  <li key={it.name}>
-                    <button
-                      type="button"
-                      onClick={() => toggle(it.name)}
-                      className={`group w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${
-                        isOn
-                          ? 'bg-emerald-50 ring-1 ring-emerald-200'
-                          : 'hover:bg-slate-50 ring-1 ring-transparent'
-                      }`}
-                    >
-                      <span
-                        className={`grid h-5 w-5 shrink-0 place-items-center rounded-md ring-1 transition ${
-                          isOn
-                            ? 'bg-emerald-500 ring-emerald-500 text-white'
-                            : 'bg-white ring-slate-300 group-hover:ring-slate-400'
-                        }`}
-                      >
-                        {isOn && <CheckCircle2 className="h-3.5 w-3.5" />}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        <span className={`block font-medium truncate ${isOn ? 'text-emerald-900 line-through decoration-emerald-400/70' : 'text-slate-800'}`}>
-                          {it.name}
-                        </span>
-                      </span>
-                      <span className={`shrink-0 text-xs tabular-nums font-semibold ${isOn ? 'text-emerald-700' : 'text-slate-500'}`}>
-                        {it.total}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {allDone && (
-              <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                ¡Lista completa!
-              </p>
-            )}
-          </>
-        )}
-      </div>
-    </section>
   );
 }
 
@@ -1548,63 +1408,39 @@ function MacroBars({
 }
 
 /* =========================================================================
- * Meal card — image full-width, content below, ingredient pills, expand toggle
+ * Meal card — image-free, all info visible. Layout:
+ *   [type badge]  [meal name]
+ *   [calorie · macros · prep-time stat pills]
+ *   ── divider ──
+ *   Ingredientes (bullet list)
+ *   ── divider ──
+ *   Preparación (description, line-breaks preserved)
+ *
+ * No images and no expand/collapse — every card shows the full recipe
+ * so the user can read the steps without a tap. The PDF download covers
+ * the offline / shopping use case.
  * =========================================================================*/
 
 function MealCard({ meal }: { meal: Meal }) {
-  const [open, setOpen] = useState(false);
-  const img = MEAL_IMAGES[meal.meal_type];
   const badge = MEAL_TYPE_ES[meal.meal_type] ?? meal.meal_type;
-
-  // Show ingredients as pills only when the list is short enough to look
-  // tidy (more than ~10 turns into a wall). Beyond that we fall back to
-  // a list inside the expanded body.
-  const fewIngredients =
-    !!meal.ingredients && meal.ingredients.length > 0 && meal.ingredients.length <= 10;
-  const manyIngredients =
-    !!meal.ingredients && meal.ingredients.length > 10;
+  const hasIngredients = !!meal.ingredients && meal.ingredients.length > 0;
+  const hasDescription = !!meal.description && meal.description.trim().length > 0;
 
   return (
     <article className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl overflow-hidden">
-      {/* Image hero — full width */}
-      <div className="relative aspect-[16/9] bg-slate-200 overflow-hidden">
-        <img
-          src={img}
-          alt={meal.name}
-          className="absolute inset-0 h-full w-full object-cover"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent" />
-        <span className="absolute top-3 left-3 inline-flex items-center text-[10px] uppercase tracking-[0.18em] font-bold px-2.5 py-1 rounded-full bg-white/95 text-blue-700 ring-1 ring-blue-200 shadow-sm backdrop-blur">
-          {badge}
-        </span>
-      </div>
-
-      {/* Body */}
       <div className="p-5 sm:p-6">
-        <h3 className="font-display text-xl sm:text-2xl text-slate-900 leading-tight">
+        {/* Header: type badge + meal name */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center text-[10px] uppercase tracking-[0.18em] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+            {badge}
+          </span>
+        </div>
+        <h3 className="font-display text-xl sm:text-2xl text-slate-900 leading-tight mt-2">
           {meal.name}
         </h3>
-        {meal.description && (
-          <p className="italic text-slate-500 text-sm mt-1.5">{meal.description}</p>
-        )}
-
-        {/* Ingredient pills (when short) */}
-        {fewIngredients && (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {meal.ingredients!.map((ing, i) => (
-              <span
-                key={i}
-                className="inline-block text-xs text-slate-700 bg-slate-100 ring-1 ring-slate-200 rounded-full px-3 py-1"
-              >
-                {ing}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Stat pills */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           {typeof meal.calories === 'number' && (
             <StatPill
               icon={<Flame className="h-3.5 w-3.5 text-amber-500" />}
@@ -1642,29 +1478,36 @@ function MealCard({ meal }: { meal: Meal }) {
           )}
         </div>
 
-        {/* Expand toggle — only when we actually have something to reveal.
-            For short ingredient lists everything is already on the card
-            (description italicized above + ingredient pills + macros), so
-            the toggle would open into emptiness. We only render it when
-            the ingredient list is long enough to have been hidden from
-            the pill row (>10). */}
-        {manyIngredients && (
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-blue-700 hover:text-blue-800"
-          >
-            {open ? 'Ocultar receta' : 'Ver receta completa'}
-            {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          </button>
+        {/* Ingredients — always visible */}
+        {hasIngredients && (
+          <div className="mt-5">
+            <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-2 flex items-center gap-1.5">
+              <ShoppingCart className="h-3.5 w-3.5 text-blue-600" />
+              Ingredientes
+            </h4>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-700">
+              {meal.ingredients!.map((ing, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="mt-1.5 inline-block h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
+                  <span>{ing}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
-        {open && manyIngredients && (
-          <ul className="mt-3 list-disc list-inside text-sm text-slate-700 space-y-0.5 bg-slate-50 rounded-xl p-4 ring-1 ring-slate-200">
-            {meal.ingredients!.map((ing, i) => (
-              <li key={i}>{ing}</li>
-            ))}
-          </ul>
+        {/* Preparation — always visible. We preserve newlines so step-by-step
+            outputs from the AI render with one step per line. */}
+        {hasDescription && (
+          <div className="mt-5 rounded-xl bg-slate-50 ring-1 ring-slate-200 p-4">
+            <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-2 flex items-center gap-1.5">
+              <Utensils className="h-3.5 w-3.5 text-emerald-600" />
+              Preparación
+            </h4>
+            <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">
+              {meal.description}
+            </p>
+          </div>
         )}
       </div>
     </article>

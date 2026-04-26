@@ -67,7 +67,7 @@ const mealPlanOutputSchema = z.object({
                 day_of_week: z.number().int().min(0).max(6),
                 meal_type: z.enum(['BREAKFAST', 'SNACK_AM', 'LUNCH', 'SNACK_PM', 'DINNER']),
                 name: z.string().min(1).max(120),
-                description: z.string().min(1).max(600),
+                description: z.string().min(1).max(2000),
                 ingredients: z.array(z.string().min(1).max(120)).min(1).max(25),
                 calories: z.number().int().nonnegative(),
                 protein_g: z.number().int().nonnegative(),
@@ -172,6 +172,16 @@ REGLAS:
   Esto evita que el socio se confunda pensando que la proteína es la avena u otro ingrediente del platillo.
 - Lo mismo para "carbo", "grasa", "fibra": usa el alimento específico, no la categoría macro.
 
+CAMPO "description" — RECETA + PREPARACIÓN:
+- NO es una descripción corta. Es la receta completa, paso a paso.
+- Formato OBLIGATORIO: pasos numerados, uno por línea, separados con un salto de línea (\\n).
+  Ejemplo:
+    "1. Hierve 1 taza de agua y agrega 50g de avena. Cocina 3 min revolviendo.\\n2. Vierte la avena cocida en la licuadora.\\n3. Agrega 30g de whey vainilla, 100g de fresa lavada y 1 taza de agua fría.\\n4. Licúa 30 segundos hasta tener una mezcla cremosa.\\n5. Sirve frío en un vaso de 500ml."
+- Mínimo 3 pasos, máximo 8 pasos. Cada paso es UNA acción concreta y verificable (verbo + ingrediente + tiempo o cantidad cuando aplique).
+- Empieza cada paso con un número y un punto (1., 2., 3., ...).
+- Si necesitas dar una recomendación final ("acompaña con 2 vasos de agua") agrégala como último paso.
+- Nada de "al gusto" ni "una pizca" — siempre cantidades en gramos, ml, tazas, cucharadas o piezas.
+
 TONO: mexicano, cercano, práctico. Nada de inglés innecesario ni nombres rebuscados de superfoods. Si propones algo menos común, explícalo en 1 línea (ej: "quinoa = cereal andino alto en proteína, se prepara como arroz").
 
 Respondes SOLO con JSON válido siguiendo el esquema exacto. Nada antes, nada después.`;
@@ -233,7 +243,7 @@ SCHEMA JSON:
       "day_of_week": 0-6,
       "meal_type": "BREAKFAST | SNACK_AM | LUNCH | SNACK_PM | DINNER",
       "name": "string",
-      "description": "string (1-2 líneas de cómo prepararla)",
+      "description": "RECETA PASO A PASO. Pasos numerados (1., 2., 3., ...) separados con \\n. Mínimo 3 y máximo 8 pasos. Cada paso = una acción concreta con cantidades.",
       "ingredients": ["100g pollo", "50g arroz", "1 aguacate"],
       "calories": number,
       "protein_g": number,
