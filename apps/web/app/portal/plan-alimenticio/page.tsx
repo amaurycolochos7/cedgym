@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  Apple, Flame, Dumbbell, Wheat, Droplet, Download,
+  Apple, Flame, Dumbbell, Wheat, Droplet,
   RefreshCw, ChevronDown, ChevronUp, AlertCircle, Clock, Lock,
   ShoppingCart, Utensils, CheckCircle2, ArrowRight, Plus,
 } from 'lucide-react';
@@ -24,7 +24,7 @@ import { PlansModal } from '@/components/portal/plans-modal';
 type MealType = 'BREAKFAST' | 'SNACK_AM' | 'LUNCH' | 'SNACK_PM' | 'DINNER';
 
 interface Meal {
-  day_of_week: number; // 1..7 (Mon..Sun)
+  day_of_week: number; // 0..6 (Mon..Sun) — matches DB schema
   meal_type: MealType;
   name: string;
   description?: string;
@@ -97,7 +97,21 @@ const MEAL_IMAGES: Record<MealType, string> = {
 
 const MEAL_ORDER: MealType[] = ['BREAKFAST', 'SNACK_AM', 'LUNCH', 'SNACK_PM', 'DINNER'];
 
-const DAYS_ES = ['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const DAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']; // 0-indexed (0=Lun)
+const DAYS_ES_LONG = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+// Maps the canonical goal enum to a user-friendly Spanish label.
+// We render this as a separate badge instead of relying on the AI to embed
+// the goal inside plan.name (which produced odd phrasing like
+// "Mantenimiento de Jahazuel — 2309 kcal").
+const GOAL_ES: Record<string, string> = {
+  WEIGHT_LOSS: 'Bajada de grasa',
+  MUSCLE_GAIN: 'Hipertrofia',
+  MAINTENANCE: 'Mantenimiento',
+  STRENGTH: 'Fuerza',
+  ENDURANCE: 'Resistencia',
+  GENERAL_FITNESS: 'Bienestar',
+};
 
 const RESTRICTIONS = [
   { value: 'vegetarian', label: 'Vegetariano' },
@@ -187,6 +201,9 @@ export default function PlanAlimenticioPage() {
         <PlanView
           plan={plan}
           quota={quota}
+          userFirstName={
+            (user?.name?.split(' ')[0] || user?.name || '').trim() || null
+          }
           onRegenerated={() => {
             qc.invalidateQueries({ queryKey: ['ai', 'meal-plans', 'me'] });
             qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
@@ -952,14 +969,24 @@ function CheckGrid({
 function PlanView({
   plan,
   quota,
+  userFirstName,
   onRegenerated,
 }: {
   plan: MealPlan;
   quota?: AiQuota;
+  userFirstName: string | null;
   onRegenerated: () => void;
 }) {
   const router = useRouter();
   const [addonOpen, setAddonOpen] = useState(false);
+  const [shoppingOpen, setShoppingOpen] = useState(false);
+
+  // Clean, structured title (we don't trust the AI-generated plan.name to
+  // be well-phrased — it tends to be "Mantenimiento de X — 2309 kcal").
+  const titleText = userFirstName
+    ? `Plan alimenticio de ${userFirstName}`
+    : 'Tu plan alimenticio';
+  const goalLabel = plan.goal ? GOAL_ES[plan.goal] : null;
 
   const byDay = useMemo(() => {
     const map = new Map<number, Meal[]>();
@@ -983,7 +1010,7 @@ function PlanView({
     [byDay],
   );
 
-  const [activeDay, setActiveDay] = useState<number>(availableDays[0] ?? 1);
+  const [activeDay, setActiveDay] = useState<number>(availableDays[0] ?? 0);
 
   const regenerate = useMutation({
     mutationFn: async () => {
@@ -1007,35 +1034,7 @@ function PlanView({
 
   const mp = quota?.meal_plan;
   const regenerateDisabled = !!mp && !mp.allowed;
-  // Allow buying-another only when the user is not unlimited (ELITE) and
-  // the membership is active (otherwise backend will reject anyway).
   const canBuyAnother = !!quota && !mp?.unlimited && !!quota.has_active_membership;
-
-  const [downloading, setDownloading] = useState(false);
-
-  async function downloadShoppingList() {
-    try {
-      setDownloading(true);
-      const r = await api.get(`/ai/meal-plans/${plan.id}/shopping-list`);
-      const items: ShoppingListItem[] = r.data?.items ?? [];
-      const lines = [
-        `LISTA DE COMPRAS - ${plan.name}`,
-        '',
-        ...items.map((i) => `• ${i.total} ${i.name}`.trim()),
-      ];
-      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'lista-compras-cedgym.txt';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   const meals = byDay.get(activeDay) ?? [];
 
@@ -1049,6 +1048,11 @@ function PlanView({
     return map;
   }, [byDay]);
 
+  // Header meta: total meals across the week / avg per day.
+  const totalMeals = plan.meals?.length ?? 0;
+  const avgMealsPerDay =
+    availableDays.length > 0 ? Math.round(totalMeals / availableDays.length) : 0;
+
   return (
     <div className="space-y-6 pb-24 sm:pb-6">
       <AIGenerationOverlay open={regenerate.isPending} kind="meal_plan" />
@@ -1058,52 +1062,99 @@ function PlanView({
         onSuccess={onRegenerated}
       />
 
-      {/* Compact hero with name/goal + desktop toolbar */}
-      <section className="relative overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm">
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 via-emerald-400 to-transparent" />
-        <div className="absolute -top-24 -right-20 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="relative px-5 sm:px-7 py-6 sm:py-7">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      {/* Editorial hero — dark gradient header with title in white,
+          macros card sits on white below for clear hierarchy. */}
+      <section className="relative overflow-hidden rounded-2xl ring-1 ring-slate-200 shadow-sm bg-white">
+        {/* Dark header */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 px-5 sm:px-8 py-7 sm:py-9">
+          {/* Decorative blobs */}
+          <div className="pointer-events-none absolute -top-20 -right-16 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-emerald-500/15 blur-3xl" />
+          {/* Subtle grid pattern */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+
+          <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-5">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">
-                <Apple className="h-3.5 w-3.5" />
-                Plan activo
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 ring-1 ring-emerald-400/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-300">
+                  <Apple className="h-3 w-3" />
+                  Plan activo
+                </span>
+                {goalLabel && (
+                  <span className="inline-flex items-center rounded-full bg-blue-500/15 ring-1 ring-blue-400/30 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-300">
+                    {goalLabel}
+                  </span>
+                )}
               </div>
-              <h1 className="font-display mt-1 text-3xl sm:text-4xl leading-tight text-slate-900">
-                {plan.name}
+              <h1 className="font-display mt-3 text-3xl sm:text-4xl lg:text-[2.6rem] leading-[1.05] text-white">
+                {titleText}
               </h1>
-              {plan.goal && (
-                <p className="text-slate-500 mt-1 text-sm">{plan.goal}</p>
-              )}
+
+              {/* Meta line */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/55">
+                {plan.calories_target != null && (
+                  <span>
+                    <span className="text-white tabular-nums">{plan.calories_target}</span>
+                    <span className="text-white/55"> kcal/día</span>
+                  </span>
+                )}
+                {availableDays.length > 0 && (
+                  <>
+                    <span className="text-white/30">·</span>
+                    <span>
+                      <span className="text-white tabular-nums">{availableDays.length}</span>
+                      <span className="text-white/55"> días</span>
+                    </span>
+                  </>
+                )}
+                {avgMealsPerDay > 0 && (
+                  <>
+                    <span className="text-white/30">·</span>
+                    <span>
+                      <span className="text-white tabular-nums">{avgMealsPerDay}</span>
+                      <span className="text-white/55"> comidas/día</span>
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
 
-            {/* Desktop toolbar */}
+            {/* Desktop toolbar — adapted for dark bg */}
             <div className="hidden md:flex md:flex-wrap md:gap-2">
-              <ToolbarButton
+              <DarkToolbarButton
                 onClick={() => regenerate.mutate()}
                 disabled={regenerate.isPending || regenerateDisabled}
                 title={regenerateDisabled ? 'Quota agotada este periodo' : undefined}
                 icon={<RefreshCw className={`h-4 w-4 ${regenerate.isPending ? 'animate-spin' : ''}`} />}
                 label={regenerate.isPending ? 'Regenerando…' : 'Regenerar'}
               />
-              <ToolbarButton
-                onClick={downloadShoppingList}
-                disabled={downloading}
-                icon={<Download className="h-4 w-4" />}
-                label={downloading ? 'Generando…' : 'Lista de compras'}
+              <DarkToolbarButton
+                onClick={() => setShoppingOpen((v) => !v)}
+                icon={<ShoppingCart className="h-4 w-4" />}
+                label={shoppingOpen ? 'Ocultar lista' : 'Lista de compras'}
+                active={shoppingOpen}
               />
               {canBuyAnother && (
-                <ToolbarButton
+                <DarkToolbarButton
                   onClick={() => setAddonOpen(true)}
                   icon={<Plus className="h-4 w-4" />}
-                  label="Comprar otro (+$499)"
+                  label="Otro plan +$499"
                   primary
                 />
               )}
             </div>
           </div>
+        </div>
 
-          {/* Macro stats — bar chart row */}
+        {/* Macros — light section, contiguous with the hero card */}
+        <div className="px-5 sm:px-8 pt-5 pb-6">
           <MacroBars
             calories={plan.calories_target}
             protein={plan.protein_g}
@@ -1113,52 +1164,67 @@ function PlanView({
         </div>
       </section>
 
+      {/* Inline shopping list — toggled by the toolbar button */}
+      {shoppingOpen && (
+        <ShoppingListInline
+          planId={plan.id}
+          onClose={() => setShoppingOpen(false)}
+        />
+      )}
+
       {/* Day tabs */}
-      <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-none">
-        <div className="flex gap-2 px-4 sm:px-0 py-2 min-w-max sm:justify-center snap-x snap-mandatory">
-          {availableDays.map((d) => {
-            const active = d === activeDay;
-            const cals = dayCalorieTotals.get(d) ?? 0;
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setActiveDay(d)}
-                className={`snap-start shrink-0 relative flex items-center gap-2 pl-2.5 pr-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                  active
-                    ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-600/25 ring-1 ring-blue-500'
-                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-slate-300 hover:text-slate-900'
-                }`}
-              >
-                <span
-                  className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
-                    active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+      {availableDays.length > 0 && (
+        <div className="-mx-4 sm:mx-0 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 px-4 sm:px-0 py-2 min-w-max sm:justify-center snap-x snap-mandatory">
+            {availableDays.map((d) => {
+              const active = d === activeDay;
+              const cals = dayCalorieTotals.get(d) ?? 0;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setActiveDay(d)}
+                  className={`snap-start shrink-0 relative flex items-center gap-2 pl-2.5 pr-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                    active
+                      ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-md shadow-blue-600/25 ring-1 ring-blue-500'
+                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-slate-300 hover:text-slate-900'
                   }`}
                 >
-                  {d}
-                </span>
-                <span>{DAYS_ES[d] ?? `D${d}`}</span>
-                {cals > 0 && (
                   <span
-                    className={`text-[10px] tabular-nums ${
-                      active ? 'text-white/80' : 'text-slate-400'
+                    className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
+                      active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
                     }`}
                   >
-                    {cals}
+                    {d + 1}
                   </span>
-                )}
-              </button>
-            );
-          })}
+                  <span>{DAYS_ES[d] ?? `D${d + 1}`}</span>
+                  {cals > 0 && (
+                    <span
+                      className={`text-[10px] tabular-nums ${
+                        active ? 'text-white/80' : 'text-slate-400'
+                      }`}
+                    >
+                      {cals}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Meals */}
       <div className="space-y-4">
         {meals.length === 0 ? (
-          <div className="text-slate-500 text-sm">No hay comidas para este día.</div>
+          <EmptyMealsState />
         ) : (
-          meals.map((m, i) => <MealCard key={`${m.meal_type}-${i}`} meal={m} />)
+          <>
+            <h2 className="font-display text-lg sm:text-xl font-semibold text-slate-900">
+              {DAYS_ES_LONG[activeDay] ?? ''} <span className="text-slate-400 font-normal">· {meals.length} comida{meals.length === 1 ? '' : 's'}</span>
+            </h2>
+            {meals.map((m, i) => <MealCard key={`${m.meal_type}-${i}`} meal={m} />)}
+          </>
         )}
       </div>
 
@@ -1173,10 +1239,9 @@ function PlanView({
             compact
           />
           <ToolbarButton
-            onClick={downloadShoppingList}
-            disabled={downloading}
-            icon={<Download className="h-4 w-4" />}
-            label="Lista"
+            onClick={() => setShoppingOpen((v) => !v)}
+            icon={<ShoppingCart className="h-4 w-4" />}
+            label={shoppingOpen ? 'Cerrar' : 'Lista'}
             compact
           />
           {canBuyAnother && (
@@ -1191,6 +1256,194 @@ function PlanView({
         </div>
       </div>
     </div>
+  );
+}
+
+/* =========================================================================
+ * Inline shopping list — replaces the .txt download. Aggregated ingredients
+ * with checkable items so the user can use it as a real shopping companion.
+ * =========================================================================*/
+
+function ShoppingListInline({
+  planId,
+  onClose,
+}: {
+  planId: string;
+  onClose: () => void;
+}) {
+  const { data, isLoading, isError } = useQuery<{ items: ShoppingListItem[] }>({
+    queryKey: ['ai', 'meal-plans', planId, 'shopping-list'],
+    queryFn: async () => {
+      const r = await api.get(`/ai/meal-plans/${planId}/shopping-list`);
+      return r.data;
+    },
+  });
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+
+  const items = data?.items ?? [];
+  const checkedCount = checked.size;
+  const total = items.length;
+  const allDone = total > 0 && checkedCount === total;
+
+  function toggle(name: string) {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  return (
+    <section className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
+      <header className="flex items-center justify-between gap-3 px-5 sm:px-7 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-50/60 to-emerald-50/40">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/30">
+            <ShoppingCart className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-display text-base sm:text-lg font-semibold text-slate-900 truncate">
+              Lista de compras
+            </h3>
+            <p className="text-xs text-slate-500">
+              {isLoading
+                ? 'Calculando ingredientes…'
+                : total > 0
+                  ? `${checkedCount}/${total} marcados`
+                  : 'Sin ingredientes'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          aria-label="Cerrar lista"
+        >
+          <ChevronUp className="h-4 w-4" />
+        </button>
+      </header>
+
+      <div className="px-5 sm:px-7 py-4">
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-9 rounded-lg bg-slate-100 animate-pulse" />
+            ))}
+          </div>
+        ) : isError ? (
+          <p className="text-sm text-red-600">No pudimos cargar la lista de compras.</p>
+        ) : total === 0 ? (
+          <p className="text-sm text-slate-500">Aún no hay ingredientes para este plan.</p>
+        ) : (
+          <>
+            {/* Progress bar */}
+            <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-300"
+                style={{ width: `${total === 0 ? 0 : (checkedCount / total) * 100}%` }}
+              />
+            </div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {items.map((it) => {
+                const isOn = checked.has(it.name);
+                return (
+                  <li key={it.name}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(it.name)}
+                      className={`group w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                        isOn
+                          ? 'bg-emerald-50 ring-1 ring-emerald-200'
+                          : 'hover:bg-slate-50 ring-1 ring-transparent'
+                      }`}
+                    >
+                      <span
+                        className={`grid h-5 w-5 shrink-0 place-items-center rounded-md ring-1 transition ${
+                          isOn
+                            ? 'bg-emerald-500 ring-emerald-500 text-white'
+                            : 'bg-white ring-slate-300 group-hover:ring-slate-400'
+                        }`}
+                      >
+                        {isOn && <CheckCircle2 className="h-3.5 w-3.5" />}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className={`block font-medium truncate ${isOn ? 'text-emerald-900 line-through decoration-emerald-400/70' : 'text-slate-800'}`}>
+                          {it.name}
+                        </span>
+                      </span>
+                      <span className={`shrink-0 text-xs tabular-nums font-semibold ${isOn ? 'text-emerald-700' : 'text-slate-500'}`}>
+                        {it.total}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {allDone && (
+              <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                ¡Lista completa!
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* Empty state for days with no meals — friendlier than the bare line. */
+function EmptyMealsState() {
+  return (
+    <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white px-6 py-10 text-center">
+      <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400">
+        <Utensils className="h-5 w-5" />
+      </div>
+      <h3 className="mt-3 font-display text-lg font-semibold text-slate-900">
+        Sin comidas para este día
+      </h3>
+      <p className="mt-1 text-sm text-slate-500">
+        Selecciona otro día arriba para ver el menú.
+      </p>
+    </div>
+  );
+}
+
+/* Toolbar button adapted for the dark editorial header. */
+function DarkToolbarButton({
+  onClick,
+  disabled,
+  icon,
+  label,
+  primary,
+  active,
+  title,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  icon: React.ReactNode;
+  label: string;
+  primary?: boolean;
+  active?: boolean;
+  title?: string;
+}) {
+  const cls = primary
+    ? 'bg-blue-500 hover:bg-blue-400 text-white ring-1 ring-blue-400/40 shadow-sm shadow-blue-900/40'
+    : active
+      ? 'bg-white/15 text-white ring-1 ring-white/30'
+      : 'bg-white/5 hover:bg-white/15 text-white/85 hover:text-white ring-1 ring-white/15 hover:ring-white/30';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm ${cls}`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 
@@ -1408,8 +1661,13 @@ function MealCard({ meal }: { meal: Meal }) {
           )}
         </div>
 
-        {/* Expand toggle — only when there's something interesting hidden */}
-        {(manyIngredients || (fewIngredients && meal.description)) && (
+        {/* Expand toggle — only when we actually have something to reveal.
+            For short ingredient lists everything is already on the card
+            (description italicized above + ingredient pills + macros), so
+            the toggle would open into emptiness. We only render it when
+            the ingredient list is long enough to have been hidden from
+            the pill row (>10). */}
+        {manyIngredients && (
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
