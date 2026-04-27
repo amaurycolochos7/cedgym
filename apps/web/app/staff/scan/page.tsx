@@ -38,6 +38,30 @@ export default function StaffScanPage() {
   // últimas N-1 vendrían como EXPIRED_QR pisando el resultado real.
   const inFlightRef = useRef(false);
   const lastTokenRef = useRef<{ token: string; at: number } | null>(null);
+  // Auto-dismiss timer del card de resultado. Lo guardamos en un ref
+  // para poder cancelarlo cuando llega un nuevo escaneo (o cuando el
+  // usuario hace click en "Permitir reingreso") — sin esto, el timer
+  // del scan original podía limpiar la pantalla justo cuando el
+  // override mostraba "Reingreso autorizado".
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cuánto dura un resultado en pantalla. 4s era muy corto para que
+  // el recepcionista alcanzara a leer el motivo del rechazo o
+  // comparar la cara con la selfie del socio.
+  const RESULT_VISIBLE_MS = 12_000;
+
+  function clearDismissTimer() {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+  }
+  function scheduleDismiss(ms: number = RESULT_VISIBLE_MS) {
+    clearDismissTimer();
+    dismissTimerRef.current = setTimeout(() => {
+      setResult(null);
+      dismissTimerRef.current = null;
+    }, ms);
+  }
 
   useEffect(() => {
     // Reusar el script si ya está cargado (evita duplicados al navegar).
@@ -107,6 +131,10 @@ export default function StaffScanPage() {
         member: data.check_in ? { name: 'Reingreso autorizado' } : {},
       } as ScanResult);
       setHistory((h) => [{ member: { name: 'Override' }, at: Date.now() }, ...h].slice(0, 20));
+      // Renovamos el timer del card — sin esto el dismiss del scan
+      // DUPLICATE original (que sigue corriendo en background) podía
+      // limpiar el "Reingreso autorizado" en cuestión de segundos.
+      scheduleDismiss();
     },
     onError: (err: any) => {
       toast.error(err?.message || 'No se pudo autorizar el reingreso');
@@ -138,12 +166,16 @@ export default function StaffScanPage() {
 
           inFlightRef.current = true;
           lastTokenRef.current = { token: decoded, at: now };
+          // Cancelamos cualquier dismiss del scan anterior — al llegar
+          // un nuevo escaneo, queremos que el resultado nuevo viva sus
+          // 12s completos sin que un timer rezagado lo limpie antes.
+          clearDismissTimer();
           scan.mutate(decoded, {
             onSettled: () => {
               inFlightRef.current = false;
+              scheduleDismiss();
             },
           });
-          setTimeout(() => setResult(null), 4000);
         },
         () => {}
       );
@@ -189,6 +221,7 @@ export default function StaffScanPage() {
   // los nodos que html5-qrcode inyectó en #qr-reader.
   useEffect(() => {
     return () => {
+      clearDismissTimer();
       const s = scannerRef.current;
       scannerRef.current = null;
       if (!s) return;
