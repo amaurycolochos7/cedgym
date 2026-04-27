@@ -341,8 +341,13 @@ export default async function productsRoutes(fastify) {
             // Ephemeral token: 5-min HMAC over productId+userId+ts. The token
             // itself isn't used to gate downloads (JWT still gates the route)
             // but is appended to URLs so CDN cache keys don't leak across users.
+            //
+            // JWT_SECRET is validated at boot (apps/api/src/index.js fails hard
+            // if missing/too short in production). No fallback here — if the
+            // secret is somehow missing at runtime it's a bug, fail loud.
             const ts = Date.now();
-            const secret = process.env.JWT_SECRET || 'dev';
+            const secret = process.env.JWT_SECRET;
+            if (!secret) throw err('JWT_SECRET_MISSING', 'Servidor mal configurado', 500);
             const token = crypto
                 .createHmac('sha256', secret)
                 .update(`${purchase.id}:${userId}:${ts}`)

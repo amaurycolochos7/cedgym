@@ -43,14 +43,29 @@ async function getClient() {
     if (_s3Client) return _s3Client;
     const sdk = await getSdk();
     if (!sdk) return null;
+
+    const accessKeyId = process.env.MINIO_ROOT_USER || 'minioadmin';
+    const secretAccessKey = process.env.MINIO_ROOT_PASSWORD || 'minioadmin';
+
+    // In production, refuse to start a client with the well-known default
+    // creds. Falling back to 'minioadmin/minioadmin' against a real bucket
+    // is either a misconfiguration or a known-credential foothold for an
+    // attacker. Throw so the failing call surfaces the issue loudly in
+    // logs instead of silently auth-failing later.
+    if (process.env.NODE_ENV === 'production') {
+        if (accessKeyId === 'minioadmin' || secretAccessKey === 'minioadmin') {
+            throw new Error(
+                '[storage] MINIO_ROOT_USER / MINIO_ROOT_PASSWORD must be ' +
+                'set to non-default values in production'
+            );
+        }
+    }
+
     const { S3Client } = sdk;
     _s3Client = new S3Client({
         endpoint: process.env.MINIO_ENDPOINT,
         region: process.env.MINIO_REGION || 'us-east-1',
-        credentials: {
-            accessKeyId: process.env.MINIO_ROOT_USER || 'minioadmin',
-            secretAccessKey: process.env.MINIO_ROOT_PASSWORD || 'minioadmin',
-        },
+        credentials: { accessKeyId, secretAccessKey },
         forcePathStyle: true, // required by MinIO
     });
     return _s3Client;
