@@ -59,6 +59,14 @@ const fastify = Fastify({
     logger: {
         level: process.env.LOG_LEVEL || 'info',
     },
+    // ── Timeouts: defend against slow-loris and connection exhaustion ──
+    // Fastify's defaults leave most of these at 0 / Node's defaults
+    // (10 min request timeout, no connection cap), which lets a single
+    // attacker trickle bytes for hours and pin file descriptors.
+    connectionTimeout: 10_000,   // 10 s to complete the TCP/TLS handshake
+    keepAliveTimeout: 5_000,     // 5 s idle on a keep-alive socket
+    requestTimeout: 30_000,      // 30 s end-to-end for any single request
+    bodyLimit: 1_048_576,        // 1 MB max body — explicit, was the default
 });
 
 // ── Core plugins ────────────────────────────────────────────
