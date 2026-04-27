@@ -14,6 +14,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import Fastify from 'fastify';
+import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
@@ -61,6 +62,35 @@ const fastify = Fastify({
 });
 
 // ── Core plugins ────────────────────────────────────────────
+// Helmet first so its headers (HSTS, X-Frame, X-Content-Type, CSP)
+// land on every response — including CORS preflights and 4xx errors.
+// CSP is locked to default-src 'none' because this is a JSON API:
+// nothing is rendered, so nothing should ever load. frame-ancestors
+// 'none' double-locks against clickjacking on top of X-Frame-Options.
+await fastify.register(helmet, {
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+        },
+    },
+    hsts: {
+        maxAge: 31536000, // 1 year
+        includeSubDomains: true,
+        preload: true,
+    },
+    crossOriginResourcePolicy: { policy: 'same-site' },
+    referrerPolicy: { policy: 'no-referrer' },
+});
+
+// Strip server-fingerprint headers on every response. Fastify doesn't
+// add X-Powered-By by default, but defence in depth — a future plugin
+// might, and Server: leaks the runtime version.
+fastify.addHook('onSend', async (_req, reply) => {
+    reply.removeHeader('Server');
+    reply.removeHeader('X-Powered-By');
+});
+
 await fastify.register(cors, {
     origin: (origin, cb) => {
         const envOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
