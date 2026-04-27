@@ -9,6 +9,11 @@
 //   DELETE /admin/staff/:id      — eliminar (solo SUPERADMIN)
 // ─────────────────────────────────────────────────────────────────
 import bcrypt from 'bcryptjs';
+import { audit, auditCtx } from '../lib/audit.js';
+import {
+  assertWorkspaceAccess,
+  requireSameWorkspace,
+} from '../lib/tenant-guard.js';
 
 const STAFF_ROLES = ['RECEPTIONIST', 'ADMIN'];
 
@@ -17,7 +22,7 @@ export default async function adminStaffRoutes(fastify) {
   const superOnly = { preHandler: [fastify.authenticate, fastify.requireRole('SUPERADMIN')] };
 
   fastify.get('/admin/staff', admin, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const items = await fastify.prisma.user.findMany({
       where: {
         workspace_id: workspaceId,
@@ -32,6 +37,7 @@ export default async function adminStaffRoutes(fastify) {
   });
 
   fastify.post('/admin/staff', admin, async (req, reply) => {
+    const workspaceId = assertWorkspaceAccess(req);
     const { name, email, phone, password, role } = req.body ?? {};
     if (!name || !email || !phone || !password || !role) {
       return reply.status(400).send({
@@ -50,6 +56,9 @@ export default async function adminStaffRoutes(fastify) {
       });
     }
 
+    // Duplicate check is global because email/phone are unique across the
+    // platform, not scoped per workspace. (A single physical person can't
+    // exist twice — even across gyms.)
     const exists = await fastify.prisma.user.findFirst({
       where: { OR: [{ email }, { phone }] },
     });
@@ -67,34 +76,37 @@ export default async function adminStaffRoutes(fastify) {
         role,
         status: 'ACTIVE',
         phone_verified_at: new Date(),
-        password_hash: await bcrypt.hash(password, 10),
-        workspace_id: req.user?.workspace_id ?? fastify.defaultWorkspaceId,
+        password_hash: await bcrypt.hash(password, 12),
+        workspace_id: workspaceId,
       },
     });
 
-    // Audit log
-    try {
-      await fastify.prisma.auditLog.create({
-        data: {
-          workspace_id: user.workspace_id,
-          actor_id: req.user?.id,
-          action: 'staff.created',
-          target_type: 'User',
-          target_id: user.id,
-          metadata: { role, email },
-          ip_address: req.ip,
-        },
-      });
-    } catch { /* best effort */ }
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'staff.created',
+      target_type: 'user',
+      target_id: user.id,
+      metadata: { role, email },
+      ...auditCtx(req),
+    });
 
     const { password_hash, ...safeUser } = user;
     return { success: true, user: safeUser };
   });
 
   fastify.patch('/admin/staff/:id', admin, async (req, reply) => {
+    const workspaceId = assertWorkspaceAccess(req);
+    const existing = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { select: { id: true, name: true, role: true, status: true } },
+    );
+
+    // Allowlist body fields — no role escalation via mass-assign.
     const { name, role, status } = req.body ?? {};
-    const existing = await fastify.prisma.user.findUnique({ where: { id: req.params.id } });
-    if (!existing) return reply.status(404).send({ error: { code: 'NOT_FOUND' } });
 
     // Solo SUPERADMIN puede modificar role a/desde ADMIN
     if (role && role !== existing.role) {
@@ -109,36 +121,92 @@ export default async function adminStaffRoutes(fastify) {
         });
       }
     }
+    // Defense in depth: nobody (not even SUPERADMIN) can grant SUPERADMIN
+    // through this route — that path requires a deliberate DB action.
+    if (role === 'SUPERADMIN') {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'No se puede asignar SUPERADMIN desde el panel' },
+      });
+    }
+
+    const data = {
+      ...(typeof name === 'string' && name.trim() && { name: name.trim() }),
+      ...(role && { role }),
+      ...(status && { status }),
+    };
+    if (Object.keys(data).length === 0) {
+      return reply.status(400).send({ error: { code: 'NO_CHANGES', message: 'Sin cambios válidos' } });
+    }
 
     const updated = await fastify.prisma.user.update({
-      where: { id: req.params.id },
-      data: {
-        ...(name && { name }),
-        ...(role && { role }),
-        ...(status && { status }),
-      },
+      where: { id: existing.id },
+      data,
     });
+
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'staff.updated',
+      target_type: 'user',
+      target_id: existing.id,
+      metadata: {
+        changes: Object.keys(data),
+        previous_role: existing.role,
+        new_role: data.role || existing.role,
+      },
+      ...auditCtx(req),
+    });
+
     const { password_hash, ...safeUser } = updated;
     return { success: true, user: safeUser };
   });
 
-  fastify.delete('/admin/staff/:id', superOnly, async (req) => {
-    const target = await fastify.prisma.user.findUnique({ where: { id: req.params.id } });
-    if (!target) return { success: true };
+  fastify.delete('/admin/staff/:id', superOnly, async (req, reply) => {
+    const workspaceId = assertWorkspaceAccess(req);
+    const target = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { select: { id: true, name: true, email: true, role: true } },
+    );
     if (target.role === 'SUPERADMIN') {
-      return { success: false, error: 'No se puede eliminar al SUPERADMIN' };
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'No se puede eliminar al SUPERADMIN' },
+      });
     }
+    const actorId = req.user?.sub || req.user?.id;
+    if (target.id === actorId) {
+      return reply.status(400).send({
+        error: { code: 'CANNOT_DELETE_SELF', message: 'No puedes eliminar tu propia cuenta' },
+      });
+    }
+
     // Anonymize en lugar de delete hard (preserva FK en AuditLog, payments, etc.)
     await fastify.prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: target.id },
       data: {
         name: 'Staff eliminado',
-        email: `deleted-${req.params.id}@cedgym.invalid`,
+        email: `deleted-${target.id}@cedgym.invalid`,
         phone: null,
         status: 'DELETED',
         role: 'ATHLETE', // despojar de permisos
       },
     });
+
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: actorId || null,
+      action: 'staff.deleted',
+      target_type: 'user',
+      target_id: target.id,
+      metadata: {
+        previous_role: target.role,
+        previous_email: target.email,
+      },
+      ...auditCtx(req),
+    });
+
     return { success: true };
   });
 }

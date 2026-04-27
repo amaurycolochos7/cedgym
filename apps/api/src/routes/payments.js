@@ -11,6 +11,11 @@
 
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
+import { audit, auditCtx } from '../lib/audit.js';
+import {
+    assertWorkspaceAccess,
+    assertOwnerOrWorkspaceRole,
+} from '../lib/tenant-guard.js';
 
 const meQuery = z.object({
     page: z.coerce.number().int().min(1).default(1),
@@ -171,19 +176,30 @@ export default async function paymentsRoutes(fastify) {
     );
 
     // ─── GET /payments/:id ────────────────────────────────────────
+    // Authorization: owner OR (admin/superadmin in the SAME workspace).
+    // Cross-tenant admin access is rejected as 404 to hide existence.
     fastify.get(
         '/payments/:id',
         { preHandler: [fastify.authenticate] },
-        async (req, reply) => {
+        async (req) => {
             const payment = await prisma.payment.findUnique({
                 where: { id: req.params.id },
             });
             if (!payment) {
                 throw err('PAYMENT_NOT_FOUND', 'Pago no encontrado', 404);
             }
-            const userId = req.user.sub || req.user.id;
-            if (payment.user_id !== userId && !isAdminRole(req.user.role)) {
-                throw err('FORBIDDEN', 'No autorizado', 403);
+            const accessMode = assertOwnerOrWorkspaceRole(req, payment); // throws 403/404
+            // Audit only when staff reads someone else's payment.
+            if (accessMode === 'staff') {
+                audit(fastify, {
+                    workspace_id: payment.workspace_id,
+                    actor_id: req.user?.sub || req.user?.id || null,
+                    action: 'payment.viewed',
+                    target_type: 'payment',
+                    target_id: payment.id,
+                    metadata: { user_id: payment.user_id, amount: payment.amount },
+                    ...auditCtx(req),
+                });
             }
             return { payment };
         }
@@ -194,11 +210,14 @@ export default async function paymentsRoutes(fastify) {
         '/admin/payments',
         { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] },
         async (req, reply) => {
+            const workspaceId = assertWorkspaceAccess(req);
             const parsed = adminQuery.safeParse(req.query || {});
             if (!parsed.success) throw err('BAD_QUERY', parsed.error.message, 400);
             const { page, limit, type, status, user_id, from, to, format } = parsed.data;
 
-            const where = {};
+            // Workspace scoping is non-negotiable. Every payment listing is
+            // limited to the actor's own workspace.
+            const where = { workspace_id: workspaceId };
             if (type) where.type = type;
             if (status) where.status = status;
             if (user_id) where.user_id = user_id;
@@ -215,6 +234,17 @@ export default async function paymentsRoutes(fastify) {
                     where,
                     orderBy: { created_at: 'desc' },
                     take: 10000,
+                });
+                audit(fastify, {
+                    workspace_id: workspaceId,
+                    actor_id: req.user?.sub || req.user?.id || null,
+                    action: 'payments.exported_csv',
+                    target_type: 'report',
+                    metadata: {
+                        row_count: rows.length,
+                        filters: { type, status, user_id, from, to },
+                    },
+                    ...auditCtx(req),
                 });
                 reply.header('content-type', 'text/csv; charset=utf-8');
                 reply.header(

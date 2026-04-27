@@ -12,6 +12,10 @@
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
 import { audit, auditCtx } from '../lib/audit.js';
+import {
+  assertWorkspaceAccess,
+  requireSameWorkspace,
+} from '../lib/tenant-guard.js';
 import { rotateTokenForUser } from '../lib/qr.js';
 import { generateMembershipCard } from '../lib/pdf.js';
 import { sendWhatsAppMessage } from '../lib/whatsapp.js';
@@ -88,19 +92,32 @@ export default async function adminMembersRoutes(fastify) {
   });
 
   fastify.get('/admin/miembros/:id', guard, async (req, reply) => {
-    const u = await fastify.prisma.user.findUnique({
-      where: { id: req.params.id },
-      include: {
-        membership: true,
-      },
-    });
-    if (!u) return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Miembro no encontrado' } });
+    const workspaceId = assertWorkspaceAccess(req);
+    const u = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { include: { membership: true } },
+    );
 
     const [checkinCount, lastCheckin, progress] = await Promise.all([
-      fastify.prisma.checkIn.count({ where: { user_id: u.id } }),
-      fastify.prisma.checkIn.findFirst({ where: { user_id: u.id }, orderBy: { scanned_at: 'desc' } }),
+      fastify.prisma.checkIn.count({ where: { user_id: u.id, workspace_id: workspaceId } }),
+      fastify.prisma.checkIn.findFirst({
+        where: { user_id: u.id, workspace_id: workspaceId },
+        orderBy: { scanned_at: 'desc' },
+      }),
       fastify.prisma.userProgress.findUnique({ where: { user_id: u.id } }).catch(() => null),
     ]);
+
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'member.viewed',
+      target_type: 'user',
+      target_id: u.id,
+      ...auditCtx(req),
+    });
 
     return {
       ...u,
@@ -142,32 +159,96 @@ export default async function adminMembersRoutes(fastify) {
     return { id: user.id, success: true };
   });
 
-  fastify.patch('/admin/miembros/:id', adminOnly, async (req) => {
+  fastify.patch('/admin/miembros/:id', adminOnly, async (req, reply) => {
+    const workspaceId = assertWorkspaceAccess(req);
+    // Resolve target inside the actor's workspace first — prevents
+    // cross-tenant updates and gives us the previous values for the
+    // audit diff.
+    const target = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { select: { id: true, name: true, full_name: true, email: true, status: true } },
+    );
+
+    // Allowlist — never spread req.body straight into Prisma. Stops
+    // mass-assignment (role, workspace_id, password_hash, ...) cold.
     const { name, full_name, email, status } = req.body ?? {};
+    const data = {
+      ...(typeof name === 'string' && name.trim() && { name: name.trim() }),
+      ...(typeof full_name === 'string' && full_name.trim() && { full_name: full_name.trim() }),
+      ...(typeof email === 'string' && email.trim() && { email: email.trim().toLowerCase() }),
+      ...(typeof status === 'string' && status && { status }),
+    };
+    if (Object.keys(data).length === 0) {
+      return reply.status(400).send({ error: { code: 'NO_CHANGES', message: 'Sin cambios válidos' } });
+    }
+
     const updated = await fastify.prisma.user.update({
-      where: { id: req.params.id },
-      data: {
-        ...(name && { name }),
-        ...(full_name && { full_name }),
-        ...(email && { email }),
-        ...(status && { status }),
-      },
+      where: { id: target.id },
+      data,
     });
+
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'member.updated',
+      target_type: 'user',
+      target_id: target.id,
+      metadata: { changes: Object.keys(data) },
+      ...auditCtx(req),
+    });
+
     return { id: updated.id, success: true };
   });
 
   fastify.post('/admin/miembros/:id/suspend', adminOnly, async (req) => {
+    const workspaceId = assertWorkspaceAccess(req);
+    const target = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { select: { id: true, status: true } },
+    );
     await fastify.prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: target.id },
       data: { status: 'SUSPENDED' },
+    });
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'member.suspended',
+      target_type: 'user',
+      target_id: target.id,
+      metadata: { previous_status: target.status },
+      ...auditCtx(req),
     });
     return { success: true };
   });
 
   fastify.post('/admin/miembros/:id/reactivate', adminOnly, async (req) => {
+    const workspaceId = assertWorkspaceAccess(req);
+    const target = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { select: { id: true, status: true } },
+    );
     await fastify.prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: target.id },
       data: { status: 'ACTIVE' },
+    });
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'member.reactivated',
+      target_type: 'user',
+      target_id: target.id,
+      metadata: { previous_status: target.status },
+      ...auditCtx(req),
     });
     return { success: true };
   });
