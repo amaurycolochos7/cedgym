@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════════
 import 'dotenv/config';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import Fastify from 'fastify';
@@ -24,12 +25,34 @@ import redisPlugin from './plugins/redis.js';
 import authPlugin from './plugins/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const IS_PROD = process.env.NODE_ENV === 'production';
 
-const JWT_FALLBACK = 'cedgym-dev-secret-change-me';
-const JWT_SECRET = process.env.JWT_SECRET || JWT_FALLBACK;
-if (JWT_SECRET === JWT_FALLBACK) {
-    console.warn('[AUTH] ⚠️ JWT_SECRET env var not set — using dev default. Rotate before production.');
+// Load a critical secret from env. Fails hard in production if missing
+// or too short — never serve a single request without a strong secret.
+// In development, generates an ephemeral random secret per process so
+// dev keeps working but stale tokens don't outlive a restart (which is
+// safer than a known shared dev string).
+function loadSecret(name, { minLength = 32 } = {}) {
+    const v = process.env[name];
+    if (typeof v === 'string' && v.length >= minLength) return v;
+    if (IS_PROD) {
+        // Hard exit BEFORE any HTTP listener is up.
+        const reason = !v ? 'missing' : `shorter than ${minLength} chars`;
+        console.error(
+            `[FATAL] ${name} is ${reason} in production. ` +
+            `Set it (Dokploy env / secret manager) and restart. Aborting boot.`
+        );
+        process.exit(1);
+    }
+    const ephemeral = crypto.randomBytes(48).toString('hex');
+    console.warn(
+        `[BOOT] ⚠️  ${name} not set — using ephemeral dev secret ` +
+        `(sessions invalidate on restart). Set ${name} for stable dev sessions.`
+    );
+    return ephemeral;
 }
+
+const JWT_SECRET = loadSecret('JWT_SECRET');
 
 const fastify = Fastify({
     logger: {

@@ -13,7 +13,19 @@ import { prisma } from '@cedgym/db';
 const DEFAULT_SLUG = 'ced-gym';
 const DEFAULT_NAME = 'CED-GYM';
 const SUPERADMIN_EMAIL = 'admin@cedgym.mx';
-const SUPERADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'CedGym2026!';
+
+// Require SEED_ADMIN_PASSWORD explicitly — never fall back to a hardcoded
+// value. Anyone with the repo would otherwise know the SUPERADMIN password.
+// Generate one with: openssl rand -base64 24
+const SUPERADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD;
+if (!SUPERADMIN_PASSWORD || SUPERADMIN_PASSWORD.length < 12) {
+    console.error(
+        '[seed] SEED_ADMIN_PASSWORD env var is required (min 12 chars).\n' +
+        '       Generate one: openssl rand -base64 24\n' +
+        '       Then: SEED_ADMIN_PASSWORD=<value> node apps/api/src/seed.js'
+    );
+    process.exit(1);
+}
 
 // Base gamification badges (Fase 8). Seeded here so fresh dev
 // envs can award badges the moment a member hits the thresholds.
