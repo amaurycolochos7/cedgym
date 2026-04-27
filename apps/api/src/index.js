@@ -99,33 +99,37 @@ fastify.addHook('onSend', async (_req, reply) => {
     reply.removeHeader('X-Powered-By');
 });
 
+// Hardcoded production origins. CORS_ORIGINS env (comma-list) is
+// additive — used by Dokploy to add the Vercel URL without a redeploy.
+// We narrowed away the previous `*.sslip.io` wildcard and the
+// substring `.includes('localhost')` check (which let
+// `https://evil.com/?u=localhost` through).
+const STATIC_ORIGINS = [
+    'https://cedgym.mx',
+    'https://www.cedgym.mx',
+    'https://api.187-77-11-79.sslip.io', // self, for in-cluster fetches
+];
+// Vercel preview URLs: project + optional `-<sha>` suffix.
+const VERCEL_PREVIEW_RE = /^https:\/\/cedgym(-[a-z0-9-]+)?\.vercel\.app$/;
+// Dev-only loopback. Locked to http:// + numeric port — won't match
+// `http://localhost.attacker.com`.
+const LOOPBACK_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 await fastify.register(cors, {
     origin: (origin, cb) => {
-        const envOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [];
-        const allowed = [
-            'https://cedgym.mx',
-            'https://www.cedgym.mx',
-            ...envOrigins,
-        ];
         if (!origin) {
             if (process.env.CORS_ALLOW_NO_ORIGIN === 'true') return cb(null, true);
             return cb(null, false);
         }
-        // Exact-match list + localhost (dev) + *.sslip.io (staging/preview
-        // deploys that use plain-IP domains via the sslip.io DNS wildcard).
-        // Previously we threw `new Error('Not allowed by CORS')` for
-        // unknown origins, which bubbled up as a generic 500 on every
-        // login attempt from a staging host. Reject silently with
-        // `cb(null, false)` instead — the browser gets a normal CORS
-        // denial, not a crashed server.
-        if (
-            allowed.includes(origin) ||
-            origin.includes('localhost') ||
-            origin.includes('127.0.0.1') ||
-            /\.sslip\.io$/.test(new URL(origin).hostname)
-        ) {
-            return cb(null, true);
-        }
+        const envOrigins = process.env.CORS_ORIGINS
+            ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
+            : [];
+        if (STATIC_ORIGINS.includes(origin)) return cb(null, true);
+        if (envOrigins.includes(origin)) return cb(null, true);
+        if (VERCEL_PREVIEW_RE.test(origin)) return cb(null, true);
+        if (!IS_PROD && LOOPBACK_RE.test(origin)) return cb(null, true);
+        // Reject silently — the browser shows a normal CORS denial,
+        // we don't want every blocked request to surface as a 500.
         return cb(null, false);
     },
     credentials: true,
