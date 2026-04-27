@@ -23,6 +23,7 @@
 import { z } from 'zod';
 import dayjs from 'dayjs';
 import { err } from '../lib/errors.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 import { fireEvent } from '../lib/events.js';
 import { audit, auditCtx } from '../lib/audit.js';
 import {
@@ -1100,15 +1101,19 @@ export default async function membershipsRoutes(fastify) {
             }
             const { user_id, plan, cycle, starts_at, note, method, replace_active } = parsed.data;
             const billingCycle = CYCLE_MAP[cycle];
+            const adminWs = assertWorkspaceAccess(req);
 
-            const user = await prisma.user.findUnique({ where: { id: user_id } });
+            // Tenant guard via workspace-scoped findFirst. Pre-fix this
+            // did findUnique then a `req.user.workspace_id && …` check
+            // — the && short-circuited when workspace_id was missing
+            // from the JWT, letting an admin with a broken token
+            // assign memberships across workspaces. Mismatch is now a
+            // 404 (existence-hiding) instead of a 403 that revealed
+            // the user belonged elsewhere.
+            const user = await prisma.user.findFirst({
+                where: { id: user_id, workspace_id: adminWs },
+            });
             if (!user) throw err('USER_NOT_FOUND', 'Socio no encontrado', 404);
-
-            // Workspace tenant guard — admin can only assign inside
-            // their own workspace.
-            if (req.user.workspace_id && user.workspace_id !== req.user.workspace_id) {
-                throw err('FORBIDDEN', 'El socio pertenece a otro workspace', 403);
-            }
 
             // Active membership → refuse UNLESS the admin explicitly
             // opted into replacement via `replace_active: true`. The

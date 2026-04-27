@@ -21,6 +21,7 @@ import dayjs from 'dayjs';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
 import { audit, auditCtx } from '../lib/audit.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 import {
     rotateTokenForUser,
     getCurrentTokenForUser,
@@ -382,9 +383,15 @@ export default async function checkinsRoutes(fastify) {
             if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
             const { user_id, method, override, reason } = parsed.data;
             const staffId = req.user.sub || req.user.id;
+            const staffWs = assertWorkspaceAccess(req);
 
-            const user = await prisma.user.findUnique({
-                where: { id: user_id },
+            // Tenant guard: the staff member can only check in users from
+            // their own workspace. Pre-fix receptionist_b could check in
+            // athlete_a — creating a CheckIn in workspace_a, bumping
+            // their gamification streak, and firing member.checked_in
+            // in someone else's tenant.
+            const user = await prisma.user.findFirst({
+                where: { id: user_id, workspace_id: staffWs },
                 include: { membership: true },
             });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
