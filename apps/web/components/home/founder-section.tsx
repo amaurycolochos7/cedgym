@@ -69,6 +69,130 @@ const STATS = [
 
 const HIGHLIGHT_COUNT = 4;
 
+const CAROUSEL_IMAGES: { src: string; alt: string }[] = [
+  { src: '/founder.jpg', alt: 'Samuel Jeffery' },
+  { src: '/carr1.jpg', alt: 'Samuel Jeffery — powerlifting' },
+  { src: '/carr2.jpg', alt: 'Samuel Jeffery — entrenamiento' },
+  { src: '/carr3.jpg', alt: 'Samuel Jeffery — football' },
+  { src: '/carr4.jpg', alt: 'Samuel Jeffery — football' },
+  { src: '/carr5.jpg', alt: 'Samuel Jeffery — football' },
+];
+
+const AUTOPLAY_MS = 4000;
+const SWIPE_THRESHOLD_PX = 40;
+
+function FounderCarousel() {
+  const [index, setIndex] = React.useState(0);
+  const [paused, setPaused] = React.useState(false);
+  const touchStartX = React.useRef<number | null>(null);
+  const touchDeltaX = React.useRef(0);
+
+  const total = CAROUSEL_IMAGES.length;
+  const goTo = React.useCallback((next: number) => {
+    setIndex(((next % total) + total) % total);
+  }, [total]);
+  const next = React.useCallback(() => goTo(index + 1), [goTo, index]);
+  const prev = React.useCallback(() => goTo(index - 1), [goTo, index]);
+
+  React.useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(() => {
+      setIndex((i) => (i + 1) % total);
+    }, AUTOPLAY_MS);
+    return () => window.clearInterval(id);
+  }, [paused, total]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchDeltaX.current = 0;
+    setPaused(true);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current == null) return;
+    touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+  };
+  const onTouchEnd = () => {
+    const dx = touchDeltaX.current;
+    if (Math.abs(dx) > SWIPE_THRESHOLD_PX) {
+      if (dx < 0) next();
+      else prev();
+    }
+    touchStartX.current = null;
+    touchDeltaX.current = 0;
+    // Resume autoplay after a short delay so the user can read the new slide
+    window.setTimeout(() => setPaused(false), 1500);
+  };
+
+  return (
+    <div
+      className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-slate-100 select-none"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      role="region"
+      aria-label="Galería del coach"
+              >
+      <div
+        className="flex h-full w-full transition-transform duration-700 ease-out"
+        style={{ transform: `translateX(-${index * 100}%)` }}
+      >
+        {CAROUSEL_IMAGES.map((img, i) => (
+          <div key={img.src} className="relative h-full w-full flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={img.src}
+              alt={img.alt}
+              draggable={false}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                const el = e.currentTarget;
+                el.style.background = 'linear-gradient(135deg,#1e40af,#0ea5e9)';
+                el.removeAttribute('src');
+              }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Prev / next arrows — visible on hover (desktop) and always on touch */}
+      <button
+        type="button"
+        onClick={prev}
+        aria-label="Foto anterior"
+        className="absolute left-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <button
+        type="button"
+        onClick={next}
+        aria-label="Foto siguiente"
+        className="absolute right-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/60"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+
+      {/* Dots */}
+      <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-1.5">
+        {CAROUSEL_IMAGES.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => goTo(i)}
+            aria-label={`Ir a la foto ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all ${
+              i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/55 hover:bg-white/80'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function FounderSection() {
   const [expanded, setExpanded] = React.useState(false);
   const visible = expanded ? ACHIEVEMENTS : ACHIEVEMENTS.slice(0, HIGHLIGHT_COUNT);
@@ -99,19 +223,7 @@ export function FounderSection() {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-14">
           {/* Photo column — clean framing, no viewfinder chrome */}
           <div className="relative">
-            <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl bg-slate-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/founder.jpg"
-                alt="Samuel Jeffery"
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  const img = e.currentTarget;
-                  img.style.background = 'linear-gradient(135deg,#1e40af,#0ea5e9)';
-                  img.removeAttribute('src');
-                }}
-              />
-            </div>
+            <FounderCarousel />
             {/* Caption below the frame, editorial style */}
             <div className="mt-4 flex items-baseline justify-between gap-4">
               <div>

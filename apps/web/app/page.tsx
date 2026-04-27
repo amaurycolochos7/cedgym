@@ -515,7 +515,7 @@ export default async function HomePage() {
 
         {/* Full-bleed carousel */}
         <div className="mt-8 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory scroll-pl-6 sm:scroll-pl-8 lg:scroll-pl-10">
-          <div className="mx-auto flex max-w-7xl gap-4 px-6 sm:gap-5 sm:px-8 lg:px-10">
+          <div className="mx-auto flex max-w-7xl gap-4 pl-6 pr-24 sm:gap-5 sm:pl-8 sm:pr-32 lg:pl-10 lg:pr-40">
             {AUDIENCE.map((a) => (
               <div
                 key={a.title}
