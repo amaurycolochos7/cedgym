@@ -660,7 +660,18 @@ export default async function authRoutes(fastify) {
     // ── POST /auth/password/forgot ──────────────────────────
     fastify.post(
         '/password/forgot',
-        { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+        {
+            config: {
+                rateLimit: {
+                    max: 5,
+                    timeWindow: '15 minutes',
+                    // Per-phone key blocks targeted spam against one
+                    // user from a botnet — IP rotation no longer
+                    // unlocks more codes for the same destination.
+                    keyGenerator: (req) => req.body?.phone || req.ip,
+                },
+            },
+        },
         async (request, reply) => {
             const parsed = forgotSchema.safeParse(request.body);
             if (!parsed.success) {
@@ -703,7 +714,21 @@ export default async function authRoutes(fastify) {
     );
 
     // ── POST /auth/password/reset ───────────────────────────
-    fastify.post('/password/reset', async (request, reply) => {
+    // Was unrate-limited. Per-OTP attempt counter inside the route
+    // caps to 5 guesses per OTP row — but without a request rate
+    // limit, an attacker could keep requesting fresh OTPs (via
+    // /password/forgot, also rate-limited) and burn 5 guesses per
+    // code at line speed. 5 reset attempts per phone per 15 min is
+    // the matching ceiling.
+    fastify.post('/password/reset', {
+        config: {
+            rateLimit: {
+                max: 5,
+                timeWindow: '15 minutes',
+                keyGenerator: (req) => req.body?.phone || req.ip,
+            },
+        },
+    }, async (request, reply) => {
         const parsed = resetSchema.safeParse(request.body);
         if (!parsed.success) {
             return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
@@ -824,7 +849,15 @@ export default async function authRoutes(fastify) {
     });
 
     // ── POST /auth/otp/resend ───────────────────────────────
-    fastify.post('/otp/resend', async (request, reply) => {
+    // Custom Redis-based rate limit (cooldown + hourly cap by phone)
+    // already lives inside the handler. We add a coarse @fastify
+    // rate-limit on top as a per-IP ceiling — defence in depth so
+    // an attacker can't hammer the route to find the cooldown gap.
+    fastify.post('/otp/resend', {
+        config: {
+            rateLimit: { max: 20, timeWindow: '1 hour' },
+        },
+    }, async (request, reply) => {
         const parsed = resendSchema.safeParse(request.body);
         if (!parsed.success) {
             return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
