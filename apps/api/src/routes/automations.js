@@ -13,6 +13,7 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { renderTemplate } from '../lib/template-renderer.js';
+import { assertWorkspaceAccess, loadInWorkspace } from '../lib/tenant-guard.js';
 
 const KNOWN_TRIGGERS = [
     'membership.expiring_soon',
@@ -70,13 +71,14 @@ const testBody = z.object({
 });
 
 // ─────────────────────────────────────────────────────────────
-async function adminWorkspaceId(fastify, req) {
-    const userId = req.user.sub || req.user.id;
-    const admin = await fastify.prisma.user.findUnique({
-        where: { id: userId },
-        select: { workspace_id: true },
-    });
-    return admin?.workspace_id || fastify.defaultWorkspaceId;
+// Thin wrapper over the central tenant guard. Kept async so
+// existing callers (await adminWorkspaceId(...)) compile unchanged.
+// Pre-fix this read workspace_id from the DB and fell back to
+// fastify.defaultWorkspaceId — letting any session without a
+// workspace_id silently operate on the system workspace. The
+// guard refuses such sessions with 403.
+async function adminWorkspaceId(_fastify, req) {
+    return assertWorkspaceAccess(req);
 }
 
 async function sendWhatsAppTest(fastify, { phone, message }) {
@@ -284,10 +286,12 @@ export default async function automationsRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
         const ws = await adminWorkspaceId(fastify, req);
 
-        const existing = await prisma.automation.findUnique({ where: { id: req.params.id } });
-        if (!existing || existing.workspace_id !== ws) {
-            throw err('NOT_FOUND', 'Automation no encontrada', 404);
-        }
+        // findFirst with workspace_id in the WHERE — replaces the
+        // findUnique-then-check pattern that allowed a tiny race
+        // window between the read and the write.
+        const existing = await loadInWorkspace(prisma, 'automation', { id: req.params.id }, ws);
+        if (!existing) throw err('NOT_FOUND', 'Automation no encontrada', 404);
+
         const updated = await prisma.automation.update({
             where: { id: req.params.id },
             data: { ...parsed.data },
@@ -299,10 +303,8 @@ export default async function automationsRoutes(fastify) {
     // Cascade wipes AutomationJob rows (schema onDelete: Cascade).
     fastify.delete('/admin/automations/:id', guard, async (req) => {
         const ws = await adminWorkspaceId(fastify, req);
-        const existing = await prisma.automation.findUnique({ where: { id: req.params.id } });
-        if (!existing || existing.workspace_id !== ws) {
-            throw err('NOT_FOUND', 'Automation no encontrada', 404);
-        }
+        const existing = await loadInWorkspace(prisma, 'automation', { id: req.params.id }, ws);
+        if (!existing) throw err('NOT_FOUND', 'Automation no encontrada', 404);
         await prisma.automation.delete({ where: { id: req.params.id } });
         return { deleted: true };
     });
@@ -318,10 +320,8 @@ export default async function automationsRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
 
         const ws = await adminWorkspaceId(fastify, req);
-        const automation = await prisma.automation.findUnique({ where: { id: req.params.id } });
-        if (!automation || automation.workspace_id !== ws) {
-            throw err('NOT_FOUND', 'Automation no encontrada', 404);
-        }
+        const automation = await loadInWorkspace(prisma, 'automation', { id: req.params.id }, ws);
+        if (!automation) throw err('NOT_FOUND', 'Automation no encontrada', 404);
 
         const adminId = req.user.sub || req.user.id;
         const admin = await prisma.user.findUnique({
@@ -378,10 +378,8 @@ export default async function automationsRoutes(fastify) {
     // ─── GET /admin/automations/:id/jobs ────────────────────────
     fastify.get('/admin/automations/:id/jobs', guard, async (req) => {
         const ws = await adminWorkspaceId(fastify, req);
-        const existing = await prisma.automation.findUnique({ where: { id: req.params.id } });
-        if (!existing || existing.workspace_id !== ws) {
-            throw err('NOT_FOUND', 'Automation no encontrada', 404);
-        }
+        const existing = await loadInWorkspace(prisma, 'automation', { id: req.params.id }, ws);
+        if (!existing) throw err('NOT_FOUND', 'Automation no encontrada', 404);
         const jobs = await prisma.automationJob.findMany({
             where: { automation_id: req.params.id },
             orderBy: { created_at: 'desc' },

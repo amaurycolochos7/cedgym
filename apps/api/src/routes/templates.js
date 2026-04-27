@@ -11,6 +11,7 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { renderTemplate } from '../lib/template-renderer.js';
+import { assertWorkspaceAccess, loadInWorkspace } from '../lib/tenant-guard.js';
 
 const createBody = z.object({
     code: z.string().trim().min(2).max(64).regex(/^[a-z0-9_.-]+$/i, 'code alfanumérico'),
@@ -31,13 +32,11 @@ const previewBody = z.object({
     context: z.record(z.any()).optional(),
 });
 
-async function adminWorkspaceId(fastify, req) {
-    const userId = req.user.sub || req.user.id;
-    const admin = await fastify.prisma.user.findUnique({
-        where: { id: userId },
-        select: { workspace_id: true },
-    });
-    return admin?.workspace_id || fastify.defaultWorkspaceId;
+// Thin wrapper over the central guard. Replaces the previous
+// fastify.defaultWorkspaceId fallback that let workspace-less
+// sessions silently operate on the system workspace.
+async function adminWorkspaceId(_fastify, req) {
+    return assertWorkspaceAccess(req);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -100,10 +99,8 @@ export default async function templatesRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
         const ws = await adminWorkspaceId(fastify, req);
 
-        const existing = await prisma.messageTemplate.findUnique({ where: { id: req.params.id } });
-        if (!existing || existing.workspace_id !== ws) {
-            throw err('NOT_FOUND', 'Template no encontrado', 404);
-        }
+        const existing = await loadInWorkspace(prisma, 'messageTemplate', { id: req.params.id }, ws);
+        if (!existing) throw err('NOT_FOUND', 'Template no encontrado', 404);
         const updated = await prisma.messageTemplate.update({
             where: { id: req.params.id },
             data: parsed.data,
@@ -114,10 +111,8 @@ export default async function templatesRoutes(fastify) {
     // ─── DELETE /admin/templates/:id ────────────────────────────
     fastify.delete('/admin/templates/:id', guard, async (req) => {
         const ws = await adminWorkspaceId(fastify, req);
-        const existing = await prisma.messageTemplate.findUnique({ where: { id: req.params.id } });
-        if (!existing || existing.workspace_id !== ws) {
-            throw err('NOT_FOUND', 'Template no encontrado', 404);
-        }
+        const existing = await loadInWorkspace(prisma, 'messageTemplate', { id: req.params.id }, ws);
+        if (!existing) throw err('NOT_FOUND', 'Template no encontrado', 404);
         await prisma.messageTemplate.delete({ where: { id: req.params.id } });
         return { deleted: true };
     });
@@ -128,10 +123,8 @@ export default async function templatesRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
         const ws = await adminWorkspaceId(fastify, req);
 
-        const template = await prisma.messageTemplate.findUnique({ where: { id: req.params.id } });
-        if (!template || template.workspace_id !== ws) {
-            throw err('NOT_FOUND', 'Template no encontrado', 404);
-        }
+        const template = await loadInWorkspace(prisma, 'messageTemplate', { id: req.params.id }, ws);
+        if (!template) throw err('NOT_FOUND', 'Template no encontrado', 404);
         const context = { ...(parsed.data.context || {}), workspace_id: ws };
         const rendered = await renderTemplate(template.body, context);
         return { rendered, template_body: template.body };
