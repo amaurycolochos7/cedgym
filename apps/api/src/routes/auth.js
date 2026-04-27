@@ -16,6 +16,23 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import dayjs from 'dayjs';
 
+// ── Auth tunables ────────────────────────────────────────────
+// Single source of truth for bcrypt cost — every password hash in
+// this module (register, password reset, reset-via-link, etc.) goes
+// through BCRYPT_COST so a future bump (12 → 13) lifts the floor in
+// one place instead of N.
+const BCRYPT_COST = 12;
+// Pre-baked hash used in the login flow when the user is missing,
+// so the response time is constant regardless of whether the
+// account exists. Compare against this with bcrypt.compare and
+// discard the result. hashSync at module load time keeps the
+// runtime path zero-cost. Cost matches BCRYPT_COST so timing is
+// identical to a real comparison.
+const DUMMY_HASH = bcrypt.hashSync('login-timing-equalizer', BCRYPT_COST);
+// Login lockout policy.
+const LOGIN_FAIL_THRESHOLD = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000; // 15 min
+
 import { errPayload } from '../lib/errors.js';
 import {
     generateOtpCode,
@@ -51,6 +68,10 @@ const phoneSchema = z
 const passwordSchema = z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    // 128 chars is well past every real-world password manager output
+    // and bounds the bcrypt input so an attacker can't trickle a 1 GB
+    // body through register/reset to pin a bcrypt worker.
+    .max(128, 'La contraseña no puede exceder 128 caracteres')
     .regex(/[A-Za-z]/, 'La contraseña debe incluir al menos una letra')
     .regex(/[0-9]/, 'La contraseña debe incluir al menos un número');
 
@@ -250,7 +271,7 @@ export default async function authRoutes(fastify) {
                 return reply.status(500).send(errPayload('NO_WORKSPACE', 'Workspace default no inicializado', 500));
             }
 
-            const password_hash = await bcrypt.hash(password, 12);
+            const password_hash = await bcrypt.hash(password, BCRYPT_COST);
 
             // Upsert-like: if UNVERIFIED dup, update the password + name;
             // otherwise create fresh. Schema guarantees email/phone unique.
@@ -643,7 +664,7 @@ export default async function authRoutes(fastify) {
         const user = await prisma.user.findUnique({ where: { phone } });
         if (!user) return reply.status(404).send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado'));
 
-        const password_hash = await bcrypt.hash(new_password, 12);
+        const password_hash = await bcrypt.hash(new_password, BCRYPT_COST);
 
         // Revoke ALL existing refresh tokens — password change should log
         // out every other device.
@@ -706,7 +727,7 @@ export default async function authRoutes(fastify) {
             return reply.status(404).send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado'));
         }
 
-        const password_hash = await bcrypt.hash(new_password, 12);
+        const password_hash = await bcrypt.hash(new_password, BCRYPT_COST);
 
         await prisma.$transaction([
             prisma.user.update({
@@ -1151,7 +1172,7 @@ export default async function authRoutes(fastify) {
                 .send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
         }
 
-        const password_hash = await bcrypt.hash(password, 10);
+        const password_hash = await bcrypt.hash(password, BCRYPT_COST);
         const updated = await prisma.user.update({
             where: { id: user.id },
             data: {
