@@ -387,7 +387,7 @@ export default async function staffRegisterRoutes(fastify) {
         }
 
         const tempPassword = generateTempPassword();
-        const passwordHash = await bcrypt.hash(tempPassword, 10);
+        const passwordHash = await bcrypt.hash(tempPassword, 12);
 
         const user = await prisma.user.create({
             data: {

@@ -152,7 +152,7 @@ export default async function adminMembersRoutes(fastify) {
         role: 'ATHLETE',
         status: 'ACTIVE',
         phone_verified_at: new Date(),
-        password_hash: await bcrypt.hash(password || `CedGym${Date.now()}`, 10),
+        password_hash: await bcrypt.hash(password || `CedGym${Date.now()}`, 12),
         workspace_id: req.user?.workspace_id ?? fastify.defaultWorkspaceId,
       },
     });
