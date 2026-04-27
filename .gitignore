@@ -61,3 +61,7 @@ deploy/_ssh_runner.py
 # tsbuildinfo (generated)
 apps/web/tsconfig.tsbuildinfo
 smartfitpage.txt
+
+# Security test kit — generated fixture file holds local DB ids and
+# pseudo-passwords for the e2e workspace. Regenerated each run.
+scripts/security/.bola-fixtures.json
