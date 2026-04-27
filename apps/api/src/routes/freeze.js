@@ -18,6 +18,7 @@ import dayjs from 'dayjs';
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
+import { assertWorkspaceAccess, requireSameWorkspace } from '../lib/tenant-guard.js';
 
 export default async function freezeRoutes(fastify) {
     const { prisma } = fastify;
@@ -69,15 +70,28 @@ export default async function freezeRoutes(fastify) {
             if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
 
             const membershipId = req.params.id;
-            const membership = await prisma.membership.findUnique({
-                where: { id: membershipId },
-            });
-            if (!membership) throw err('NOT_FOUND', 'Membresía no encontrada', 404);
+            // Tenant-guard: refuse if membership belongs to another workspace.
+            // Pre-fix admin_b could unfreeze any membership by id and shift
+            // expires_at on a member of admin_a's gym.
+            const ws = assertWorkspaceAccess(req);
+            const membership = await requireSameWorkspace(
+                prisma,
+                'membership',
+                membershipId,
+                ws,
+            );
 
-            // Locate the freeze to reverse.
+            // Locate the freeze to reverse. Even with the admin scoped to
+            // their workspace, we still pin the freeze lookup to the
+            // membership we just verified — so a freeze_id pointing at
+            // another membership in the same workspace doesn't accidentally
+            // shrink the wrong member's expiry.
             const freeze = parsed.data.freeze_id
-                ? await prisma.membershipFreeze.findUnique({
-                      where: { id: parsed.data.freeze_id },
+                ? await prisma.membershipFreeze.findFirst({
+                      where: {
+                          id: parsed.data.freeze_id,
+                          membership_id: membershipId,
+                      },
                   })
                 : await prisma.membershipFreeze.findFirst({
                       where: {
