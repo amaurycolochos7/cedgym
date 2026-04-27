@@ -1,12 +1,14 @@
 // ═══════════════════════════════════════════════════════════════
 // CED-GYM API — Fastify 5 entrypoint.
 // Boot order matters:
-//   1. cors / cookies / jwt / rate-limit
-//   2. prisma / redis decorators
-//   3. auth decorator (depends on jwt)
-//   4. autoload routes
-//   5. resolve defaultWorkspaceId (needs prisma)
-//   6. listen
+//   1. helmet (response headers — must run first)
+//   2. cors / cookies / jwt
+//   3. prisma / redis decorators
+//   4. rate-limit (uses Redis store from step 3)
+//   5. auth decorator (depends on jwt)
+//   6. autoload routes
+//   7. resolve defaultWorkspaceId (needs prisma)
+//   8. listen
 // ═══════════════════════════════════════════════════════════════
 import 'dotenv/config';
 import path from 'node:path';
@@ -148,10 +150,20 @@ await fastify.register(jwt, {
     // Refresh tokens live in a cookie and are opaque (not JWTs).
 });
 
+// ── Our plugins (Prisma + Redis decorators) ─────────────────
+// Registered before rate-limit so the rate-limit plugin can pick
+// up the shared Redis client and keep counters consistent across
+// API instances (instead of the in-memory store, which is per-pod).
+await fastify.register(prismaPlugin);
+await fastify.register(redisPlugin);
+
 await fastify.register(rateLimit, {
     global: false,
     max: 120,
     timeWindow: '1 minute',
+    // Shared store: counters are coherent across replicas. Falls back
+    // to in-memory if redisPlugin failed to connect (warned at boot).
+    redis: fastify.redis,
     errorResponseBuilder: (_req, ctx) => ({
         error: {
             code: 'RATE_LIMITED',
@@ -161,9 +173,6 @@ await fastify.register(rateLimit, {
     }),
 });
 
-// ── Our plugins ──────────────────────────────────────────────
-await fastify.register(prismaPlugin);
-await fastify.register(redisPlugin);
 await fastify.register(authPlugin);
 
 // Cache the default workspace id once at boot. Routes that create
@@ -214,7 +223,13 @@ fastify.setErrorHandler((error, request, reply) => {
 });
 
 // ── Health + Routes ──────────────────────────────────────────
-fastify.get('/health', async () => ({ status: 'ok', service: 'cedgym-api' }));
+// /health is public — Dokploy hits it for probes. Cap to 60 rpm/IP
+// so a bot can't pin it as a recon endpoint.
+fastify.get(
+    '/health',
+    { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } },
+    async () => ({ status: 'ok', service: 'cedgym-api' })
+);
 
 // Autoload every file in routes/. Each route module exports an
 // `autoPrefix` string so `routes/auth.js` mounts under `/auth/*`.
