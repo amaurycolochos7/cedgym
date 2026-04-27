@@ -118,6 +118,16 @@ export default async function coursesRoutes(fastify) {
             const user = await prisma.user.findUnique({ where: { id: userId } });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
 
+            // Cross-tenant enrol guard: the athlete must belong to the
+            // same workspace as the course. Pre-fix admin_a's courses
+            // were enrollable by athlete_b — the resulting Payment row
+            // would land in workspace A with a user_id from workspace B,
+            // tangling tenant scoping for the rest of the lifecycle
+            // (refunds, audit, statistics).
+            if (course.workspace_id !== user.workspace_id) {
+                throw err('COURSE_NOT_FOUND', 'Curso no encontrado', 404);
+            }
+
             // Guard: already paid & approved?
             const existing = await prisma.payment.findFirst({
                 where: {

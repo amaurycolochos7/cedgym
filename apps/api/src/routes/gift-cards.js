@@ -104,6 +104,14 @@ export default async function giftCardsRoutes(fastify) {
             if (!product) throw err('PRODUCT_NOT_FOUND', 'Producto no encontrado', 404);
             if (!product.published) throw err('PRODUCT_UNAVAILABLE', 'Producto no disponible', 400);
 
+            // Cross-tenant guard: gift-card purchases must stay within
+            // the buyer's workspace so the resulting Payment row lands
+            // in a coherent (workspace_id, user_id) pair. Cross-gym
+            // revenue-share is a separate product decision.
+            if (product.workspace_id !== user.workspace_id) {
+                throw err('PRODUCT_NOT_FOUND', 'Producto no encontrado', 404);
+            }
+
             const amount = product.sale_price_mxn != null ? product.sale_price_mxn : product.price_mxn;
 
             // Create Payment PENDING with a special reference marker.
