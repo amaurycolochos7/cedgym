@@ -12,7 +12,8 @@
     "db:seed": "pnpm --filter @cedgym/api db:seed",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "test:bola": "node scripts/security/bola-runner.mjs"
   },
   "engines": {
     "node": ">=20.0.0",
