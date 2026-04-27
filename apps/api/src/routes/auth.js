@@ -461,9 +461,15 @@ export default async function authRoutes(fastify) {
     );
 
     // ── POST /auth/login ────────────────────────────────────
+    // Hardened: per-IP rate-limit + per-user lockout + timing equalisation.
+    // We deliberately collapse every "this didn't work" path (no such
+    // user, wrong password, locked, suspended, unverified) onto the
+    // same generic 401 so an attacker can't enumerate accounts or
+    // detect lockouts. Status differentiation only happens when bcrypt
+    // succeeded — past that point we trust the user is the real owner.
     fastify.post(
         '/login',
-        { config: { rateLimit: { max: 30, timeWindow: '15 minutes' } } },
+        { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
         async (request, reply) => {
             const parsed = loginSchema.safeParse(request.body);
             if (!parsed.success) {
@@ -474,13 +480,69 @@ export default async function authRoutes(fastify) {
             const user = await prisma.user.findFirst({
                 where: phone ? { phone } : { email },
             });
+
+            // Branch-equalising bcrypt call. When the user doesn't
+            // exist we still spend ~bcrypt time so the response
+            // doesn't leak account existence by timing. The dummy
+            // hash uses the same cost factor as a real one.
             if (!user) {
+                await bcrypt.compare(password, DUMMY_HASH);
                 return reply.status(401).send(errPayload('INVALID_CREDENTIALS', 'Credenciales inválidas', 401));
             }
+
+            // Lockout check BEFORE bcrypt — once locked, every attempt
+            // is refused for free. We still log the attempt and we
+            // *don't* tell the user they're locked (that's enumeration
+            // too). On the user side the message is identical to a
+            // wrong-password response, so a legitimate user just sees
+            // "Credenciales inválidas" and waits 15 min.
+            if (user.locked_until && user.locked_until > new Date()) {
+                audit(fastify, {
+                    workspace_id: user.workspace_id,
+                    actor_id: user.id,
+                    action: 'auth.login.failed',
+                    target_type: 'user',
+                    target_id: user.id,
+                    metadata: { reason: 'locked', until: user.locked_until.toISOString() },
+                    ...auditCtx(request),
+                });
+                return reply.status(401).send(errPayload('INVALID_CREDENTIALS', 'Credenciales inválidas', 401));
+            }
+
             const valid = await bcrypt.compare(password, user.password_hash);
             if (!valid) {
+                // Bump failed counter; lock if we just hit the threshold.
+                const nextCount = (user.failed_login_attempts ?? 0) + 1;
+                const shouldLock = nextCount >= LOGIN_FAIL_THRESHOLD;
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: shouldLock
+                        ? {
+                              failed_login_attempts: 0,
+                              locked_until: new Date(Date.now() + LOGIN_LOCK_MS),
+                          }
+                        : { failed_login_attempts: nextCount },
+                });
+                audit(fastify, {
+                    workspace_id: user.workspace_id,
+                    actor_id: user.id,
+                    action: 'auth.login.failed',
+                    target_type: 'user',
+                    target_id: user.id,
+                    metadata: {
+                        reason: 'wrong_password',
+                        attempts: nextCount,
+                        locked: shouldLock,
+                    },
+                    ...auditCtx(request),
+                });
                 return reply.status(401).send(errPayload('INVALID_CREDENTIALS', 'Credenciales inválidas', 401));
             }
+
+            // Password check passed — *now* we can branch on status,
+            // because at this point the caller has proven account
+            // ownership and status differentiation is no longer an
+            // enumeration leak.
             if (user.status !== 'ACTIVE') {
                 if (user.status === 'UNVERIFIED') {
                     return reply.status(403).send(errPayload('UNVERIFIED', 'Debes verificar tu cuenta primero', 403));
@@ -491,9 +553,14 @@ export default async function authRoutes(fastify) {
                 return reply.status(403).send(errPayload('USER_INACTIVE', 'Cuenta no disponible', 403));
             }
 
+            // Successful login: reset lockout state + bump last_login_at
+            // in one write.
+            const resetData = { last_login_at: new Date() };
+            if (user.failed_login_attempts > 0) resetData.failed_login_attempts = 0;
+            if (user.locked_until) resetData.locked_until = null;
             const updated = await prisma.user.update({
                 where: { id: user.id },
-                data: { last_login_at: new Date() },
+                data: resetData,
             });
 
             const { access, refreshRaw } = await issueTokens(fastify, request, updated);
