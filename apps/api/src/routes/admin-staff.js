@@ -170,15 +170,18 @@ export default async function adminStaffRoutes(fastify) {
       workspaceId,
       { select: { id: true, name: true, email: true, role: true } },
     );
-    if (target.role === 'SUPERADMIN') {
-      return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'No se puede eliminar al SUPERADMIN' },
-      });
-    }
+    // Self-delete check goes FIRST: it's an absolute invariant — even a
+    // SUPERADMIN cannot delete their own account through the panel.
+    // (Locking yourself out is a footgun we never want to leave open.)
     const actorId = req.user?.sub || req.user?.id;
     if (target.id === actorId) {
       return reply.status(400).send({
         error: { code: 'CANNOT_DELETE_SELF', message: 'No puedes eliminar tu propia cuenta' },
+      });
+    }
+    if (target.role === 'SUPERADMIN') {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'No se puede eliminar al SUPERADMIN' },
       });
     }
 
