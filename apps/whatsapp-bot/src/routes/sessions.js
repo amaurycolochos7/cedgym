@@ -1,7 +1,18 @@
 import { Router } from 'express';
 import QRCode from 'qrcode';
+import { isValidWorkspaceId } from '../lib/validation.js';
 
 const router = Router();
+
+// Reject obviously-malformed workspace ids before they ever touch
+// Prisma or SessionManager. Prevents path-traversal / injection-style
+// inputs from polluting logs and saves a DB roundtrip.
+router.param('workspaceId', (req, res, next, value) => {
+    if (!isValidWorkspaceId(value)) {
+        return res.status(400).json({ error: 'invalid_workspace_id' });
+    }
+    next();
+});
 
 // GET /sessions — lista todas las sesiones activas en memoria
 router.get('/', (req, res) => {
