@@ -19,6 +19,7 @@
 import { z } from 'zod';
 import crypto from 'node:crypto';
 import { err } from '../lib/errors.js';
+import { assertWorkspaceAccess, loadInWorkspace } from '../lib/tenant-guard.js';
 
 const MUSCLE_GROUPS = [
   'CHEST', 'BACK', 'LEGS', 'SHOULDERS', 'ARMS', 'CORE', 'FULL_BODY', 'CARDIO',
@@ -123,8 +124,7 @@ export default async function adminExercisesRoutes(fastify) {
     if (!parsed.success) throw err('BAD_QUERY', parsed.error.message, 400);
     const { muscle_group, level, equipment, q, is_active, page, limit } = parsed.data;
 
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-    if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
+    const workspace_id = assertWorkspaceAccess(req);
 
     const where = {
       workspace_id,
@@ -154,8 +154,7 @@ export default async function adminExercisesRoutes(fastify) {
   // ── GET /admin/exercises/stats ──────────────────────────────────
   // NOTE: declared before `/:id` routes so the literal path wins.
   fastify.get('/admin/exercises/stats', adminGuard, async (req) => {
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-    if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
+    const workspace_id = assertWorkspaceAccess(req);
 
     const where = { workspace_id, is_active: true };
     const [byMuscleRaw, byLevelRaw, total] = await Promise.all([
@@ -184,8 +183,7 @@ export default async function adminExercisesRoutes(fastify) {
     if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
     const data = parsed.data;
 
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-    if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
+    const workspace_id = assertWorkspaceAccess(req);
 
     const baseSlug = data.slug ? slugify(data.slug) : slugify(data.name);
     const slug = await uniqueSlug(prisma, workspace_id, baseSlug);
@@ -227,12 +225,9 @@ export default async function adminExercisesRoutes(fastify) {
     if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
     const data = parsed.data;
 
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-    const existing = await prisma.exercise.findUnique({ where: { id: req.params.id } });
+    const workspace_id = assertWorkspaceAccess(req);
+    const existing = await loadInWorkspace(prisma, 'exercise', { id: req.params.id }, workspace_id);
     if (!existing) throw err('NOT_FOUND', 'Ejercicio no encontrado', 404);
-    if (existing.workspace_id !== workspace_id) {
-      throw err('FORBIDDEN', 'Ejercicio pertenece a otro workspace', 403);
-    }
 
     // Re-slugify only if caller sent a slug or renamed and no slug was set.
     let nextSlug = existing.slug;
@@ -274,11 +269,12 @@ export default async function adminExercisesRoutes(fastify) {
   // Soft delete: flip is_active=false. Preserves FK refs from
   // RoutineExercise and variant links.
   fastify.delete('/admin/exercises/:id', adminGuard, async (req) => {
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-    const existing = await prisma.exercise.findUnique({ where: { id: req.params.id } });
-    if (!existing) return { success: true };
-    if (existing.workspace_id !== workspace_id) {
-      throw err('FORBIDDEN', 'Ejercicio pertenece a otro workspace', 403);
+    const workspace_id = assertWorkspaceAccess(req);
+    const existing = await loadInWorkspace(prisma, 'exercise', { id: req.params.id }, workspace_id);
+    if (!existing) {
+      // Either does not exist or belongs to another workspace — same
+      // 404-equivalent response either way (existence-hiding).
+      throw err('NOT_FOUND', 'Ejercicio no encontrado', 404);
     }
     await prisma.exercise.update({
       where: { id: existing.id },
@@ -296,8 +292,7 @@ export default async function adminExercisesRoutes(fastify) {
     const parsed = bulkBody.safeParse(req.body || {});
     if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
 
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-    if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
+    const workspace_id = assertWorkspaceAccess(req);
 
     const errors = [];
     let created = 0;
