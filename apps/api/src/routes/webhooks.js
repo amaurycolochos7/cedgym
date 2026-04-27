@@ -55,6 +55,26 @@ function verifySignature({ secret, dataId, requestId, ts, v1 }) {
     return crypto.timingSafeEqual(a, b);
 }
 
+// Replay window for the `ts` value in MP's signature. MP normally
+// retries within minutes of a payment event, so 5 min back / 1 min
+// forward (clock skew) is safe. Anything older is either a replay or
+// a webhook that's been sitting in someone's curl history.
+const TS_MAX_AGE_SEC = 5 * 60;
+const TS_MAX_FUTURE_SEC = 60;
+
+function isFreshTimestamp(tsRaw) {
+    // MP can send `ts` in seconds or milliseconds depending on era —
+    // normalize to seconds before comparing. Anything > 10^12 is ms.
+    const ts = Number(tsRaw);
+    if (!Number.isFinite(ts) || ts <= 0) return false;
+    const tsSec = ts > 1e12 ? Math.floor(ts / 1000) : Math.floor(ts);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const delta = nowSec - tsSec;
+    if (delta > TS_MAX_AGE_SEC) return false;     // too old (replay)
+    if (delta < -TS_MAX_FUTURE_SEC) return false; // too far future (clock-skew abuse)
+    return true;
+}
+
 // ─────────────────────────────────────────────────────────────────
 export default async function webhooksRoutes(fastify) {
     const { prisma, redis } = fastify;
@@ -77,6 +97,14 @@ export default async function webhooksRoutes(fastify) {
                 req.log.warn(
                     { signatureHeader, requestId, dataId },
                     '[mp-webhook] missing signature / headers'
+                );
+                return reply.code(401).send({ error: 'invalid_signature' });
+            }
+            // Reject before we even hash, so a replay storm can't burn CPU on us.
+            if (!isFreshTimestamp(parsed.ts)) {
+                req.log.warn(
+                    { dataId, requestId, ts: parsed.ts },
+                    '[mp-webhook] stale or future ts — refusing as replay'
                 );
                 return reply.code(401).send({ error: 'invalid_signature' });
             }
