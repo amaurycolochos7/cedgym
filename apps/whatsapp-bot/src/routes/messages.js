@@ -73,6 +73,11 @@ router.post('/send-media', async (req, res) => {
         const result = await session.sendMedia(phone, message || '', mediaUrl);
         res.json(result);
     } catch (err) {
+        // assertSafeMediaUrl throws MediaUrlError with a stable .code;
+        // surface as 400 so callers can distinguish from transient 500s.
+        if (err && err.name === 'MediaUrlError') {
+            return res.status(400).json({ error: err.code });
+        }
         res.status(500).json({ error: err.message, fallback: true });
     }
 });
