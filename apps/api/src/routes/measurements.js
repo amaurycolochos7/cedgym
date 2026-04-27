@@ -25,6 +25,11 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { putObject } from '../lib/storage.js';
+import { audit, auditCtx } from '../lib/audit.js';
+import {
+    assertWorkspaceAccess,
+    ensureUserInWorkspace,
+} from '../lib/tenant-guard.js';
 
 const numOpt = z.number().positive().optional();
 
@@ -67,6 +72,12 @@ export default async function measurementsRoutes(fastify) {
             if (targetId !== actorId && !isStaff(actorRole)) {
                 throw err('FORBIDDEN', 'Solo entrenadores pueden medir a otros usuarios', 403);
             }
+            // When staff measures someone else, that someone MUST be in
+            // the actor's workspace. Prevents cross-tenant write.
+            if (targetId !== actorId) {
+                const workspaceId = assertWorkspaceAccess(req);
+                await ensureUserInWorkspace(prisma, targetId, workspaceId);
+            }
 
             // Strip user_id / measured_at (handled separately) before
             // dropping the rest into Prisma.
@@ -84,6 +95,18 @@ export default async function measurementsRoutes(fastify) {
                     ...numeric,
                 },
             });
+
+            if (targetId !== actorId) {
+                audit(fastify, {
+                    workspace_id: req.user.workspace_id,
+                    actor_id: actorId,
+                    action: 'measurement.created_by_staff',
+                    target_type: 'user',
+                    target_id: targetId,
+                    metadata: { measurement_id: created.id },
+                    ...auditCtx(req),
+                });
+            }
             return { measurement: created };
         }
     );
@@ -196,6 +219,9 @@ export default async function measurementsRoutes(fastify) {
     );
 
     // ── DELETE /measurements/:id ───────────────────────────
+    // Authorization: owner OR (admin/superadmin in the SAME workspace as
+    // the row owner). BodyMeasurement has no workspace_id of its own, so
+    // we resolve the owner's workspace explicitly.
     fastify.delete(
         '/measurements/:id',
         { preHandler: [fastify.authenticate] },
@@ -205,28 +231,62 @@ export default async function measurementsRoutes(fastify) {
             });
             if (!row) throw err('NOT_FOUND', 'Medición no encontrada', 404);
 
-            const userId = req.user.sub || req.user.id;
-            const role = req.user.role;
-            const isOwner = row.user_id === userId;
-            const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+            const actorId = req.user.sub || req.user.id;
+            const isOwner = row.user_id === actorId;
+            const isAdmin = isStaff(req.user.role);
+
             if (!isOwner && !isAdmin) {
                 throw err('FORBIDDEN', 'No autorizado', 403);
             }
+
+            if (!isOwner) {
+                // Cross-workspace check: the owner must live in the actor's
+                // workspace. Otherwise hide existence with 404.
+                const actorWorkspace = assertWorkspaceAccess(req);
+                await ensureUserInWorkspace(prisma, row.user_id, actorWorkspace);
+
+                audit(fastify, {
+                    workspace_id: actorWorkspace,
+                    actor_id: actorId,
+                    action: 'measurement.deleted_by_staff',
+                    target_type: 'measurement',
+                    target_id: row.id,
+                    metadata: { user_id: row.user_id },
+                    ...auditCtx(req),
+                });
+            }
+
             await prisma.bodyMeasurement.delete({ where: { id: row.id } });
             return { success: true };
         }
     );
 
     // ── GET /admin/measurements/:userId ───────────────────
+    // Tenant-scoped: the target user must belong to the actor's workspace.
+    // BodyMeasurement has no workspace_id, so we authorize via the user.
     fastify.get(
         '/admin/measurements/:userId',
         { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] },
         async (req) => {
+            const workspaceId = assertWorkspaceAccess(req);
+            await ensureUserInWorkspace(prisma, req.params.userId, workspaceId);
+
             const rows = await prisma.bodyMeasurement.findMany({
                 where: { user_id: req.params.userId },
                 orderBy: { measured_at: 'desc' },
                 take: 200,
             });
+
+            audit(fastify, {
+                workspace_id: workspaceId,
+                actor_id: req.user?.sub || req.user?.id || null,
+                action: 'measurements.viewed_by_staff',
+                target_type: 'user',
+                target_id: req.params.userId,
+                metadata: { row_count: rows.length },
+                ...auditCtx(req),
+            });
+
             return { measurements: rows };
         }
     );
