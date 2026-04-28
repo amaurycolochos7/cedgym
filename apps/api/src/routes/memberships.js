@@ -292,7 +292,7 @@ export default async function membershipsRoutes(fastify) {
                 );
             }
 
-            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspaceId = assertWorkspaceAccess(req);
             if (!workspaceId) {
                 throw err('WORKSPACE_MISSING', 'No se pudo resolver el workspace', 500);
             }
