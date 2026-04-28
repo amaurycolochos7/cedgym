@@ -27,7 +27,12 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://api.187-77-11-79.sslip.io wss://api.187-77-11-79.sslip.io https://api.mercadopago.com https://*.mercadopago.com",
+  // Both API hosts are valid: api.cedgym.mx (the prod alias) and the
+  // sslip.io fallback. Pre-fix the CSP only listed sslip.io and the
+  // browser blocked every fetch from cedgym.mx → api.cedgym.mx with
+  // "no podemos conectar con el servidor" — that's what produced the
+  // post-deploy outage.
+  "connect-src 'self' https://api.cedgym.mx wss://api.cedgym.mx https://api.187-77-11-79.sslip.io wss://api.187-77-11-79.sslip.io https://api.mercadopago.com https://*.mercadopago.com",
   "frame-src 'self' https://www.mercadopago.com https://www.mercadopago.com.mx https://www.mercadopago.com.ar https://www.youtube-nocookie.com https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
