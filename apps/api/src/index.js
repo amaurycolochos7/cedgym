@@ -65,9 +65,14 @@ const fastify = Fastify({
     // Fastify's defaults leave most of these at 0 / Node's defaults
     // (10 min request timeout, no connection cap), which lets a single
     // attacker trickle bytes for hours and pin file descriptors.
+    // requestTimeout is 120 s (not 30 s) because /ai/meal-plans/generate
+    // and /ai/routines/generate make synchronous OpenAI calls that
+    // routinely take 30-90 s for a full plan. Slow-loris is still
+    // bounded by connectionTimeout (10 s for the handshake) so a stalled
+    // connection can't stay open forever.
     connectionTimeout: 10_000,   // 10 s to complete the TCP/TLS handshake
     keepAliveTimeout: 5_000,     // 5 s idle on a keep-alive socket
-    requestTimeout: 30_000,      // 30 s end-to-end for any single request
+    requestTimeout: 120_000,     // 2 min end-to-end (AI endpoints need it)
     bodyLimit: 1_048_576,        // 1 MB max body — explicit, was the default
 });
 
