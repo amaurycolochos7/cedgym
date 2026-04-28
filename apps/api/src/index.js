@@ -61,18 +61,22 @@ const fastify = Fastify({
     logger: {
         level: process.env.LOG_LEVEL || 'info',
     },
-    // ── Timeouts: defend against slow-loris and connection exhaustion ──
-    // Fastify's defaults leave most of these at 0 / Node's defaults
-    // (10 min request timeout, no connection cap), which lets a single
-    // attacker trickle bytes for hours and pin file descriptors.
-    // requestTimeout is 120 s (not 30 s) because /ai/meal-plans/generate
-    // and /ai/routines/generate make synchronous OpenAI calls that
-    // routinely take 30-90 s for a full plan. Slow-loris is still
-    // bounded by connectionTimeout (10 s for the handshake) so a stalled
-    // connection can't stay open forever.
-    connectionTimeout: 10_000,   // 10 s to complete the TCP/TLS handshake
-    keepAliveTimeout: 5_000,     // 5 s idle on a keep-alive socket
-    requestTimeout: 120_000,     // 2 min end-to-end (AI endpoints need it)
+    // ── Timeouts ────────────────────────────────────────────────────
+    // requestTimeout is the real slow-loris choke point — caps how
+    // long a single request can occupy a worker. 120 s lets the AI
+    // endpoints (POST /ai/meal-plans/generate, /ai/routines/generate)
+    // wait on OpenAI without getting cut.
+    //
+    // connectionTimeout is intentionally 0 (Fastify default). Earlier
+    // I set it to 10 s thinking it bounded the TCP/TLS handshake; in
+    // fact it's the Node http server "socket timeout" — it fires when
+    // the *socket* sees no I/O for that long, including while a
+    // handler is awaiting a slow upstream (OpenAI). At 10 s every
+    // meal-plan POST got 502'd by Traefik because Fastify killed the
+    // upstream socket mid-request. Don't reintroduce.
+    connectionTimeout: 0,
+    keepAliveTimeout: 5_000,
+    requestTimeout: 120_000,
     bodyLimit: 1_048_576,        // 1 MB max body — explicit, was the default
 });
 
