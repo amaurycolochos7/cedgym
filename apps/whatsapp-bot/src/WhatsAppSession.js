@@ -3,6 +3,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { EventEmitter } from 'events';
 import pkg from 'whatsapp-web.js';
+import { assertSafeMediaUrl, MAX_MEDIA_BYTES, MediaUrlError } from './lib/url-allowlist.js';
 const { Client, LocalAuth, MessageMedia } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -310,7 +311,29 @@ class WhatsAppSession extends EventEmitter {
             throw new Error(`Session ${this.workspaceId} not connected`);
         }
 
-        const media = await MessageMedia.fromUrl(mediaUrl, { unsafeMime: true });
+        // SSRF defence: refuse private/loopback/link-local hostnames + enforce HTTPS.
+        // We do the fetch ourselves (with `redirect: 'error'`) to close the TOCTOU
+        // window between the dns check above and the actual download — otherwise a
+        // malicious server could pin a public A record on the lookup and a private
+        // one on the fetch (DNS rebind), or 302-redirect to file:// / loopback.
+        await assertSafeMediaUrl(mediaUrl);
+
+        const res = await fetch(mediaUrl, { redirect: 'error' });
+        if (!res.ok) throw new Error(`media_fetch_failed_${res.status}`);
+        const declaredLen = Number(res.headers.get('content-length') || '0');
+        if (declaredLen > MAX_MEDIA_BYTES) throw new Error('media_too_large');
+        const arrayBuf = await res.arrayBuffer();
+        if (arrayBuf.byteLength > MAX_MEDIA_BYTES) throw new Error('media_too_large');
+        const mimetype = (res.headers.get('content-type') || 'application/octet-stream')
+            .split(';')[0]
+            .trim();
+        const filename =
+            (() => {
+                try { return new URL(mediaUrl).pathname.split('/').pop() || 'media'; }
+                catch { return 'media'; }
+            })();
+        const media = new MessageMedia(mimetype, Buffer.from(arrayBuf).toString('base64'), filename);
+
         const formatted = this._formatPhone(phone);
         const result = await this.client.sendMessage(formatted, media, { caption: message || '' });
         return { success: true, messageId: result.id._serialized };

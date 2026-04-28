@@ -8,6 +8,7 @@
 // a hacer un segundo request).
 // ─────────────────────────────────────────────────────────────────
 import { z } from 'zod';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 const listQuery = z.object({
   limit: z.coerce.number().int().min(1).max(1000).default(200),
@@ -31,7 +32,7 @@ export default async function adminAuditRoutes(fastify) {
       });
     }
     const { limit, action, actor, target } = parsed.data;
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
 
     const where = { workspace_id: workspaceId };
     if (action) where.action = { contains: action, mode: 'insensitive' };

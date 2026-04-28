@@ -268,6 +268,17 @@ model User {
   // (charged on first PRO/ELITE subscription). Existing users at
   // cutover are backfilled to NOW() so they're exempt.
   inscription_paid_at DateTime?
+  // Login lockout — incremented on each failed /auth/login, reset
+  // on success. When >=5, locked_until is set 15min ahead and the
+  // counter resets. Generic 401 either way (no enumeration leak).
+  failed_login_attempts Int      @default(0)
+  locked_until        DateTime?
+  // MFA (TOTP) — groundwork. mfa_enabled false means no second factor
+  // is enforced; once true the login flow demands a 6-digit code.
+  // mfa_recovery_codes are bcrypt-hashed at enrollment.
+  mfa_secret          String?
+  mfa_enabled         Boolean    @default(false)
+  mfa_recovery_codes  String[]   @default([])
   created_at        DateTime   @default(now())
   updated_at        DateTime   @updatedAt
 

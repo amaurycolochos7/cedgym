@@ -1,6 +1,20 @@
 import { Router } from 'express';
+import { isValidWorkspaceId, isValidPhone } from '../lib/validation.js';
 
 const router = Router();
+
+function rejectBadIds(req, res) {
+    const { workspaceId, phone } = req.body || {};
+    if (workspaceId !== undefined && !isValidWorkspaceId(workspaceId)) {
+        res.status(400).json({ error: 'invalid_workspace_id' });
+        return true;
+    }
+    if (phone !== undefined && !isValidPhone(phone)) {
+        res.status(400).json({ error: 'invalid_phone' });
+        return true;
+    }
+    return false;
+}
 
 // POST /send-message
 // Body: { workspaceId, phone, message }
@@ -11,6 +25,7 @@ router.post('/send-message', async (req, res) => {
     if (!phone || !message) {
         return res.status(400).json({ error: 'phone y message son requeridos' });
     }
+    if (rejectBadIds(req, res)) return;
 
     // Resolvemos la sesión del workspace (1 bot por workspace en CED-GYM)
     const session = workspaceId
@@ -41,6 +56,7 @@ router.post('/send-media', async (req, res) => {
     if (!phone || !mediaUrl) {
         return res.status(400).json({ error: 'phone y mediaUrl son requeridos' });
     }
+    if (rejectBadIds(req, res)) return;
 
     const session = workspaceId
         ? await sessionManager.findSessionForWorkspace(workspaceId)
@@ -57,6 +73,11 @@ router.post('/send-media', async (req, res) => {
         const result = await session.sendMedia(phone, message || '', mediaUrl);
         res.json(result);
     } catch (err) {
+        // assertSafeMediaUrl throws MediaUrlError with a stable .code;
+        // surface as 400 so callers can distinguish from transient 500s.
+        if (err && err.name === 'MediaUrlError') {
+            return res.status(400).json({ error: err.code });
+        }
         res.status(500).json({ error: err.message, fallback: true });
     }
 });
@@ -70,6 +91,7 @@ router.post('/send-document', async (req, res) => {
     if (!phone || !base64) {
         return res.status(400).json({ error: 'phone y base64 son requeridos' });
     }
+    if (rejectBadIds(req, res)) return;
 
     const session = workspaceId
         ? await sessionManager.findSessionForWorkspace(workspaceId)

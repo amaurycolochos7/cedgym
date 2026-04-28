@@ -11,6 +11,7 @@
 import { z } from 'zod';
 import crypto from 'node:crypto';
 import { err } from '../lib/errors.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 import {
     revenueByPeriod,
     membershipRetention,
@@ -46,14 +47,13 @@ async function cached(redis, key, ttl, fn) {
     return payload;
 }
 
-// Resolves the admin's workspace_id from their JWT sub.
-async function adminWorkspace(fastify, req) {
-    const userId = req.user.sub || req.user.id;
-    const admin = await fastify.prisma.user.findUnique({
-        where: { id: userId },
-        select: { workspace_id: true },
-    });
-    return admin?.workspace_id || fastify.defaultWorkspaceId;
+// Resolves the admin's workspace_id straight from the JWT — no DB hop,
+// no defaultWorkspaceId fallback (that fallback let workspace-less
+// sessions silently operate on the system workspace; the central
+// guard rejects them with 403 instead). Kept async so callers don't
+// need to drop their `await`.
+async function adminWorkspace(_fastify, req) {
+    return assertWorkspaceAccess(req);
 }
 
 // ─── Schemas ────────────────────────────────────────────────

@@ -32,18 +32,22 @@ services:
   redis:
     image: redis:7-alpine
     container_name: cedgym-redis
-    command: redis-server --appendonly yes
+    # AUTH is required: REDIS_PASSWORD must be set or boot fails (we
+    # don't fall through to a no-auth instance — that was the last
+    # remaining "anyone on the docker network can dump session data"
+    # gap from Fase 0). The API/worker reach us via redis://:pwd@redis:6379.
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD env is required}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD env is required}
     volumes:
       - redisdata:/data
     # Bind to loopback only — same rationale as `db`. The API/worker
     # talk to Redis via the Docker DNS name `redis:6379`, so this host
-    # mapping exists purely for local dev (redis-cli from host).
-    # NOTE: this Redis still has no AUTH (--requirepass). Adding it is
-    # a separate Fase 0 hardening task tracked elsewhere.
+    # mapping exists purely for local dev (redis-cli -a $REDIS_PASSWORD).
     ports:
       - "127.0.0.1:6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +60,7 @@ services:
     container_name: cedgym-api
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cedgym}:${POSTGRES_PASSWORD:-cedgym_dev_pass}@db:5432/${POSTGRES_DB:-cedgym}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
@@ -109,7 +113,7 @@ services:
     container_name: cedgym-worker
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cedgym}:${POSTGRES_PASSWORD:-cedgym_dev_pass}@db:5432/${POSTGRES_DB:-cedgym}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       WHATSAPP_BOT_URL: http://whatsapp-bot:3002
       WHATSAPP_BOT_KEY: ${WHATSAPP_BOT_KEY}
       NODE_ENV: ${NODE_ENV:-production}

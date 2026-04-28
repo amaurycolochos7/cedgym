@@ -690,7 +690,10 @@ async function main() {
     console.log(`  Check-ins seeded:     ${counters.checkins}`);
     console.log(`  Payments APPROVED:    ${counters.payments}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`  Demo password: ${DEMO_PASSWORD}`);
+    // Demo password is documented in DEV.md; we no longer print it
+    // to stdout so container logs don't leak it to whoever scrapes
+    // them (Dokploy ships logs to anyone with project access).
+    console.log('  Demo password: see DEV.md');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 

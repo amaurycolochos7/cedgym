@@ -16,6 +16,23 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import dayjs from 'dayjs';
 
+// ── Auth tunables ────────────────────────────────────────────
+// Single source of truth for bcrypt cost — every password hash in
+// this module (register, password reset, reset-via-link, etc.) goes
+// through BCRYPT_COST so a future bump (12 → 13) lifts the floor in
+// one place instead of N.
+const BCRYPT_COST = 12;
+// Pre-baked hash used in the login flow when the user is missing,
+// so the response time is constant regardless of whether the
+// account exists. Compare against this with bcrypt.compare and
+// discard the result. hashSync at module load time keeps the
+// runtime path zero-cost. Cost matches BCRYPT_COST so timing is
+// identical to a real comparison.
+const DUMMY_HASH = bcrypt.hashSync('login-timing-equalizer', BCRYPT_COST);
+// Login lockout policy.
+const LOGIN_FAIL_THRESHOLD = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000; // 15 min
+
 import { errPayload } from '../lib/errors.js';
 import {
     generateOtpCode,
@@ -51,6 +68,10 @@ const phoneSchema = z
 const passwordSchema = z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    // 128 chars is well past every real-world password manager output
+    // and bounds the bcrypt input so an attacker can't trickle a 1 GB
+    // body through register/reset to pin a bcrypt worker.
+    .max(128, 'La contraseña no puede exceder 128 caracteres')
     .regex(/[A-Za-z]/, 'La contraseña debe incluir al menos una letra')
     .regex(/[0-9]/, 'La contraseña debe incluir al menos un número');
 
@@ -250,7 +271,7 @@ export default async function authRoutes(fastify) {
                 return reply.status(500).send(errPayload('NO_WORKSPACE', 'Workspace default no inicializado', 500));
             }
 
-            const password_hash = await bcrypt.hash(password, 12);
+            const password_hash = await bcrypt.hash(password, BCRYPT_COST);
 
             // Upsert-like: if UNVERIFIED dup, update the password + name;
             // otherwise create fresh. Schema guarantees email/phone unique.
@@ -440,9 +461,15 @@ export default async function authRoutes(fastify) {
     );
 
     // ── POST /auth/login ────────────────────────────────────
+    // Hardened: per-IP rate-limit + per-user lockout + timing equalisation.
+    // We deliberately collapse every "this didn't work" path (no such
+    // user, wrong password, locked, suspended, unverified) onto the
+    // same generic 401 so an attacker can't enumerate accounts or
+    // detect lockouts. Status differentiation only happens when bcrypt
+    // succeeded — past that point we trust the user is the real owner.
     fastify.post(
         '/login',
-        { config: { rateLimit: { max: 30, timeWindow: '15 minutes' } } },
+        { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
         async (request, reply) => {
             const parsed = loginSchema.safeParse(request.body);
             if (!parsed.success) {
@@ -453,13 +480,69 @@ export default async function authRoutes(fastify) {
             const user = await prisma.user.findFirst({
                 where: phone ? { phone } : { email },
             });
+
+            // Branch-equalising bcrypt call. When the user doesn't
+            // exist we still spend ~bcrypt time so the response
+            // doesn't leak account existence by timing. The dummy
+            // hash uses the same cost factor as a real one.
             if (!user) {
+                await bcrypt.compare(password, DUMMY_HASH);
                 return reply.status(401).send(errPayload('INVALID_CREDENTIALS', 'Credenciales inválidas', 401));
             }
+
+            // Lockout check BEFORE bcrypt — once locked, every attempt
+            // is refused for free. We still log the attempt and we
+            // *don't* tell the user they're locked (that's enumeration
+            // too). On the user side the message is identical to a
+            // wrong-password response, so a legitimate user just sees
+            // "Credenciales inválidas" and waits 15 min.
+            if (user.locked_until && user.locked_until > new Date()) {
+                audit(fastify, {
+                    workspace_id: user.workspace_id,
+                    actor_id: user.id,
+                    action: 'auth.login.failed',
+                    target_type: 'user',
+                    target_id: user.id,
+                    metadata: { reason: 'locked', until: user.locked_until.toISOString() },
+                    ...auditCtx(request),
+                });
+                return reply.status(401).send(errPayload('INVALID_CREDENTIALS', 'Credenciales inválidas', 401));
+            }
+
             const valid = await bcrypt.compare(password, user.password_hash);
             if (!valid) {
+                // Bump failed counter; lock if we just hit the threshold.
+                const nextCount = (user.failed_login_attempts ?? 0) + 1;
+                const shouldLock = nextCount >= LOGIN_FAIL_THRESHOLD;
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: shouldLock
+                        ? {
+                              failed_login_attempts: 0,
+                              locked_until: new Date(Date.now() + LOGIN_LOCK_MS),
+                          }
+                        : { failed_login_attempts: nextCount },
+                });
+                audit(fastify, {
+                    workspace_id: user.workspace_id,
+                    actor_id: user.id,
+                    action: 'auth.login.failed',
+                    target_type: 'user',
+                    target_id: user.id,
+                    metadata: {
+                        reason: 'wrong_password',
+                        attempts: nextCount,
+                        locked: shouldLock,
+                    },
+                    ...auditCtx(request),
+                });
                 return reply.status(401).send(errPayload('INVALID_CREDENTIALS', 'Credenciales inválidas', 401));
             }
+
+            // Password check passed — *now* we can branch on status,
+            // because at this point the caller has proven account
+            // ownership and status differentiation is no longer an
+            // enumeration leak.
             if (user.status !== 'ACTIVE') {
                 if (user.status === 'UNVERIFIED') {
                     return reply.status(403).send(errPayload('UNVERIFIED', 'Debes verificar tu cuenta primero', 403));
@@ -470,9 +553,14 @@ export default async function authRoutes(fastify) {
                 return reply.status(403).send(errPayload('USER_INACTIVE', 'Cuenta no disponible', 403));
             }
 
+            // Successful login: reset lockout state + bump last_login_at
+            // in one write.
+            const resetData = { last_login_at: new Date() };
+            if (user.failed_login_attempts > 0) resetData.failed_login_attempts = 0;
+            if (user.locked_until) resetData.locked_until = null;
             const updated = await prisma.user.update({
                 where: { id: user.id },
-                data: { last_login_at: new Date() },
+                data: resetData,
             });
 
             const { access, refreshRaw } = await issueTokens(fastify, request, updated);
@@ -572,7 +660,18 @@ export default async function authRoutes(fastify) {
     // ── POST /auth/password/forgot ──────────────────────────
     fastify.post(
         '/password/forgot',
-        { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+        {
+            config: {
+                rateLimit: {
+                    max: 5,
+                    timeWindow: '15 minutes',
+                    // Per-phone key blocks targeted spam against one
+                    // user from a botnet — IP rotation no longer
+                    // unlocks more codes for the same destination.
+                    keyGenerator: (req) => req.body?.phone || req.ip,
+                },
+            },
+        },
         async (request, reply) => {
             const parsed = forgotSchema.safeParse(request.body);
             if (!parsed.success) {
@@ -615,7 +714,21 @@ export default async function authRoutes(fastify) {
     );
 
     // ── POST /auth/password/reset ───────────────────────────
-    fastify.post('/password/reset', async (request, reply) => {
+    // Was unrate-limited. Per-OTP attempt counter inside the route
+    // caps to 5 guesses per OTP row — but without a request rate
+    // limit, an attacker could keep requesting fresh OTPs (via
+    // /password/forgot, also rate-limited) and burn 5 guesses per
+    // code at line speed. 5 reset attempts per phone per 15 min is
+    // the matching ceiling.
+    fastify.post('/password/reset', {
+        config: {
+            rateLimit: {
+                max: 5,
+                timeWindow: '15 minutes',
+                keyGenerator: (req) => req.body?.phone || req.ip,
+            },
+        },
+    }, async (request, reply) => {
         const parsed = resetSchema.safeParse(request.body);
         if (!parsed.success) {
             return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
@@ -643,7 +756,7 @@ export default async function authRoutes(fastify) {
         const user = await prisma.user.findUnique({ where: { phone } });
         if (!user) return reply.status(404).send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado'));
 
-        const password_hash = await bcrypt.hash(new_password, 12);
+        const password_hash = await bcrypt.hash(new_password, BCRYPT_COST);
 
         // Revoke ALL existing refresh tokens — password change should log
         // out every other device.
@@ -706,7 +819,7 @@ export default async function authRoutes(fastify) {
             return reply.status(404).send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado'));
         }
 
-        const password_hash = await bcrypt.hash(new_password, 12);
+        const password_hash = await bcrypt.hash(new_password, BCRYPT_COST);
 
         await prisma.$transaction([
             prisma.user.update({
@@ -736,7 +849,15 @@ export default async function authRoutes(fastify) {
     });
 
     // ── POST /auth/otp/resend ───────────────────────────────
-    fastify.post('/otp/resend', async (request, reply) => {
+    // Custom Redis-based rate limit (cooldown + hourly cap by phone)
+    // already lives inside the handler. We add a coarse @fastify
+    // rate-limit on top as a per-IP ceiling — defence in depth so
+    // an attacker can't hammer the route to find the cooldown gap.
+    fastify.post('/otp/resend', {
+        config: {
+            rateLimit: { max: 20, timeWindow: '1 hour' },
+        },
+    }, async (request, reply) => {
         const parsed = resendSchema.safeParse(request.body);
         if (!parsed.success) {
             return reply.status(400).send(errPayload('VALIDATION', parsed.error.issues[0]?.message || 'Datos inválidos'));
@@ -1151,7 +1272,7 @@ export default async function authRoutes(fastify) {
                 .send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
         }
 
-        const password_hash = await bcrypt.hash(password, 10);
+        const password_hash = await bcrypt.hash(password, BCRYPT_COST);
         const updated = await prisma.user.update({
             where: { id: user.id },
             data: {

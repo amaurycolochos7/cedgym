@@ -1,0 +1,35 @@
+{
+  "api_url": "http://localhost:3001",
+  "workspace_a": {
+    "id": "cmo6gnzie0000veq8ljnlmd1m",
+    "slug": "ced-gym"
+  },
+  "workspace_b": {
+    "id": "cmohl6zwi0000veooswfwa17j",
+    "slug": "gym-test-bola"
+  },
+  "admin_a": {
+    "id": "cmo6gnzpq0002veq83b72nh3h",
+    "email": "admin@cedgym.mx",
+    "password": "CedGym2026!"
+  },
+  "admin_b": {
+    "id": "cmohl6zzm0002veoohfjadocw",
+    "email": "admin-e2e-bola@e2e.local",
+    "password": "TestBolaB2026!"
+  },
+  "athlete_a": {
+    "id": "cmohl701t0004veooqfhtlnmj",
+    "email": "atleta-a-e2e-bola@e2e.local",
+    "password": "TestAthlete2026!"
+  },
+  "athlete_b": {
+    "id": "cmohl703v0006veoog385fym1",
+    "email": "atleta-b-e2e-bola@e2e.local",
+    "password": "TestAthlete2026!"
+  },
+  "payment_a_id": "cmohl704r000aveoon9qgd854",
+  "payment_b_id": "cmohl704i0008veooeb2aylie",
+  "measurement_b_id": "cmohl7053000bveoom1qk3r0l",
+  "e2e_marker": "e2e-bola"
+}

@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { z } from 'zod';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 import crypto from 'node:crypto';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
@@ -90,7 +91,7 @@ export default async function adminProductsRoutes(fastify) {
     if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
     const data = parsed.data;
 
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
+    const workspace_id = assertWorkspaceAccess(req);
     if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
     const authorId = data.author_id || req.user.sub || req.user.id;

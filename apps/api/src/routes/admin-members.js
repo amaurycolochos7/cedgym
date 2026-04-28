@@ -32,7 +32,7 @@ export default async function adminMembersRoutes(fastify) {
 
   fastify.get('/admin/miembros', guard, async (req) => {
     const { search, status, plan, limit = 30, offset = 0 } = req.query;
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
 
     // Hide soft-deleted users (status='DELETED' with anonymized email).
     // These come from /admin/staff DELETE which demotes role→ATHLETE +
@@ -152,8 +152,8 @@ export default async function adminMembersRoutes(fastify) {
         role: 'ATHLETE',
         status: 'ACTIVE',
         phone_verified_at: new Date(),
-        password_hash: await bcrypt.hash(password || `CedGym${Date.now()}`, 10),
-        workspace_id: req.user?.workspace_id ?? fastify.defaultWorkspaceId,
+        password_hash: await bcrypt.hash(password || `CedGym${Date.now()}`, 12),
+        workspace_id: assertWorkspaceAccess(req),
       },
     });
     return { id: user.id, success: true };
@@ -393,7 +393,7 @@ export default async function adminMembersRoutes(fastify) {
   // Histórico de check-ins del socio, paginado por fecha. Útil para el
   // detail page del admin (tab "Check-ins").
   fastify.get('/admin/miembros/:id/checkins', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const limit = Math.min(Number(req.query?.limit) || 50, 200);
     const items = await fastify.prisma.checkIn.findMany({
       where: { user_id: req.params.id, workspace_id: workspaceId },
@@ -415,7 +415,7 @@ export default async function adminMembersRoutes(fastify) {
   // Pagos del socio (membresía, productos, etc.) ordenados por fecha
   // de creación, con metadata útil para que el admin entienda contexto.
   fastify.get('/admin/miembros/:id/payments', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const limit = Math.min(Number(req.query?.limit) || 50, 200);
     const items = await fastify.prisma.payment.findMany({
       where: { user_id: req.params.id, workspace_id: workspaceId },
@@ -442,7 +442,7 @@ export default async function adminMembersRoutes(fastify) {
   // Rutinas / productos digitales que el socio compró (productPurchase
   // → digitalProduct). Para el tab "Rutinas".
   fastify.get('/admin/miembros/:id/routines', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const purchases = await fastify.prisma.productPurchase.findMany({
       where: { user_id: req.params.id, workspace_id: workspaceId },
       include: {
@@ -552,7 +552,7 @@ export default async function adminMembersRoutes(fastify) {
   // Devuelve también el addon ACTIVO si lo hay, para que el UI
   // sepa cuándo esconder el botón de "Activar (cortesía)".
   fastify.get('/admin/miembros/:id/meal-plans', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const [items, activeAddon] = await Promise.all([
       fastify.prisma.mealPlan.findMany({
         where: { user_id: req.params.id, workspace_id: workspaceId },

@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 // POS — Point of sale (front desk quick sales).
+// (workspace resolved via assertWorkspaceAccess from tenant-guard)
 //
 // Staff (RECEPTIONIST+):
 //   POST /pos/sale                 — create a sale
@@ -29,6 +30,7 @@ import { createPreference } from '../lib/mercadopago.js';
 import { getItem, adjustStock, listItems } from './inventory.js';
 import { generateReceipt } from '../lib/pdf.js';
 import { PLAN_CATALOG } from '../lib/memberships.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 const saleBody = z.object({
@@ -78,7 +80,7 @@ export default async function posRoutes(fastify) {
             if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
             const body = parsed.data;
 
-            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspaceId = assertWorkspaceAccess(req);
             if (!workspaceId) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
             // 1. Resolve items + validate stock upfront (no partial commits).
@@ -233,7 +235,7 @@ export default async function posRoutes(fastify) {
             if (!parsed.success) throw err('BAD_QUERY', parsed.error.message, 400);
             const { from, to, status, page, limit } = parsed.data;
 
-            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspaceId = assertWorkspaceAccess(req);
             const where = {
                 workspace_id: workspaceId,
                 type: 'SUPPLEMENT',
@@ -289,7 +291,7 @@ export default async function posRoutes(fastify) {
             if (!isStaffRole(req.user.role)) {
                 throw err('FORBIDDEN', 'Solo staff', 403);
             }
-            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspaceId = assertWorkspaceAccess(req);
             if (!workspaceId) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
             const [invItems, courseRows] = await Promise.all([

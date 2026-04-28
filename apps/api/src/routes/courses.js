@@ -24,6 +24,7 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { createPreference } from '../lib/mercadopago.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 // ─── Validation schemas ──────────────────────────────────────────
 const listQuery = z.object({
@@ -117,6 +118,16 @@ export default async function coursesRoutes(fastify) {
             const userId = req.user.sub || req.user.id;
             const user = await prisma.user.findUnique({ where: { id: userId } });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario inexistente', 404);
+
+            // Cross-tenant enrol guard: the athlete must belong to the
+            // same workspace as the course. Pre-fix admin_a's courses
+            // were enrollable by athlete_b — the resulting Payment row
+            // would land in workspace A with a user_id from workspace B,
+            // tangling tenant scoping for the rest of the lifecycle
+            // (refunds, audit, statistics).
+            if (course.workspace_id !== user.workspace_id) {
+                throw err('COURSE_NOT_FOUND', 'Curso no encontrado', 404);
+            }
 
             // Guard: already paid & approved?
             const existing = await prisma.payment.findFirst({
@@ -231,8 +242,7 @@ export default async function coursesRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
         const data = parsed.data;
 
-        const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-        if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
+        const workspace_id = assertWorkspaceAccess(req);
 
         const course = await prisma.course.create({
             data: {
