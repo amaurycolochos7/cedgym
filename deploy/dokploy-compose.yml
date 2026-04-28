@@ -31,11 +31,30 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    # Soft-on AUTH: use --requirepass when REDIS_PASSWORD is set. When
+    # unset, log a loud WARN and start without auth so an existing
+    # deploy keeps booting until the operator sets REDIS_PASSWORD in
+    # Dokploy and bumps REDIS_URL on api+worker to redis://:pwd@redis:6379.
+    # The dev compose at the repo root (docker-compose.yml) is fail-hard;
+    # this one stays soft to avoid taking prod down on the rollout.
+    command:
+      - sh
+      - -c
+      - |
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"
+        else
+          echo '[WARN] REDIS_PASSWORD not set — Redis booting WITHOUT auth.' >&2
+          echo '[WARN] Set REDIS_PASSWORD in Dokploy and bump REDIS_URL to' >&2
+          echo '[WARN] redis://:$$REDIS_PASSWORD@redis:6379 to close this gap.' >&2
+          exec redis-server --appendonly yes
+        fi
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" ping; else redis-cli ping; fi"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,7 +68,9 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cedgym}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cedgym}
-      REDIS_URL: redis://redis:6379
+      # Override in Dokploy to redis://:${REDIS_PASSWORD}@redis:6379 once
+      # REDIS_PASSWORD is set; defaults to no-auth so deploy keeps booting.
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
@@ -138,7 +159,9 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cedgym}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cedgym}
-      REDIS_URL: redis://redis:6379
+      # Override in Dokploy to redis://:${REDIS_PASSWORD}@redis:6379 once
+      # REDIS_PASSWORD is set; defaults to no-auth so deploy keeps booting.
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       WHATSAPP_BOT_URL: http://whatsapp-bot:3002
       WHATSAPP_BOT_KEY: ${WHATSAPP_BOT_KEY}
       WEBAPP_PUBLIC_URL: ${WEBAPP_PUBLIC_URL:-https://cedgym.mx}
