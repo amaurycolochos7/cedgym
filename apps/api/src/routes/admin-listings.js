@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────────
 
 import { err } from '../lib/errors.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 export default async function adminListingsRoutes(fastify) {
   const { prisma } = fastify;
@@ -24,7 +25,7 @@ export default async function adminListingsRoutes(fastify) {
   // `trainer_name` and `enrolled_count` so the admin grid can render
   // without follow-up requests.
   fastify.get('/admin/courses', adminGuard, async (req) => {
-    const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
+    const workspace_id = assertWorkspaceAccess(req);
     if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
     const rows = await prisma.course.findMany({

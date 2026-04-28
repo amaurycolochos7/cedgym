@@ -24,6 +24,7 @@
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
 import { createPreference } from '../lib/mercadopago.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 // ─── Validation schemas ──────────────────────────────────────────
 const listQuery = z.object({
@@ -241,8 +242,7 @@ export default async function coursesRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
         const data = parsed.data;
 
-        const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
-        if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
+        const workspace_id = assertWorkspaceAccess(req);
 
         const course = await prisma.course.create({
             data: {

@@ -1,12 +1,13 @@
 // ─────────────────────────────────────────────────────────────────
 // Admin: workspace info + integration health.
 // ─────────────────────────────────────────────────────────────────
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 export default async function adminWorkspaceRoutes(fastify) {
   const guard = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] };
 
   fastify.get('/admin/workspace', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const ws = await fastify.prisma.workspace.findUnique({
       where: { id: workspaceId },
       include: { whatsapp_sessions: { take: 1 } },
@@ -29,7 +30,7 @@ export default async function adminWorkspaceRoutes(fastify) {
   });
 
   fastify.patch('/admin/workspace', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const { name, logo_url } = req.body ?? {};
     const updated = await fastify.prisma.workspace.update({
       where: { id: workspaceId },

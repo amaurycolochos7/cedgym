@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 // Staff — Walk-in register / renew / enroll.
+// (workspace resolved via assertWorkspaceAccess from tenant-guard)
 //
 // Endpoints (RECEPTIONIST+):
 //   GET  /staff/members/search               — lookup by name/phone/email
@@ -39,6 +40,7 @@ import {
 import { createPreference } from '../lib/mercadopago.js';
 import { detectGender } from '../lib/gender.js';
 import { signWelcomeToken } from '../lib/jwt.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 const PAYMENT_METHODS = ['CASH', 'CARD_TERMINAL', 'MP_LINK'];
@@ -307,7 +309,7 @@ export default async function staffRegisterRoutes(fastify) {
         const parsed = searchQuery.safeParse(req.query || {});
         if (!parsed.success) throw err('BAD_QUERY', parsed.error.message, 400);
         const { q, limit } = parsed.data;
-        const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+        const workspaceId = assertWorkspaceAccess(req);
 
         const rows = await prisma.user.findMany({
             where: {
@@ -348,7 +350,7 @@ export default async function staffRegisterRoutes(fastify) {
         const { name, email, plan, billing_cycle, payment_method, promo_code } = parsed.data;
         const phone = normalizePhone(parsed.data.phone);
 
-        const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+        const workspaceId = assertWorkspaceAccess(req);
         if (!workspaceId) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
         const basePrice = await getEffectivePlanPrice(prisma, workspaceId, plan, billing_cycle);

@@ -6,6 +6,7 @@
 //   GET /admin/reports/birthdays            (this month)
 // ─────────────────────────────────────────────────────────────────
 import dayjs from 'dayjs';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 function toCsv(rows, columns) {
   const header = columns.map((c) => c.header).join(',');
@@ -34,7 +35,7 @@ export default async function adminReportsRoutes(fastify) {
   const guard = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] };
 
   fastify.get('/admin/reports/active-members', guard, async (req, reply) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const items = await fastify.prisma.user.findMany({
       where: {
         workspace_id: workspaceId,
@@ -60,7 +61,7 @@ export default async function adminReportsRoutes(fastify) {
   });
 
   fastify.get('/admin/reports/inactive', guard, async (req, reply) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const days = Number(req.query?.days || 30);
     const cutoff = dayjs().subtract(days, 'day').toDate();
 
@@ -87,7 +88,7 @@ export default async function adminReportsRoutes(fastify) {
   });
 
   fastify.get('/admin/reports/birthdays', guard, async (req, reply) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const month = Number(req.query?.month || dayjs().month() + 1); // 1-12
 
     // Raw query on month of birth_date (Postgres EXTRACT).

@@ -11,6 +11,8 @@
 //   POST  /admin/whatsapp/logout
 // ─────────────────────────────────────────────────────────────────
 
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
+
 const BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:3002';
 const BOT_KEY = process.env.WHATSAPP_BOT_KEY || '';
 
@@ -35,7 +37,7 @@ export default async function adminWhatsAppRoutes(fastify) {
   const guard = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] };
 
   fastify.get('/admin/whatsapp/status', guard, async (req, reply) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     try {
       const { status, body } = await botFetch(`/sessions/${workspaceId}/status`);
       if (status >= 400) {
@@ -69,7 +71,7 @@ export default async function adminWhatsAppRoutes(fastify) {
   });
 
   fastify.get('/admin/whatsapp/qr', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     try {
       const { body } = await botFetch(`/sessions/${workspaceId}/qr`);
       return body;
@@ -79,7 +81,7 @@ export default async function adminWhatsAppRoutes(fastify) {
   });
 
   fastify.post('/admin/whatsapp/start', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     // Limpia QR obsoleto antes de re-iniciar. Si hay un QR en DB de una sesión
     // anterior que ya expiró, no queremos que el GET /qr lo devuelva mientras
     // el bot genera el nuevo.
@@ -92,7 +94,7 @@ export default async function adminWhatsAppRoutes(fastify) {
   });
 
   fastify.post('/admin/whatsapp/logout', guard, async (req) => {
-    const workspaceId = req.user?.workspace_id ?? fastify.defaultWorkspaceId;
+    const workspaceId = assertWorkspaceAccess(req);
     const { body } = await botFetch(`/sessions/${workspaceId}/logout`, { method: 'POST' });
     return body;
   });

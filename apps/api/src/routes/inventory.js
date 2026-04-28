@@ -3,6 +3,10 @@
 //
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  HACK DOCUMENTADO — Sin modelo Prisma                         ║
+//
+// Workspace resolution uses assertWorkspaceAccess() from
+// tenant-guard so a session without workspace_id is refused with
+// 403 instead of silently using fastify.defaultWorkspaceId.
 // ║                                                               ║
 // ║  El schema Prisma actual no tiene un modelo `Product` físico  ║
 // ║  (solo tiene DigitalProduct para el marketplace). Para no     ║
@@ -30,6 +34,7 @@
 
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 const createBody = z.object({
@@ -137,7 +142,7 @@ export default async function inventoryRoutes(fastify) {
             if (!isStaffRole(req.user.role)) {
                 throw err('FORBIDDEN', 'Solo staff puede ver inventario', 403);
             }
-            const ws = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const ws = assertWorkspaceAccess(req);
             if (!ws) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
             const items = await listItems(redis, ws);
@@ -158,7 +163,7 @@ export default async function inventoryRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
         const data = parsed.data;
 
-        const ws = req.user.workspace_id || fastify.defaultWorkspaceId;
+        const ws = assertWorkspaceAccess(req);
         if (!ws) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
         const existing = await getItem(redis, ws, data.sku);
@@ -193,7 +198,7 @@ export default async function inventoryRoutes(fastify) {
         const parsed = patchBody.safeParse(req.body || {});
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
 
-        const ws = req.user.workspace_id || fastify.defaultWorkspaceId;
+        const ws = assertWorkspaceAccess(req);
         const sku = req.params.sku;
         const item = await getItem(redis, ws, sku);
         if (!item) throw err('INVENTORY_NOT_FOUND', `SKU no encontrado: ${sku}`, 404);
@@ -209,7 +214,7 @@ export default async function inventoryRoutes(fastify) {
         const parsed = stockBody.safeParse(req.body);
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
 
-        const ws = req.user.workspace_id || fastify.defaultWorkspaceId;
+        const ws = assertWorkspaceAccess(req);
         const sku = req.params.sku;
 
         const item = await adjustStock(redis, ws, sku, parsed.data.delta, {
@@ -224,7 +229,7 @@ export default async function inventoryRoutes(fastify) {
     //
     // Bonus handy endpoint for debugging stock issues in dev.
     fastify.get('/admin/inventory/:sku/audit', adminGuard, async (req) => {
-        const ws = req.user.workspace_id || fastify.defaultWorkspaceId;
+        const ws = assertWorkspaceAccess(req);
         const sku = req.params.sku;
         const rows = await redis.lrange(keyAudit(ws, sku), 0, 99);
         return {

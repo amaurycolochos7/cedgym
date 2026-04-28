@@ -21,6 +21,7 @@ import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
 import { audit, auditCtx } from '../lib/audit.js';
 import { applyPromoToAmount } from '../lib/memberships.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 import {
     createCardPayment,
     mapPaymentStatus,
@@ -113,7 +114,7 @@ export default async function addonsRoutes(fastify) {
         '/addons/meal-plan/price',
         { preHandler: [fastify.authenticate] },
         async (req) => {
-            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspaceId = assertWorkspaceAccess(req);
             const priceMxn = await resolveAddonPrice(prisma, workspaceId);
             return { price_mxn: priceMxn, currency: 'MXN' };
         }
@@ -144,7 +145,7 @@ export default async function addonsRoutes(fastify) {
             }
             const { price_mxn } = parsed.data;
 
-            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspaceId = assertWorkspaceAccess(req);
             if (!workspaceId) {
                 throw err('WORKSPACE_MISSING', 'No se pudo resolver el workspace', 500);
             }
@@ -185,7 +186,7 @@ export default async function addonsRoutes(fastify) {
             ],
         },
         async (req) => {
-            const workspaceId = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspaceId = assertWorkspaceAccess(req);
             const priceMxn = await resolveAddonPrice(prisma, workspaceId);
             return {
                 price_mxn: priceMxn,

@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────────────────────────
 // Marketplace — digital products (routines, nutrition plans, ebooks).
+// (admin-side workspace resolution uses assertWorkspaceAccess)
 //
 // Public:
 //   GET  /products                  — list (published only) with filters
@@ -32,6 +33,7 @@ import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
 import { createPreference } from '../lib/mercadopago.js';
 import { generateRoutinePDF } from '../lib/pdf.js';
+import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 const listQuery = z.object({
@@ -420,7 +422,7 @@ export default async function productsRoutes(fastify) {
             if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
             const data = parsed.data;
 
-            const workspace_id = req.user.workspace_id || fastify.defaultWorkspaceId;
+            const workspace_id = assertWorkspaceAccess(req);
             if (!workspace_id) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
 
             // Slug: explicit, or derived from title. Must be unique per workspace.

@@ -472,7 +472,7 @@ export default async function checkinsRoutes(fastify) {
                 where: { id: req.user.sub || req.user.id },
                 select: { workspace_id: true },
             });
-            const workspace_id = staffWorkspace?.workspace_id || fastify.defaultWorkspaceId;
+            const workspace_id = assertWorkspaceAccess(req);
 
             const startOfDay = dayjs().startOf('day').toDate();
             const where = { workspace_id, scanned_at: { gte: startOfDay } };
@@ -517,7 +517,7 @@ export default async function checkinsRoutes(fastify) {
                 where: { id: req.user.sub || req.user.id },
                 select: { workspace_id: true },
             });
-            const workspace_id = admin?.workspace_id || fastify.defaultWorkspaceId;
+            const workspace_id = assertWorkspaceAccess(req);
 
             const where = { workspace_id };
             if (user_id) where.user_id = user_id;
