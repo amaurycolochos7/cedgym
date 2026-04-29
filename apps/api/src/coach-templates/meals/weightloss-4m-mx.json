@@ -8,8 +8,8 @@
   "meals_per_day": 4,
   "country": "MX",
   "gender": null,
-  "calories_target_kcal": 1800,
-  "macros": { "protein_g": 180, "carbs_g": 135, "fats_g": 60 },
+  "calories_target_kcal": 1660,
+  "macros": { "protein_g": 154, "carbs_g": 132, "fats_g": 55 },
   "restrictions": [],
   "meals": [
     {
