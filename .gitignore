@@ -61,3 +61,8 @@ deploy/_ssh_runner.py
 # tsbuildinfo (generated)
 apps/web/tsconfig.tsbuildinfo
 smartfitpage.txt
+
+# Coach Excel exports — fuente local para los templates en
+# apps/api/src/coach-templates/. Los JSON resultantes ya están en
+# el repo y son la fuente de verdad para producción.
+tmp_excel_dump/
