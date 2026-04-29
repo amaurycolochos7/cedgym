@@ -814,6 +814,12 @@ model Routine {
   days_per_week     Int
   source            RoutineSource
   ai_generation_id  String?
+  // Coach-Templates V1 tracking (FASE 2). Both columns are optional —
+  // legacy / pre-flag routines stay NULL. The migration that adds these
+  // columns lives in packages/db/prisma/migrations/<ts>_add_coach_templates_tracking
+  // and is NOT applied automatically. See SCHEMA.md in coach-templates/.
+  template_id            String?
+  template_used_fallback Boolean? @default(false)
   is_active         Boolean         @default(true)
   started_at        DateTime        @default(now())
   ended_at          DateTime?
@@ -876,6 +882,9 @@ model MealPlan {
   restrictions     String[]
   source           MealPlanSource
   ai_generation_id String?
+  // Coach-Templates V1 tracking. Same caveats as Routine.
+  template_id            String?
+  template_used_fallback Boolean? @default(false)
   is_active        Boolean        @default(true)
   started_at       DateTime       @default(now())
   ended_at         DateTime?
