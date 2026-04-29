@@ -25,6 +25,13 @@ import { err } from '../lib/errors.js';
 import { generateJSON } from '../lib/openai.js';
 import { assertAIQuota } from '../lib/ai-quota.js';
 import { getPlanByCode } from '../lib/memberships.js';
+import { select_meal_template } from '../coach-templates/loader.js';
+import {
+    isCoachTemplatesV1Enabled,
+    buildMealPromptFromTemplate,
+    deterministicMealsFromTemplate,
+} from '../lib/coach-templates-prompt.js';
+import { validate_meal_response, buildRetryUserPrompt } from '../lib/template-validator.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 
@@ -379,40 +386,151 @@ export default async function aiMealPlansRoutes(fastify) {
 
         const macros = computeMacros(calories_target, objective);
 
-        // 3. Call OpenAI.
-        const system = buildSystemPrompt();
-        const userPrompt = buildUserPrompt({
-            objective,
-            calories_target,
-            protein_g: macros.protein_g,
-            carbs_g: macros.carbs_g,
-            fats_g: macros.fats_g,
-            restrictions,
-            allergies,
-            disliked_foods,
-            meals_per_day,
-            budget,
-            country,
-            firstName,
-        });
+        // 3. Generate plan — either via Coach-Templates v1 (flag) or
+        //    legacy free-form prompt. Both paths converge on the same
+        //    `{ data, aiGenerationId, aiResult, templateMeta }` shape.
+        const useTemplates = isCoachTemplatesV1Enabled();
 
-        let aiResult;
-        try {
-            aiResult = await generateJSON({
-                prisma,
-                system,
-                user: userPrompt,
-                schema: mealPlanOutputSchema,
-                kind: 'MEAL_PLAN',
-                workspace_id: user.workspace_id,
-                user_id: user.id,
+        let data;
+        let aiGenerationId = null;
+        let aiResult = null;
+        let templateMeta = null;
+
+        if (useTemplates) {
+            const tpl = select_meal_template({
+                objective,
+                meals_per_day,
+                country,
+                gender: user.gender,
+                calories_target,
             });
-        } catch (e) {
-            req.log.error({ err: e }, '[ai-meal-plans] OpenAI generation failed');
-            throw err('AI_GENERATION_FAILED', 'No pudimos generar tu plan en este momento. Intenta de nuevo.', 502);
+
+            if (!tpl) {
+                // Catalog empty / selector returned null — fall back to
+                // the legacy free-form path so the user still gets a plan.
+                req.log.warn(
+                    { userId: user.id },
+                    '[ai-meal-plans] COACH_TEMPLATES_V1=true but selector returned null; falling back to legacy prompt',
+                );
+            } else {
+                const { system, user: userPromptOriginal, schema } = buildMealPromptFromTemplate(tpl, {
+                    firstName,
+                    restrictions,
+                    allergies,
+                    disliked_foods,
+                    country,
+                });
+
+                let attemptCount = 0;
+                let userPromptCurrent = userPromptOriginal;
+                let lastValidation = null;
+                let usedFallback = false;
+                let aiOpenAIThrew = false;
+                let totalCost = 0;
+                let totalDuration = 0;
+
+                for (attemptCount = 1; attemptCount <= 2; attemptCount++) {
+                    let result;
+                    try {
+                        result = await generateJSON({
+                            prisma,
+                            system,
+                            user: userPromptCurrent,
+                            schema,
+                            kind: 'MEAL_PLAN',
+                            workspace_id: user.workspace_id,
+                            user_id: user.id,
+                        });
+                    } catch (e) {
+                        req.log.warn(
+                            { err: e?.message, templateId: tpl.id, attempt: attemptCount },
+                            '[ai-meal-plans] OpenAI threw; using deterministic fallback',
+                        );
+                        data = deterministicMealsFromTemplate(tpl, { firstName, restrictions, allergies, disliked_foods });
+                        aiGenerationId = null;
+                        aiResult = null;
+                        usedFallback = true;
+                        aiOpenAIThrew = true;
+                        lastValidation = { ok: false, errors: [`openai_throw: ${e?.message || 'unknown'}`] };
+                        break;
+                    }
+                    totalCost     += Number(result.costUsd || 0);
+                    totalDuration += Number(result.durationMs || 0);
+                    aiResult = { costUsd: totalCost, durationMs: totalDuration };
+                    aiGenerationId = result.aiGenerationId;
+
+                    const v = validate_meal_response(result.data, tpl, { allergies, disliked_foods });
+                    lastValidation = v;
+                    if (v.ok) {
+                        data = result.data;
+                        break;
+                    }
+                    if (attemptCount < 2) {
+                        req.log.warn(
+                            { templateId: tpl.id, attempt: attemptCount, errors: v.errors.slice(0, 5) },
+                            '[ai-meal-plans] validation failed, retrying with feedback',
+                        );
+                        userPromptCurrent = buildRetryUserPrompt(userPromptOriginal, v.errors, 'meal');
+                    }
+                }
+
+                if (!data && !aiOpenAIThrew) {
+                    throw err(
+                        'AI_VALIDATION_FAILED',
+                        `La IA no respetó el template tras 2 intentos: ${(lastValidation?.errors || []).slice(0, 3).join('; ')}`,
+                        422,
+                    );
+                }
+
+                templateMeta = {
+                    id: tpl.id,
+                    source: tpl.source,
+                    validation_ok: lastValidation?.ok === true,
+                    validation_errors: lastValidation && !lastValidation.ok ? lastValidation.errors : null,
+                    used_fallback: usedFallback,
+                    attempts: attemptCount,
+                };
+            }
         }
 
-        const { data, aiGenerationId } = aiResult || {};
+        // Legacy free-form path: runs when flag is OFF, or when flag is
+        // ON but the template selector returned null (defensive).
+        if (!data) {
+            const system = buildSystemPrompt();
+            const userPrompt = buildUserPrompt({
+                objective,
+                calories_target,
+                protein_g: macros.protein_g,
+                carbs_g: macros.carbs_g,
+                fats_g: macros.fats_g,
+                restrictions,
+                allergies,
+                disliked_foods,
+                meals_per_day,
+                budget,
+                country,
+                firstName,
+            });
+
+            try {
+                aiResult = await generateJSON({
+                    prisma,
+                    system,
+                    user: userPrompt,
+                    schema: mealPlanOutputSchema,
+                    kind: 'MEAL_PLAN',
+                    workspace_id: user.workspace_id,
+                    user_id: user.id,
+                });
+            } catch (e) {
+                req.log.error({ err: e }, '[ai-meal-plans] OpenAI generation failed');
+                throw err('AI_GENERATION_FAILED', 'No pudimos generar tu plan en este momento. Intenta de nuevo.', 502);
+            }
+
+            data = aiResult?.data;
+            aiGenerationId = aiResult?.aiGenerationId || null;
+        }
+
         if (!data || !data.plan || !Array.isArray(data.meals)) {
             throw err('AI_GENERATION_FAILED', 'La IA devolvió un plan incompleto', 502);
         }
@@ -511,15 +629,41 @@ export default async function aiMealPlansRoutes(fastify) {
             );
         }
 
-        return {
+        // Optional DB tracking write — gated by COACH_TEMPLATES_TRACKING_DB.
+        // See ai-routines.js for the rationale. Best-effort; logs and
+        // continues if the migration hasn't been applied.
+        if (
+            useTemplates && templateMeta &&
+            String(process.env.COACH_TEMPLATES_TRACKING_DB || '').toLowerCase() === 'true'
+        ) {
+            try {
+                await prisma.$executeRawUnsafe(
+                    'UPDATE "meal_plans" SET "template_id" = $1, "template_used_fallback" = $2 WHERE id = $3',
+                    templateMeta.id,
+                    templateMeta.used_fallback,
+                    created.plan.id,
+                );
+            } catch (e) {
+                req.log.warn(
+                    { err: e?.message, meal_plan_id: created.plan.id, template_id: templateMeta.id },
+                    '[ai-meal-plans] template tracking write failed — has the coach-templates-tracking migration been applied?',
+                );
+            }
+        }
+
+        const response = {
             plan: created.plan,
             meals: created.meals,
             ai: {
                 generation_id: aiGenerationId || null,
-                cost_usd: aiResult.costUsd ?? null,
-                duration_ms: aiResult.durationMs ?? null,
+                cost_usd: aiResult?.costUsd ?? null,
+                duration_ms: aiResult?.durationMs ?? null,
             },
         };
+        if (useTemplates && templateMeta) {
+            response.template = templateMeta;
+        }
+        return response;
     });
 
     // ─── GET /ai/meal-plans/me ──────────────────────────────────

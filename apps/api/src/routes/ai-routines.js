@@ -14,6 +14,13 @@ import { err } from '../lib/errors.js';
 import { generateJSON } from '../lib/openai.js';
 import { assertAIQuota } from '../lib/ai-quota.js';
 import { searchExerciseVideosBatch } from '../lib/youtube.js';
+import { select_routine_template } from '../coach-templates/loader.js';
+import {
+    isCoachTemplatesV1Enabled,
+    buildRoutinePromptFromTemplate,
+    deterministicRoutineFromTemplate,
+} from '../lib/coach-templates-prompt.js';
+import { validate_routine_response, buildRetryUserPrompt } from '../lib/template-validator.js';
 
 export const autoPrefix = '/ai/routines';
 
@@ -313,12 +320,44 @@ export default async function aiRoutinesRoutes(fastify) {
                     fitness_profile: true,
                     name: true,
                     full_name: true,
+                    gender: true,
                 },
             });
             if (!user) throw err('USER_NOT_FOUND', 'Usuario no encontrado', 404);
 
             const merged = mergeProfile(parsed.data, user.fitness_profile);
             const firstName = (user.full_name || user.name || '').trim().split(/\s+/)[0] || '';
+
+            // ── Templated path (feature-flagged) ───────────────────────
+            // When COACH_TEMPLATES_V1=true we pick an official Coach
+            // template, build a constrained prompt that forces the AI to
+            // personalize WITHIN slots (no inventing days/exercises),
+            // validate the response, and fall back to the deterministic
+            // template payload on any structural drift.
+            // NOTE (future migration): we'd ideally persist `template_id`
+            // on the Routine model. The user explicitly asked NOT to add
+            // schema migrations yet, so we only return the metadata in
+            // the response and keep `source: 'AI_GENERATED'` as today.
+            const useTemplates = isCoachTemplatesV1Enabled();
+            let tpl = null;
+            let templateValidation = null; // { ok, errors }
+            let usedTemplateFallback = false;
+
+            if (useTemplates) {
+                tpl = select_routine_template({
+                    ...merged,
+                    gender: user.gender,
+                    firstName,
+                });
+                if (!tpl) {
+                    // Defensive: selector should never return null when
+                    // the catalog is non-empty. If it does, we fall back
+                    // to the legacy free-form path below.
+                    req.log.warn(
+                        '[ai-routines] COACH_TEMPLATES_V1=true but selector returned null — falling back to legacy path',
+                    );
+                }
+            }
 
             // 1. Load exercise library (filtered by equipment for HOME)
             const library = await loadExerciseLibrary(prisma, {
@@ -328,30 +367,120 @@ export default async function aiRoutinesRoutes(fastify) {
             });
 
             // 2. Build prompt + call OpenAI
-            const userPrompt = buildUserPrompt({
-                days_per_week: merged.days_per_week,
-                objective: merged.objective,
-                level: merged.level,
-                user_type: merged.user_type,
-                discipline: merged.discipline,
-                location: merged.location,
-                session_duration_min: merged.session_duration_min,
-                available_equipment: merged.available_equipment,
-                injuries: merged.injuries,
-                notes: merged.notes,
-                exerciseLibrary: library,
-                firstName,
-            });
+            let data;
+            let aiGenerationId;
+            let costUsd;
+            let durationMs;
+            let templateAttempts = 0;
 
-            const { data, aiGenerationId, costUsd, durationMs } = await generateJSON({
-                prisma,
-                system: SYSTEM_PROMPT,
-                user: userPrompt,
-                schema: aiResponseSchema,
-                kind: 'ROUTINE',
-                workspace_id: user.workspace_id,
-                user_id: user.id,
-            });
+            if (useTemplates && tpl) {
+                // ── FASE 3: strict gate with 1 retry ───────────────
+                // attempt 1 → validate → if !ok, retry with feedback
+                // attempt 2 → validate → if !ok, throw 422.
+                // OpenAI exceptions still degrade to deterministic to
+                // preserve uptime (the validator vs the network are
+                // distinct failure modes).
+                const { system, user: userPromptOriginal, schema } = buildRoutinePromptFromTemplate(tpl, {
+                    firstName,
+                    level: merged.level,
+                    injuries: merged.injuries,
+                });
+
+                let userPromptCurrent = userPromptOriginal;
+                let lastValidation = null;
+                let aiOpenAIThrew = false;
+                costUsd = 0;
+                durationMs = 0;
+
+                for (templateAttempts = 1; templateAttempts <= 2; templateAttempts++) {
+                    let result;
+                    try {
+                        result = await generateJSON({
+                            prisma,
+                            system,
+                            user: userPromptCurrent,
+                            schema,
+                            kind: 'ROUTINE',
+                            workspace_id: user.workspace_id,
+                            user_id: user.id,
+                        });
+                    } catch (e) {
+                        // OpenAI failed — degrade to deterministic (preserve uptime).
+                        req.log.warn(
+                            { err: e?.message, template_id: tpl.id, attempt: templateAttempts },
+                            '[ai-routines] OpenAI threw; using deterministic fallback',
+                        );
+                        data = deterministicRoutineFromTemplate(tpl, { firstName });
+                        aiGenerationId = null;
+                        costUsd = 0;
+                        durationMs = 0;
+                        usedTemplateFallback = true;
+                        aiOpenAIThrew = true;
+                        templateValidation = { ok: false, errors: [`openai_throw: ${e?.message || 'unknown'}`] };
+                        break;
+                    }
+                    // Sum cost / duration across attempts.
+                    costUsd      += Number(result.costUsd || 0);
+                    durationMs   += Number(result.durationMs || 0);
+                    aiGenerationId = result.aiGenerationId; // last attempt's id
+
+                    const v = validate_routine_response(result.data, tpl);
+                    lastValidation = v;
+                    if (v.ok) {
+                        data = result.data;
+                        templateValidation = v;
+                        usedTemplateFallback = false;
+                        break;
+                    }
+                    // Validation failed — prep retry only if attempt remaining.
+                    if (templateAttempts < 2) {
+                        req.log.warn(
+                            { template_id: tpl.id, attempt: templateAttempts, errors: v.errors.slice(0, 5) },
+                            '[ai-routines] validation failed, retrying with feedback',
+                        );
+                        userPromptCurrent = buildRetryUserPrompt(userPromptOriginal, v.errors, 'routine');
+                    }
+                }
+
+                // After the loop: if data is set we proceed. If not (and
+                // OpenAI didn't throw), validator failed twice → 422.
+                if (!data && !aiOpenAIThrew) {
+                    throw err(
+                        'AI_VALIDATION_FAILED',
+                        `La IA no respetó el template tras 2 intentos: ${(lastValidation?.errors || []).slice(0, 3).join('; ')}`,
+                        422,
+                    );
+                }
+            } else {
+                const userPrompt = buildUserPrompt({
+                    days_per_week: merged.days_per_week,
+                    objective: merged.objective,
+                    level: merged.level,
+                    user_type: merged.user_type,
+                    discipline: merged.discipline,
+                    location: merged.location,
+                    session_duration_min: merged.session_duration_min,
+                    available_equipment: merged.available_equipment,
+                    injuries: merged.injuries,
+                    notes: merged.notes,
+                    exerciseLibrary: library,
+                    firstName,
+                });
+
+                const result = await generateJSON({
+                    prisma,
+                    system: SYSTEM_PROMPT,
+                    user: userPrompt,
+                    schema: aiResponseSchema,
+                    kind: 'ROUTINE',
+                    workspace_id: user.workspace_id,
+                    user_id: user.id,
+                });
+                data = result.data;
+                aiGenerationId = result.aiGenerationId;
+                costUsd = result.costUsd;
+                durationMs = result.durationMs;
+            }
 
             // 3. Re-map AI-returned exercise_ids to real Exercise rows.
             //    If the model hallucinated an id, null it out and fall
@@ -363,6 +492,11 @@ export default async function aiRoutinesRoutes(fastify) {
             //     parallel, BEFORE opening the DB transaction. Avoids
             //     holding a transaction open on a flaky scraper call.
             //     youtube-sr caches in-memory so repeats are free.
+            //
+            //     We run this for BOTH legacy and templated paths now —
+            //     producto pidió que el templated mode también traiga
+            //     videos. Si el lookup falla (red/scraper), cada ejercicio
+            //     simplemente queda con video_url = null y seguimos.
             const exerciseNames = [];
             for (const d of data.days) {
                 for (const ex of d.exercises) {
@@ -452,15 +586,55 @@ export default async function aiRoutinesRoutes(fastify) {
                 return newRoutine;
             });
 
+            // Optional DB tracking write — gated by a SECOND flag so we
+            // can ship code BEFORE the migration runs in prod. When
+            // COACH_TEMPLATES_TRACKING_DB=true and the migration
+            // 20260428220000_add_coach_templates_tracking has been
+            // applied, this populates the new columns. Best-effort:
+            // a failure (e.g. missing columns) just logs a warning and
+            // does NOT roll back the routine that we already committed.
+            if (
+                useTemplates && tpl &&
+                String(process.env.COACH_TEMPLATES_TRACKING_DB || '').toLowerCase() === 'true'
+            ) {
+                try {
+                    await prisma.$executeRawUnsafe(
+                        'UPDATE "routines" SET "template_id" = $1, "template_used_fallback" = $2 WHERE id = $3',
+                        tpl.id,
+                        usedTemplateFallback,
+                        routine.id,
+                    );
+                } catch (e) {
+                    req.log.warn(
+                        { err: e?.message, routine_id: routine.id, template_id: tpl.id },
+                        '[ai-routines] template tracking write failed — has the coach-templates-tracking migration been applied?',
+                    );
+                }
+            }
+
             const full = await loadRoutineFull(prisma, routine.id);
-            return reply.status(201).send({
+            const responsePayload = {
                 routine: full,
                 ai: {
                     generation_id: aiGenerationId,
                     cost_usd: costUsd,
                     duration_ms: durationMs,
                 },
-            });
+            };
+            if (useTemplates && tpl) {
+                responsePayload.template = {
+                    id: tpl.id,
+                    source: tpl.source,
+                    validation_ok: templateValidation ? templateValidation.ok : true,
+                    validation_errors:
+                        templateValidation && !templateValidation.ok
+                            ? templateValidation.errors
+                            : null,
+                    used_fallback: usedTemplateFallback,
+                    attempts: templateAttempts,
+                };
+            }
+            return reply.status(201).send(responsePayload);
         }
     );
 
