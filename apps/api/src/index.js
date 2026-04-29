@@ -63,9 +63,10 @@ const fastify = Fastify({
     },
     // ── Timeouts ────────────────────────────────────────────────────
     // requestTimeout is the real slow-loris choke point — caps how
-    // long a single request can occupy a worker. 120 s lets the AI
+    // long a single request can occupy a worker. 180 s lets the AI
     // endpoints (POST /ai/meal-plans/generate, /ai/routines/generate)
-    // wait on OpenAI without getting cut.
+    // wait on OpenAI without getting cut, including the FASE 3
+    // retry-once path on meal plans (5×7 comidas = payload pesado).
     //
     // connectionTimeout is intentionally 0 (Fastify default). Earlier
     // I set it to 10 s thinking it bounded the TCP/TLS handshake; in
@@ -76,7 +77,7 @@ const fastify = Fastify({
     // upstream socket mid-request. Don't reintroduce.
     connectionTimeout: 0,
     keepAliveTimeout: 5_000,
-    requestTimeout: 120_000,
+    requestTimeout: 180_000,
     bodyLimit: 1_048_576,        // 1 MB max body — explicit, was the default
 });
 

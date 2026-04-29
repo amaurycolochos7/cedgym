@@ -383,7 +383,10 @@ function NoPlanView({
         .map((s) => s.trim())
         .filter(Boolean);
       if (disliked_foods.length) body.disliked_foods = disliked_foods;
-      const r = await api.post('/ai/meal-plans/generate', body, { timeout: 90_000 });
+      // 180s: meal plans (5×7=35 comidas) + retry FASE 3 pueden tardar
+      // más que 90s — bumped para evitar "timeout of 90000ms exceeded"
+      // mientras el backend (requestTimeout 180s) sigue trabajando.
+      const r = await api.post('/ai/meal-plans/generate', body, { timeout: 180_000 });
       return r.data;
     },
     onSuccess: () => onCreated(),
@@ -1004,7 +1007,7 @@ function PlanView({
       const r = await api.post(
         '/ai/meal-plans/generate',
         { country: 'MX' },
-        { timeout: 90_000 },
+        { timeout: 180_000 },
       );
       return r.data;
     },
