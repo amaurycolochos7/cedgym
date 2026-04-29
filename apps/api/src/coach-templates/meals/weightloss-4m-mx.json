@@ -1,0 +1,68 @@
+{
+  "id": "mp-weightloss-4m-mx",
+  "name": "Pérdida de grasa — 4 comidas (mexicano)",
+  "description": "Plan de bajada de grasa estilo CED·GYM, 4 comidas, ingredientes mexicanos accesibles, alto en proteína.",
+  "source": "GENERIC",
+  "coach_signature": "",
+  "objective": "WEIGHT_LOSS",
+  "meals_per_day": 4,
+  "country": "MX",
+  "gender": null,
+  "calories_target_kcal": 1800,
+  "macros": { "protein_g": 180, "carbs_g": 135, "fats_g": 60 },
+  "restrictions": [],
+  "meals": [
+    {
+      "day_of_week": 0,
+      "meal_type": "BREAKFAST",
+      "name": "Avena con whey y fresa",
+      "description": "1. Hierve 250ml de agua y agrega 50g de avena. Cocina 3 min revolviendo.\n2. Apaga y deja entibiar 1 min.\n3. Agrega 30g de whey vainilla y 100g de fresa lavada.\n4. Mezcla con cuchara hasta integrar.\n5. Sirve en tazón grande.",
+      "ingredients": ["50g avena", "30g whey vainilla", "100g fresa", "250ml agua"],
+      "calories": 380,
+      "protein_g": 35,
+      "carbs_g": 45,
+      "fats_g": 6,
+      "prep_time_min": 7,
+      "order_index": 0
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "LUNCH",
+      "name": "Pechuga a la plancha con arroz y verdura",
+      "description": "1. Sazona 180g de pechuga de pollo con sal y pimienta.\n2. Cocina en sartén con 5ml de aceite de oliva, 4 min por lado.\n3. Sirve con 80g de arroz integral cocido.\n4. Acompaña con 200g de mezcla de brócoli y zanahoria al vapor.\n5. Termina con jugo de medio limón encima de la pechuga.",
+      "ingredients": ["180g pechuga de pollo", "80g arroz integral cocido", "200g brócoli y zanahoria", "5ml aceite de oliva", "1/2 limón"],
+      "calories": 520,
+      "protein_g": 55,
+      "carbs_g": 50,
+      "fats_g": 12,
+      "prep_time_min": 20,
+      "order_index": 1
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "SNACK_PM",
+      "name": "Yogurt griego con plátano",
+      "description": "1. Sirve 200g de yogurt griego natural en un tazón.\n2. Rebana medio plátano (60g) encima.\n3. Espolvorea 10g de almendras fileteadas.\n4. Mezcla y consume frío.",
+      "ingredients": ["200g yogurt griego natural", "60g plátano", "10g almendras fileteadas"],
+      "calories": 280,
+      "protein_g": 22,
+      "carbs_g": 25,
+      "fats_g": 9,
+      "prep_time_min": 3,
+      "order_index": 2
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "DINNER",
+      "name": "Salmón con ensalada",
+      "description": "1. Sazona 150g de salmón con sal, pimienta y limón.\n2. Cocina en sartén con 5ml de aceite de oliva 4 min por lado.\n3. Mezcla 150g de espinaca con 50g de jitomate cherry y 40g de pepino.\n4. Aliña la ensalada con 5ml de aceite de oliva y vinagre balsámico.\n5. Sirve el salmón sobre la ensalada.",
+      "ingredients": ["150g salmón", "150g espinaca", "50g jitomate cherry", "40g pepino", "10ml aceite de oliva", "vinagre balsámico"],
+      "calories": 480,
+      "protein_g": 42,
+      "carbs_g": 12,
+      "fats_g": 28,
+      "prep_time_min": 15,
+      "order_index": 3
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "id": "mp-cs-diet-base-unisex",
+  "name": "CS Dieta Base Unisex — 4 comidas (mexicano)",
+  "description": "Plan base del Coach Samuel — versión simplificada de la dieta Paty Herrera. 4 comidas, ingredientes mexicanos accesibles, balanceado en macros (30/40/30). Punto de partida universal para cualquier socio: si buscas bajar grasa, recorta una porción de carbo en la comida y la cena; si buscas subir músculo, sube las claras del desayuno y agrega 30g de whey en la tarde.",
+  "source": "COACH_EXCEL",
+  "coach_signature": "Tomar 3 litros de agua diarios. Ajusta porciones según el objetivo.",
+  "objective": "MAINTENANCE",
+  "meals_per_day": 4,
+  "country": "MX",
+  "gender": null,
+  "calories_target_kcal": 2200,
+  "macros": { "protein_g": 165, "carbs_g": 220, "fats_g": 73 },
+  "restrictions": [],
+  "meals": [
+    {
+      "day_of_week": 0,
+      "meal_type": "BREAKFAST",
+      "name": "Desayuno base — claras, atún y tortillas",
+      "description": "1. Cocina 5 claras de huevo a la sartén con muy poco aceite, sazona con sal y pimienta.\n2. Drena 1/2 lata (60g) de atún en agua y agrégalo encima de las claras.\n3. Calienta 2 tortillas de maíz al comal.\n4. Acompaña con 1 papa al vapor mediana y 1/2 toronja en gajos.\n5. Toma 1 cápsula de omega 3 al final del desayuno con 250 ml de agua.",
+      "ingredients": [
+        "5 claras de huevo",
+        "60g atún en agua (1/2 lata)",
+        "2 tortillas de maíz",
+        "1 papa al vapor mediana",
+        "1/2 toronja",
+        "1 cápsula omega 3",
+        "250ml agua"
+      ],
+      "calories": 560,
+      "protein_g": 45,
+      "carbs_g": 60,
+      "fats_g": 12,
+      "prep_time_min": 15,
+      "order_index": 0
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "LUNCH",
+      "name": "Comida base — proteína animal con verdura y tortilla",
+      "description": "1. Cocina 180g de pechuga de pollo (o 180g de carne magra o 180g de pescado blanco) a la plancha con cebolla y chile morrón.\n2. Sazona con sal, pimienta y jugo de medio limón.\n3. Sirve con 2 tazas de mezcla de verdura cocida (calabaza, brócoli, zanahoria).\n4. Calienta 3 tortillas de maíz al comal.\n5. Termina el plato con 1/2 aguacate rebanado y 8 almendras naturales.\n6. De postre, 1 fruta de temporada (pera, manzana o naranja).",
+      "ingredients": [
+        "180g pollo o carne magra o pescado",
+        "1/4 cebolla",
+        "1 chile morrón",
+        "1/2 limón",
+        "2 tazas verdura cocida",
+        "3 tortillas de maíz",
+        "1/2 aguacate",
+        "8 almendras",
+        "1 pieza de fruta"
+      ],
+      "calories": 720,
+      "protein_g": 55,
+      "carbs_g": 75,
+      "fats_g": 22,
+      "prep_time_min": 25,
+      "order_index": 1
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "SNACK_PM",
+      "name": "Tarde pre-entreno — yogurt y plátano",
+      "description": "1. Sirve 200g de yogurt griego natural en un tazón.\n2. Rebana 1 plátano completo (120g) encima.\n3. Espolvorea 15g de avena cruda y 10g de almendras fileteadas.\n4. 15 min antes de pisar el gym, toma 1 servicio (5g) de creatina con 250 ml de agua.",
+      "ingredients": [
+        "200g yogurt griego natural",
+        "1 plátano (120g)",
+        "15g avena cruda",
+        "10g almendras fileteadas",
+        "5g creatina",
+        "250ml agua"
+      ],
+      "calories": 380,
+      "protein_g": 22,
+      "carbs_g": 50,
+      "fats_g": 10,
+      "prep_time_min": 4,
+      "order_index": 2
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "DINNER",
+      "name": "Cena — pescado con cereal y proteína",
+      "description": "1. Sazona 120g de salmón (o 150g de atún fresco) con sal, pimienta y limón.\n2. Cocina 4 min por lado en sartén con 5 ml de aceite de oliva.\n3. Sirve aparte 1 plato (40g) de cereal All Bran con 150 ml de leche light o agua.\n4. Prepara 1 servicio (25g) de proteína aislada batida con 250 ml de agua natural.\n5. Toma 1 cápsula de vitamina E.\n6. Cierra con 500 ml de agua para alcanzar los 3 litros del día.",
+      "ingredients": [
+        "120g salmón o atún fresco",
+        "5ml aceite de oliva",
+        "40g cereal All Bran",
+        "150ml leche light o agua",
+        "25g proteína aislada (whey)",
+        "250ml agua",
+        "1 cápsula vitamina E",
+        "500ml agua"
+      ],
+      "calories": 540,
+      "protein_g": 45,
+      "carbs_g": 35,
+      "fats_g": 22,
+      "prep_time_min": 12,
+      "order_index": 3
+    }
+  ]
+}

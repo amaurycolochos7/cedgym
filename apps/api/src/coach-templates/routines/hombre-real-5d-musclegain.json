@@ -1,0 +1,97 @@
+{
+  "id": "rt-hombre-real-5d-musclegain",
+  "name": "Rutina Hombre 2025 — Coach Samuel (5 días)",
+  "description": "Rutina real del Coach M.A. Samuel Jeffery para socio hombre adulto: 5 días — Pecho y Tríceps / Pierna / Espalda y Hombro / Brazo, Antebrazo y Trapecio / Entrenamiento Funcional. Transcrita del Excel oficial del coach (rutina hombre 2025).",
+  "source": "COACH_EXCEL",
+  "coach_signature": "No te preocupes por cargar mucho, preocúpate por hacerlo bien.",
+  "objective": "MUSCLE_GAIN",
+  "user_type": "ADULT",
+  "level": "INTERMEDIATE",
+  "days_per_week": 5,
+  "location": "GYM",
+  "discipline": null,
+  "gender": "MALE",
+  "days": [
+    {
+      "day_of_week": 0,
+      "title": "Pecho y Tríceps",
+      "notes": "Calienta 20 min en bicicleta antes de pisar el peso.",
+      "exercises": [
+        { "exercise_name": "Bicicleta", "sets": 1, "reps": "20 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Press de banco", "sets": 4, "reps": "15,12,10,8", "rest_sec": 90, "notes": "aumenta peso cada serie" },
+        { "exercise_name": "Press de banco inclinado", "sets": 4, "reps": "15,12,10,8", "rest_sec": 90, "notes": "codos no se traban" },
+        { "exercise_name": "Press de banco declinado con mancuernas", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "rango completo" },
+        { "exercise_name": "Flys", "sets": 4, "reps": "25", "rest_sec": 60, "notes": "abre lento y aprieta el pecho" },
+        { "exercise_name": "Fondos en banco", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "codos pegados" },
+        { "exercise_name": "Push 3 posiciones", "sets": 4, "reps": "10", "rest_sec": 60, "notes": "alta, media y baja" },
+        { "exercise_name": "Patada de mula", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "codo fijo" },
+        { "exercise_name": "Press francés", "sets": 4, "reps": "15,12,10,8", "rest_sec": 60, "notes": "aumenta peso, codos quietos" },
+        { "exercise_name": "Pull down", "sets": 4, "reps": "15,12,10,8", "rest_sec": 60, "notes": "aprieta el tríceps abajo" },
+        { "exercise_name": "Patada de mula con TRX", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "aumenta peso" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "100 reps en serie corrida o partida" }
+      ]
+    },
+    {
+      "day_of_week": 1,
+      "title": "Pierna",
+      "notes": "Día clave. Técnica primero, peso después.",
+      "exercises": [
+        { "exercise_name": "Steps con mancuerna", "sets": 3, "reps": "1 min", "rest_sec": 60, "notes": "calentamiento" },
+        { "exercise_name": "Sentadilla", "sets": 4, "reps": "15,12,10,8", "rest_sec": 120, "notes": "rodilla en línea con el pie" },
+        { "exercise_name": "Desplantes", "sets": 4, "reps": "20", "rest_sec": 75, "notes": "10 con cada pierna" },
+        { "exercise_name": "Prensa piernas juntas", "sets": 4, "reps": "15", "rest_sec": 90, "notes": "no trabes la rodilla arriba" },
+        { "exercise_name": "Sentadilla isométrica", "sets": 3, "reps": "1 min", "rest_sec": 60, "notes": "talones arriba, muslos paralelos" },
+        { "exercise_name": "Peso muerto sumo", "sets": 3, "reps": "15", "rest_sec": 90, "notes": "espalda recta" },
+        { "exercise_name": "Sentadilla hack", "sets": 3, "reps": "25", "rest_sec": 75, "notes": "movimiento controlado sin impulso" },
+        { "exercise_name": "Pantorrilla 3 posiciones", "sets": 4, "reps": "25", "rest_sec": 45, "notes": "puntas adentro, neutro, afuera" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    },
+    {
+      "day_of_week": 2,
+      "title": "Espalda y Hombro",
+      "notes": "Jala con el codo, no con la mano.",
+      "exercises": [
+        { "exercise_name": "Hiperextensiones", "sets": 4, "reps": "25", "rest_sec": 60, "notes": "calienta zona lumbar" },
+        { "exercise_name": "Remo en máquina", "sets": 4, "reps": "6 pesadas / 12 livianas", "rest_sec": 75, "notes": "aprieta omóplatos" },
+        { "exercise_name": "Jalón al frente", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "lleva codos hacia atrás" },
+        { "exercise_name": "Jalón invertido", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "agarre supino" },
+        { "exercise_name": "Press militar en aparato", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "core firme, sin hiperextender" },
+        { "exercise_name": "Laterales", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "sube hasta línea del hombro" },
+        { "exercise_name": "Frontal con disco", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "controla la bajada" },
+        { "exercise_name": "Círculos con mancuerna adelante y atrás", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "movimiento controlado sin impulso" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    },
+    {
+      "day_of_week": 3,
+      "title": "Brazo, Antebrazo y Trapecio",
+      "notes": "Sube lento y aprieta arriba 1 segundo.",
+      "exercises": [
+        { "exercise_name": "Bicicleta", "sets": 1, "reps": "10 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Curl bíceps", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "sin balanceo" },
+        { "exercise_name": "Curl martillo", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "palmas miran adentro" },
+        { "exercise_name": "Predicador", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "no levantes el codo" },
+        { "exercise_name": "Curl concentrado", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "sube lento y aprieta arriba" },
+        { "exercise_name": "Supinación", "sets": 4, "reps": "15", "rest_sec": 30, "notes": "antebrazo apoyado" },
+        { "exercise_name": "Pronación", "sets": 4, "reps": "20", "rest_sec": 30, "notes": "rango completo" },
+        { "exercise_name": "Isométrico sosteniendo mancuernas", "sets": 4, "reps": "1:30 min", "rest_sec": 60, "notes": "no encojas hombros" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    },
+    {
+      "day_of_week": 4,
+      "title": "Entrenamiento Funcional",
+      "notes": "Capacidad de trabajo. Ritmo alto, técnica intacta.",
+      "exercises": [
+        { "exercise_name": "Voltear la llanta", "sets": 3, "reps": "15", "rest_sec": 60, "notes": "espalda recta, empuja con piernas" },
+        { "exercise_name": "Golpeo con marro", "sets": 3, "reps": "20", "rest_sec": 60, "notes": "10 por lado" },
+        { "exercise_name": "Coordinación con escalera", "sets": 1, "reps": "10 ejercicios diferentes", "rest_sec": 60, "notes": "pies rápidos, mira al frente" },
+        { "exercise_name": "Yoguis con vallas", "sets": 1, "reps": "de frente, de lado y en deslizamiento", "rest_sec": 60, "notes": "cadera abierta" },
+        { "exercise_name": "Mountain climbers", "sets": 4, "reps": "1 min", "rest_sec": 45, "notes": "cadera abajo" },
+        { "exercise_name": "Plank", "sets": 4, "reps": "1 min", "rest_sec": 30, "notes": "cuerpo recto, sin colgar la cadera" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    }
+  ]
+}

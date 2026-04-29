@@ -1,0 +1,58 @@
+{
+  "id": "rt-generalfitness-3d-senior-beginner",
+  "name": "Fitness General Adulto Mayor Principiante — 3 días",
+  "description": "Rutina del Coach Samuel para adulto mayor (55+): 3 días con máquinas, baja carga y alto control. Movilidad, equilibrio y core. Sin saltos ni cargas máximas.",
+  "source": "GENERIC",
+  "coach_signature": "",
+  "objective": "GENERAL_FITNESS",
+  "user_type": "SENIOR",
+  "level": "BEGINNER",
+  "days_per_week": 3,
+  "location": "GYM",
+  "discipline": null,
+  "gender": null,
+  "days": [
+    {
+      "day_of_week": 0,
+      "title": "Full Body en Máquinas (Empuje + Pierna)",
+      "notes": "Mueve despacio, respira parejo, sin prisa.",
+      "exercises": [
+        { "exercise_name": "Bicicleta estática suave", "sets": 1, "reps": "15min", "rest_sec": 120, "notes": "ritmo cómodo, sin agitarse" },
+        { "exercise_name": "Prensa de pierna 45°", "sets": 3, "reps": "12-15", "rest_sec": 120, "notes": "no trabes la rodilla arriba" },
+        { "exercise_name": "Press banco en máquina", "sets": 3, "reps": "12-15", "rest_sec": 120, "notes": "controla la bajada" },
+        { "exercise_name": "Extensión de cuádriceps en máquina", "sets": 3, "reps": "15", "rest_sec": 90, "notes": "aprieta arriba un segundo" },
+        { "exercise_name": "Sentadilla isométrica en pared", "sets": 3, "reps": "20s", "rest_sec": 90, "notes": "media sentadilla, sin forzar" },
+        { "exercise_name": "Movilidad de cadera y tobillo", "sets": 2, "reps": "10 cada lado", "rest_sec": 60, "notes": "rangos cómodos, sin dolor" },
+        { "exercise_name": "Crunch en piso", "sets": 3, "reps": "12-15", "rest_sec": 60, "notes": "movimiento corto, sin tirón" }
+      ]
+    },
+    {
+      "day_of_week": 2,
+      "title": "Full Body en Máquinas (Jalón + Hombro)",
+      "notes": "Espalda recta y respira siempre.",
+      "exercises": [
+        { "exercise_name": "Caminadora plana suave", "sets": 1, "reps": "15min", "rest_sec": 120, "notes": "paso firme, brazos sueltos" },
+        { "exercise_name": "Jalón al pecho con polea alta", "sets": 3, "reps": "12-15", "rest_sec": 120, "notes": "lleva codos hacia atrás" },
+        { "exercise_name": "Remo sentado en máquina", "sets": 3, "reps": "12-15", "rest_sec": 120, "notes": "aprieta omóplatos" },
+        { "exercise_name": "Press hombro en máquina", "sets": 3, "reps": "12-15", "rest_sec": 120, "notes": "core firme, sin arquear" },
+        { "exercise_name": "Curl con mancuernas sentado", "sets": 3, "reps": "12", "rest_sec": 90, "notes": "sin balanceo, peso ligero" },
+        { "exercise_name": "Movilidad de hombro con bandas", "sets": 2, "reps": "12", "rest_sec": 60, "notes": "rango cómodo, sin pinchar" },
+        { "exercise_name": "Plancha frontal en rodillas", "sets": 3, "reps": "20s", "rest_sec": 60, "notes": "cadera abajo, 100 reps core" }
+      ]
+    },
+    {
+      "day_of_week": 4,
+      "title": "Full Body en Máquinas (Movilidad + Equilibrio)",
+      "notes": "Día de control fino y estabilidad.",
+      "exercises": [
+        { "exercise_name": "Bicicleta estática suave", "sets": 1, "reps": "15min", "rest_sec": 120, "notes": "ritmo cómodo, sin agitarse" },
+        { "exercise_name": "Sentadilla goblet ligera con mancuerna", "sets": 3, "reps": "12-15", "rest_sec": 120, "notes": "baja a silla, sube parejo" },
+        { "exercise_name": "Curl femoral en máquina", "sets": 3, "reps": "12-15", "rest_sec": 90, "notes": "controla la bajada" },
+        { "exercise_name": "Aperturas en máquina (peck deck)", "sets": 3, "reps": "12-15", "rest_sec": 90, "notes": "abre lento, aprieta el pecho" },
+        { "exercise_name": "Equilibrio una pierna apoyado en pared", "sets": 3, "reps": "20s cada pierna", "rest_sec": 60, "notes": "agárrate ligero, mira al frente" },
+        { "exercise_name": "Pantorrilla de pie en máquina", "sets": 3, "reps": "15", "rest_sec": 60, "notes": "rango completo, despacio" },
+        { "exercise_name": "Abdominales en máquina (crunch)", "sets": 3, "reps": "12-15", "rest_sec": 60, "notes": "rango corto, sin tirón cervical" }
+      ]
+    }
+  ]
+}

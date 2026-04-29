@@ -1,0 +1,130 @@
+{
+  "id": "mp-paty-herrera-5m-musclegain",
+  "name": "Dieta Paty Herrera — Coach Samuel (5 comidas)",
+  "description": "Plan alimenticio real del Coach M.A. Samuel Jeffery (CED·GYM Chihuahua), transcrito del Excel oficial de Paty Herrera. 5 comidas + al despertar, ingredientes mexicanos, alto en proteína magra y carbohidrato complejo, 3 litros de agua al día. Aunque nació como plan de socia mujer, las porciones funcionan unisex — sube proteína y carbo si el socio es hombre o pesa más de 75 kg.",
+  "source": "COACH_EXCEL",
+  "coach_signature": "Tomar 3 litros de agua diarios. Hacer 20 min de cardio cada 3er día.",
+  "objective": "MUSCLE_GAIN",
+  "meals_per_day": 5,
+  "country": "MX",
+  "gender": null,
+  "calories_target_kcal": 2000,
+  "macros": { "protein_g": 170, "carbs_g": 220, "fats_g": 60 },
+  "restrictions": [],
+  "meals": [
+    {
+      "day_of_week": 0,
+      "meal_type": "BREAKFAST",
+      "name": "Al despertar + Desayuno (claras, atún y avena)",
+      "description": "1. Al despertar: toma 400g (2 vasos) de agua con 1g de vitamina C.\n2. Prepara 300ml de té de manzanilla con canela, endulza con stevia y agrega una pizca de bicarbonato.\n3. Licúa 1/2 servicio de proteína (15g whey) con 1 taza de fresas congeladas, 1 plátano y 1 cucharada de avena.\n4. 30 min después prepara 5 claras de huevo a la sartén con muy poco aceite.\n5. Acompaña con 1/2 lata de atún en agua, 2 tortillas de maíz calientes, 1/2 toronja y 1 cápsula de omega 3.\n6. Termina con 1 papa al vapor y 1 naranja o jugo de fruta natural.",
+      "ingredients": [
+        "400ml agua",
+        "1g vitamina C",
+        "300ml té de manzanilla con canela",
+        "stevia al gusto",
+        "1 pizca bicarbonato",
+        "15g whey",
+        "1 taza fresas congeladas",
+        "1 plátano",
+        "1 cucharada avena",
+        "5 claras de huevo",
+        "60g atún en agua (1/2 lata)",
+        "2 tortillas de maíz",
+        "1/2 toronja",
+        "1 cápsula omega 3",
+        "1 papa al vapor",
+        "1 naranja"
+      ],
+      "calories": 720,
+      "protein_g": 60,
+      "carbs_g": 95,
+      "fats_g": 12,
+      "prep_time_min": 25,
+      "order_index": 0
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "SNACK_AM",
+      "name": "Media mañana — atún con aguacate y arroz con leche",
+      "description": "1. Drena 1 lata de atún en agua (120g) y mezcla con 1/2 aguacate machacado.\n2. Sirve sobre 2 tostadas de maíz horneadas.\n3. Acompaña con 2 hojas de espinaca cruda lavada.\n4. Aparte sirve 1/2 taza (120ml) de arroz con leche light.\n5. Cierra con 1/2 toronja en gajos.\n6. Acompaña con 2 vasos (400ml) de agua de fruta natural sin azúcar.",
+      "ingredients": [
+        "120g atún en agua (1 lata)",
+        "1/2 aguacate",
+        "2 tostadas de maíz",
+        "2 hojas de espinaca",
+        "120ml arroz con leche light",
+        "1/2 toronja",
+        "400ml agua de fruta natural"
+      ],
+      "calories": 430,
+      "protein_g": 28,
+      "carbs_g": 45,
+      "fats_g": 14,
+      "prep_time_min": 8,
+      "order_index": 1
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "LUNCH",
+      "name": "Comida — proteína animal con verdura y tortilla",
+      "description": "1. Cocina 200g de pechuga de pollo (o carne magra o pescado) a la plancha con cebolla y chile morrón en cubos.\n2. Sazona con sal, pimienta y jugo de medio limón.\n3. Sirve con 2 tazas de mezcla de verdura cocida (calabaza, brócoli, zanahoria).\n4. Calienta 3 tortillas de maíz directo al comal.\n5. Termina el plato con 1/2 aguacate rebanado y 8 almendras naturales.\n6. De postre, 1 pera fresca lavada.",
+      "ingredients": [
+        "200g pollo o carne magra o pescado",
+        "1/4 cebolla",
+        "1 chile morrón",
+        "1/2 limón",
+        "2 tazas verdura cocida",
+        "3 tortillas de maíz",
+        "1/2 aguacate",
+        "8 almendras",
+        "1 pera"
+      ],
+      "calories": 620,
+      "protein_g": 50,
+      "carbs_g": 55,
+      "fats_g": 22,
+      "prep_time_min": 25,
+      "order_index": 2
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "SNACK_PM",
+      "name": "Tarde antes de entrenar — yogurt griego, pai y plátano",
+      "description": "1. Sirve 1 taza (200g) de yogurt griego de fruta natural.\n2. Acompaña con 1 rebanada (60g) de pai de manzana light.\n3. Aparte come 1/2 plátano fresco rebanado.\n4. 15 min antes de pisar el gym, toma 1 servicio (5g) de creatina con 250ml de agua.",
+      "ingredients": [
+        "200g yogurt griego de fruta",
+        "60g pai de manzana light",
+        "1/2 plátano",
+        "5g creatina",
+        "250ml agua"
+      ],
+      "calories": 350,
+      "protein_g": 18,
+      "carbs_g": 50,
+      "fats_g": 8,
+      "prep_time_min": 3,
+      "order_index": 3
+    },
+    {
+      "day_of_week": 0,
+      "meal_type": "DINNER",
+      "name": "Cena — salmón, cereal All Bran y vitamina E",
+      "description": "1. Sazona 100g de salmón con sal, pimienta y limón y cocina 4 min por lado en sartén con muy poco aceite.\n2. Sirve aparte 1 plato (40g) de cereal All Bran con agua o leche light.\n3. Prepara 1 porción de proteína aislada (25g whey) batida con 250ml de agua natural.\n4. Toma 1 cápsula de vitamina E al final.\n5. Acompaña la cena con 500ml de agua para cerrar los 3 litros del día.",
+      "ingredients": [
+        "100g salmón",
+        "40g cereal All Bran",
+        "150ml leche light o agua",
+        "25g proteína aislada",
+        "250ml agua natural",
+        "1 cápsula vitamina E",
+        "500ml agua"
+      ],
+      "calories": 480,
+      "protein_g": 42,
+      "carbs_g": 25,
+      "fats_g": 18,
+      "prep_time_min": 12,
+      "order_index": 4
+    }
+  ]
+}

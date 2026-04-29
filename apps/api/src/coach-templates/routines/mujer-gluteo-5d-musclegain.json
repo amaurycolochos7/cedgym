@@ -1,0 +1,98 @@
+{
+  "id": "rt-mujer-gluteo-5d-musclegain",
+  "name": "Rutina Mujer — Glúteo y Femoral · Coach Samuel (5 días)",
+  "description": "Rutina real del Coach M.A. Samuel Jeffery para socia mujer con objetivo de aumento muscular y enfoque glúteo/femoral: 5 días — Cuádriceps / Brazo / Femoral y Pompi / Espalda y Hombro / Pierna y Pecho. Transcrita del Excel del coach (Francia Pavón / Catia Pérez).",
+  "source": "COACH_EXCEL",
+  "coach_signature": "No te preocupes por cargar mucho, preocúpate por hacerlo bien. Sube controlado y aprieta arriba 1 segundo.",
+  "objective": "MUSCLE_GAIN",
+  "user_type": "ADULT",
+  "level": "INTERMEDIATE",
+  "days_per_week": 5,
+  "location": "GYM",
+  "discipline": null,
+  "gender": "FEMALE",
+  "days": [
+    {
+      "day_of_week": 0,
+      "title": "Cuádriceps",
+      "notes": "Cardio cada 3er día 20 min. Calienta en bici antes de pisar peso.",
+      "exercises": [
+        { "exercise_name": "Bicicleta", "sets": 1, "reps": "20 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Desplante búlgaro", "sets": 4, "reps": "12", "rest_sec": 75, "notes": "12 con cada pierna" },
+        { "exercise_name": "Extensiones de cuádriceps", "sets": 4, "reps": "10 pesadas / 10 livianas", "rest_sec": 60, "notes": "sube controlado y aprieta arriba 1 segundo" },
+        { "exercise_name": "Saltos desplantes", "sets": 4, "reps": "20", "rest_sec": 60, "notes": "cae suave, rodilla alineada" },
+        { "exercise_name": "Sentadilla frontal", "sets": 4, "reps": "15", "rest_sec": 90, "notes": "pecho arriba, codos al frente" },
+        { "exercise_name": "Desplante isométrico", "sets": 4, "reps": "1 min", "rest_sec": 60, "notes": "1 min con cada pierna" },
+        { "exercise_name": "Prensa piernas cerradas", "sets": 4, "reps": "15,12,10,8", "rest_sec": 90, "notes": "aumenta peso en cada serie" },
+        { "exercise_name": "Sentadilla isométrica", "sets": 4, "reps": "1 min", "rest_sec": 60, "notes": "talones arriba" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    },
+    {
+      "day_of_week": 1,
+      "title": "Brazo",
+      "notes": "Sube lento y aprieta arriba.",
+      "exercises": [
+        { "exercise_name": "Bicicleta", "sets": 1, "reps": "10 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Curl 21", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "7 abajo / 7 arriba / 7 completos" },
+        { "exercise_name": "Curl martillo en 21", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "palmas miran adentro, no muevas hombros" },
+        { "exercise_name": "Predicador 3 posiciones", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "brazos apoyados, no despegues" },
+        { "exercise_name": "Curl concentrado", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "sube lento y aprieta arriba" },
+        { "exercise_name": "Press francés", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "codos fijos, no abras brazos" },
+        { "exercise_name": "Fondos en banco paralelos", "sets": 4, "reps": "20", "rest_sec": 45, "notes": "codos pegados al cuerpo" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    },
+    {
+      "day_of_week": 2,
+      "title": "Femoral y Pompi",
+      "notes": "Trabaja glúteos, femorales y cadera. Espalda recta siempre.",
+      "exercises": [
+        { "exercise_name": "Sentadilla profunda con propio peso", "sets": 1, "reps": "100", "rest_sec": 60, "notes": "calentamiento del glúteo" },
+        { "exercise_name": "Curl de pierna acostado", "sets": 4, "reps": "10 pesadas / 10 livianas", "rest_sec": 60, "notes": "controla la bajada" },
+        { "exercise_name": "Peso muerto sumo", "sets": 4, "reps": "20", "rest_sec": 90, "notes": "trabaja glúteos, femorales y cadera" },
+        { "exercise_name": "Reverencias / good morning", "sets": 4, "reps": "12", "rest_sec": 75, "notes": "espalda recta, bajas el torso hacia adelante" },
+        { "exercise_name": "Curl femoral sentado", "sets": 4, "reps": "10 pesadas / 10 livianas", "rest_sec": 60, "notes": "sube controlado y aprieta arriba 1 segundo" },
+        { "exercise_name": "Saltos haciendo sentadilla", "sets": 4, "reps": "10", "rest_sec": 60, "notes": "cae suave" },
+        { "exercise_name": "Patada atrás y lateral con polea", "sets": 4, "reps": "12", "rest_sec": 45, "notes": "aprieta el glúteo arriba" },
+        { "exercise_name": "Patada de mula para glúteo", "sets": 4, "reps": "10 pesadas / 10 livianas", "rest_sec": 45, "notes": "no jales con la espalda" },
+        { "exercise_name": "Pantorrilla", "sets": 4, "reps": "25", "rest_sec": 45, "notes": "rango completo" },
+        { "exercise_name": "Puentes / hip thrust", "sets": 4, "reps": "15,12,10,8", "rest_sec": 75, "notes": "aumenta peso en cada serie" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    },
+    {
+      "day_of_week": 3,
+      "title": "Espalda y Hombro",
+      "notes": "Movimiento controlado sin impulso.",
+      "exercises": [
+        { "exercise_name": "Hiperextensiones", "sets": 4, "reps": "25", "rest_sec": 60, "notes": "enfocado en zona lumbar y glúteo" },
+        { "exercise_name": "Remo en máquina con barra T", "sets": 4, "reps": "10 pesadas / 10 livianas", "rest_sec": 75, "notes": "aprieta omóplatos" },
+        { "exercise_name": "Jalón al frente", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "lleva codos hacia atrás" },
+        { "exercise_name": "Jalón con ángulo", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "controla la bajada" },
+        { "exercise_name": "Press militar con mancuernas", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "core firme" },
+        { "exercise_name": "Frontal con disco", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "movimiento controlado sin impulso" },
+        { "exercise_name": "Laterales Poliquin", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "sube hasta línea del hombro" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    },
+    {
+      "day_of_week": 4,
+      "title": "Pierna y Pecho",
+      "notes": "Cierre de semana — sentadilla pesada y pecho.",
+      "exercises": [
+        { "exercise_name": "Bicicleta", "sets": 1, "reps": "20 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Sentadilla con barra", "sets": 6, "reps": "10,8,6,3,2,1", "rest_sec": 150, "notes": "una falla al final con peso ligero" },
+        { "exercise_name": "Prensa piernas (abierta y cerrada)", "sets": 4, "reps": "10", "rest_sec": 90, "notes": "alterna abierta y cerrada" },
+        { "exercise_name": "Abductores", "sets": 3, "reps": "8", "rest_sec": 60, "notes": "aprieta el glúteo medio" },
+        { "exercise_name": "Aductores", "sets": 3, "reps": "8", "rest_sec": 60, "notes": "controla la apertura" },
+        { "exercise_name": "Desplantes laterales", "sets": 3, "reps": "8", "rest_sec": 60, "notes": "8 con cada pierna" },
+        { "exercise_name": "Press de banco", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "sube controlado" },
+        { "exercise_name": "Press de banco inclinado", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "no traves codos" },
+        { "exercise_name": "Press de banco declinado", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "rango completo" },
+        { "exercise_name": "Peck deck", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "aprieta el pecho 1 segundo" },
+        { "exercise_name": "Abdominales", "sets": 1, "reps": "100", "rest_sec": 0, "notes": "" }
+      ]
+    }
+  ]
+}

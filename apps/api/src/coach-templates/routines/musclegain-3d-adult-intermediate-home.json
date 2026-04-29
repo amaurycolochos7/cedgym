@@ -1,0 +1,58 @@
+{
+  "id": "rt-musclegain-3d-adult-intermediate-home",
+  "name": "Hipertrofia Adulto Intermedio — 3 días en Casa",
+  "description": "Rutina de hipertrofia del Coach Samuel para casa: 3 días full body con peso corporal, mancuernas ligeras y bandas elásticas. Reps moderadas-altas, técnica fina sin máquinas.",
+  "source": "GENERIC",
+  "coach_signature": "",
+  "objective": "MUSCLE_GAIN",
+  "user_type": "ADULT",
+  "level": "INTERMEDIATE",
+  "days_per_week": 3,
+  "location": "HOME",
+  "discipline": null,
+  "gender": null,
+  "days": [
+    {
+      "day_of_week": 0,
+      "title": "Empuje en Casa (Pecho + Hombro + Tríceps)",
+      "notes": "Lo que falta de carga, sóbralo de técnica y reps.",
+      "exercises": [
+        { "exercise_name": "Saltar la cuerda o trote en sitio", "sets": 1, "reps": "12min", "rest_sec": 60, "notes": "calienta parejo, ritmo cómodo" },
+        { "exercise_name": "Lagartija con pies elevados", "sets": 4, "reps": "15,12,12,10", "rest_sec": 75, "notes": "pecho al piso, codos atrás" },
+        { "exercise_name": "Press banco piso con mancuernas", "sets": 4, "reps": "15,12,10,10", "rest_sec": 75, "notes": "controla la bajada" },
+        { "exercise_name": "Press hombro de pie con mancuernas", "sets": 4, "reps": "12,12,10,10", "rest_sec": 60, "notes": "core firme, sin arquear" },
+        { "exercise_name": "Aperturas con bandas elásticas", "sets": 3, "reps": "15,12,12", "rest_sec": 45, "notes": "abre lento, aprieta el pecho" },
+        { "exercise_name": "Tríceps copa con mancuerna", "sets": 4, "reps": "12,12,10,10", "rest_sec": 45, "notes": "codos pegados a la cabeza" },
+        { "exercise_name": "Crunch en piso", "sets": 3, "reps": "30-35", "rest_sec": 30, "notes": "100 reps totales" }
+      ]
+    },
+    {
+      "day_of_week": 2,
+      "title": "Pierna en Casa (Cuádriceps + Femoral)",
+      "notes": "Día clave — fuerza + isométrico + pliométrico.",
+      "exercises": [
+        { "exercise_name": "Saltar la cuerda o trote en sitio", "sets": 1, "reps": "12min", "rest_sec": 60, "notes": "calienta tobillo y cadera" },
+        { "exercise_name": "Sentadilla goblet con mancuerna", "sets": 5, "reps": "20,15,12,12,10", "rest_sec": 90, "notes": "rodilla en línea con el pie" },
+        { "exercise_name": "Sentadilla búlgara con mancuernas", "sets": 4, "reps": "12 cada pierna", "rest_sec": 75, "notes": "rodilla alineada, torso firme" },
+        { "exercise_name": "Peso muerto rumano con mancuernas", "sets": 4, "reps": "12,10,10,10", "rest_sec": 75, "notes": "espalda recta, baja con cadera" },
+        { "exercise_name": "Sentadilla isométrica en pared", "sets": 3, "reps": "45s", "rest_sec": 60, "notes": "muslos paralelos al piso" },
+        { "exercise_name": "Saltos desplantes alternos", "sets": 3, "reps": "10 cada pierna", "rest_sec": 60, "notes": "cae suave, rodilla alineada" },
+        { "exercise_name": "Bicicleta abdominal en piso", "sets": 3, "reps": "30", "rest_sec": 30, "notes": "100 reps totales" }
+      ]
+    },
+    {
+      "day_of_week": 4,
+      "title": "Jalón en Casa (Espalda + Bíceps)",
+      "notes": "Sin barra de dominadas, banda y mancuerna hacen el trabajo.",
+      "exercises": [
+        { "exercise_name": "Saltar la cuerda o trote en sitio", "sets": 1, "reps": "12min", "rest_sec": 60, "notes": "calienta hombro y espalda" },
+        { "exercise_name": "Remo con mancuerna a una mano", "sets": 4, "reps": "15,12,12,10", "rest_sec": 75, "notes": "lleva el codo al cinturón" },
+        { "exercise_name": "Jalón al pecho con banda elástica anclada", "sets": 4, "reps": "15,12,12,10", "rest_sec": 60, "notes": "lleva codos hacia atrás" },
+        { "exercise_name": "Remo invertido bajo la mesa", "sets": 3, "reps": "12-15", "rest_sec": 60, "notes": "cuerpo recto, aprieta omóplatos" },
+        { "exercise_name": "Pájaros con mancuernas inclinado", "sets": 3, "reps": "12,12,10", "rest_sec": 45, "notes": "aprieta omóplatos" },
+        { "exercise_name": "Curl con mancuernas alterno", "sets": 4, "reps": "12,12,10,10", "rest_sec": 45, "notes": "sin balanceo" },
+        { "exercise_name": "Plancha frontal", "sets": 3, "reps": "45s", "rest_sec": 30, "notes": "cadera abajo, 100 reps de core" }
+      ]
+    }
+  ]
+}
