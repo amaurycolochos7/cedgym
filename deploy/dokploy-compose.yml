@@ -86,6 +86,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # Coach-Templates V1 — feature flag (FASE 2/3). Default OFF preserves
+      # legacy AI generation; flip Dokploy env to "true" to enable the
+      # templated path. Tracking flag depends on the migration
+      # 20260428220000_add_coach_templates_tracking being applied.
+      COACH_TEMPLATES_V1: ${COACH_TEMPLATES_V1:-false}
+      COACH_TEMPLATES_TRACKING_DB: ${COACH_TEMPLATES_TRACKING_DB:-false}
     depends_on:
       db:
         condition: service_healthy
