@@ -199,16 +199,16 @@ model Workspace {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  users         User[]
-  memberships   Membership[]
-  check_ins     CheckIn[]
-  courses       Course[]
-  payments      Payment[]
-  products      DigitalProduct[]
+  users             User[]
+  memberships       Membership[]
+  check_ins         CheckIn[]
+  courses           Course[]
+  payments          Payment[]
+  products          DigitalProduct[]
   whatsapp_sessions WhatsAppSession[]
-  qr_tokens     QRToken[]
+  qr_tokens         QRToken[]
   meal_plan_addons  MealPlanAddon[]
-  settings      WorkspaceSetting[]
+  settings          WorkspaceSetting[]
 
   @@map("workspaces")
 }
@@ -246,41 +246,46 @@ model WorkspaceSetting {
 }
 
 model User {
-  id                String     @id @default(cuid())
-  workspace_id      String
-  name              String
-  full_name         String?
-  email             String?    @unique
-  phone             String?    @unique
-  birth_date        DateTime?
-  gender            Gender?
-  role              Role       @default(ATHLETE)
-  password_hash     String
-  avatar_url        String?
-  selfie_url        String?
-  status            UserStatus @default(UNVERIFIED)
-  phone_verified_at DateTime?
-  email_verified_at DateTime?
-  profile_completed Boolean    @default(false)
-  last_login_at     DateTime?
-  fitness_profile   Json?
+  id                    String     @id @default(cuid())
+  workspace_id          String
+  name                  String
+  full_name             String?
+  email                 String?    @unique
+  phone                 String?    @unique
+  birth_date            DateTime?
+  gender                Gender?
+  role                  Role       @default(ATHLETE)
+  password_hash         String
+  avatar_url            String?
+  selfie_url            String?
+  status                UserStatus @default(UNVERIFIED)
+  phone_verified_at     DateTime?
+  email_verified_at     DateTime?
+  profile_completed     Boolean    @default(false)
+  last_login_at         DateTime?
+  fitness_profile       Json?
   // Set the first time the user pays the one-time inscription fee
   // (charged on first PRO/ELITE subscription). Existing users at
   // cutover are backfilled to NOW() so they're exempt.
-  inscription_paid_at DateTime?
+  inscription_paid_at   DateTime?
   // Login lockout — incremented on each failed /auth/login, reset
   // on success. When >=5, locked_until is set 15min ahead and the
   // counter resets. Generic 401 either way (no enumeration leak).
-  failed_login_attempts Int      @default(0)
-  locked_until        DateTime?
+  failed_login_attempts Int        @default(0)
+  locked_until          DateTime?
   // MFA (TOTP) — groundwork. mfa_enabled false means no second factor
   // is enforced; once true the login flow demands a 6-digit code.
   // mfa_recovery_codes are bcrypt-hashed at enrollment.
-  mfa_secret          String?
-  mfa_enabled         Boolean    @default(false)
-  mfa_recovery_codes  String[]   @default([])
-  created_at        DateTime   @default(now())
-  updated_at        DateTime   @updatedAt
+  mfa_secret            String?
+  mfa_enabled           Boolean    @default(false)
+  mfa_recovery_codes    String[]   @default([])
+  // Stripe Customer ID — created lazily on first checkout. Used to
+  // attach the user's PaymentMethods, run Subscriptions, and look up
+  // payment history in the Stripe dashboard. One Stripe Customer per
+  // User, lifetime. Null until the user starts their first checkout.
+  stripe_customer_id    String?    @unique
+  created_at            DateTime   @default(now())
+  updated_at            DateTime   @updatedAt
 
   workspace          Workspace          @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   membership         Membership?
@@ -317,14 +322,14 @@ model EmergencyContact {
 }
 
 model RefreshToken {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   user_id    String
-  token_hash String   @unique
+  token_hash String    @unique
   expires_at DateTime
   revoked_at DateTime?
   user_agent String?
   ip_address String?
-  created_at DateTime @default(now())
+  created_at DateTime  @default(now())
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -354,20 +359,30 @@ model OtpCode {
 // Membership
 // ────────────────────────────────────────────────────────────────
 model Membership {
-  id                 String           @id @default(cuid())
-  workspace_id       String
-  user_id            String           @unique
-  plan               MembershipPlan
-  sport              Sport?
-  status             MembershipStatus @default(TRIAL)
-  starts_at          DateTime
-  expires_at         DateTime
-  price_mxn          Int
-  billing_cycle      BillingCycle     @default(MONTHLY)
-  mp_subscription_id String?
-  auto_renew         Boolean          @default(true)
-  created_at         DateTime         @default(now())
-  updated_at         DateTime         @updatedAt
+  id                     String           @id @default(cuid())
+  workspace_id           String
+  user_id                String           @unique
+  plan                   MembershipPlan
+  sport                  Sport?
+  status                 MembershipStatus @default(TRIAL)
+  starts_at              DateTime
+  expires_at             DateTime
+  price_mxn              Int
+  billing_cycle          BillingCycle     @default(MONTHLY)
+  mp_subscription_id     String?
+  // Stripe Subscription (real recurring) — replaces mp_subscription_id
+  // for new memberships. Stripe owns the renewal cadence: each cycle
+  // it invoices, charges the saved PaymentMethod, and emits
+  // invoice.payment_succeeded which our webhook converts into a
+  // Payment row + extends `expires_at`.
+  stripe_subscription_id String?          @unique
+  // The Price the subscription was created with. Stored separately so
+  // upgrades/downgrades can detect when a renewal hits at a different
+  // tier than what's on the Membership row.
+  stripe_price_id        String?
+  auto_renew             Boolean          @default(true)
+  created_at             DateTime         @default(now())
+  updated_at             DateTime         @updatedAt
 
   workspace Workspace          @relation(fields: [workspace_id], references: [id])
   user      User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -455,24 +470,31 @@ model Course {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Payments (Mercado Pago)
+// Payments (Stripe — mp_* columns are legacy, kept until cleanup)
 // ────────────────────────────────────────────────────────────────
 model Payment {
-  id               String        @id @default(cuid())
-  workspace_id     String
-  user_id          String
-  amount           Int
-  type             PaymentType
-  reference        String?
-  description      String?
-  mp_payment_id    String?       @unique
-  mp_preference_id String?       @unique
-  mp_status_detail String?
-  status           PaymentStatus @default(PENDING)
-  metadata         Json?
-  paid_at          DateTime?
-  created_at       DateTime      @default(now())
-  updated_at       DateTime      @updatedAt
+  id                       String        @id @default(cuid())
+  workspace_id             String
+  user_id                  String
+  amount                   Int
+  type                     PaymentType
+  reference                String?
+  description              String?
+  mp_payment_id            String?       @unique
+  mp_preference_id         String?       @unique
+  mp_status_detail         String?
+  // Stripe IDs. payment_intent_id is the canonical handle for one-shot
+  // payments (addons, first-cycle membership). For recurring payments,
+  // stripe_invoice_id ties the Payment to the Stripe Invoice that
+  // generated it; charge_id is the underlying ch_xxx after capture.
+  stripe_payment_intent_id String?       @unique
+  stripe_invoice_id        String?       @unique
+  stripe_charge_id         String?
+  status                   PaymentStatus @default(PENDING)
+  metadata                 Json?
+  paid_at                  DateTime?
+  created_at               DateTime      @default(now())
+  updated_at               DateTime      @updatedAt
 
   workspace Workspace @relation(fields: [workspace_id], references: [id])
   user      User      @relation(fields: [user_id], references: [id])
@@ -632,19 +654,19 @@ model MessageTemplate {
 }
 
 model WhatsAppSession {
-  id             String    @id @default(cuid())
-  workspace_id   String
-  staff_id       String?
-  phone_number   String?
-  is_connected   Boolean   @default(false)
-  initializing   Boolean   @default(false)
-  last_heartbeat DateTime?
-  last_ready_at  DateTime?
-  paired_at      DateTime?
+  id              String    @id @default(cuid())
+  workspace_id    String
+  staff_id        String?
+  phone_number    String?
+  is_connected    Boolean   @default(false)
+  initializing    Boolean   @default(false)
+  last_heartbeat  DateTime?
+  last_ready_at   DateTime?
+  paired_at       DateTime?
   disconnected_at DateTime?
-  qr_data        String?   @db.Text
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
+  qr_data         String?   @db.Text
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 
   workspace Workspace @relation(fields: [workspace_id], references: [id])
 
@@ -793,11 +815,11 @@ model Exercise {
   created_at        DateTime      @default(now())
   updated_at        DateTime      @updatedAt
 
-  variant_easier   Exercise?          @relation("ExerciseEasier", fields: [variant_easier_id], references: [id])
-  easier_of        Exercise[]         @relation("ExerciseEasier")
-  variant_harder   Exercise?          @relation("ExerciseHarder", fields: [variant_harder_id], references: [id])
-  harder_of        Exercise[]         @relation("ExerciseHarder")
-  routine_entries  RoutineExercise[]
+  variant_easier  Exercise?         @relation("ExerciseEasier", fields: [variant_easier_id], references: [id])
+  easier_of       Exercise[]        @relation("ExerciseEasier")
+  variant_harder  Exercise?         @relation("ExerciseHarder", fields: [variant_harder_id], references: [id])
+  harder_of       Exercise[]        @relation("ExerciseHarder")
+  routine_entries RoutineExercise[]
 
   @@index([workspace_id])
   @@index([workspace_id, slug])
@@ -805,26 +827,26 @@ model Exercise {
 }
 
 model Routine {
-  id                String          @id @default(cuid())
-  workspace_id      String
-  user_id           String
-  name              String
-  goal              FitnessGoal
-  location          RoutineLocation
-  days_per_week     Int
-  source            RoutineSource
-  ai_generation_id  String?
+  id                     String          @id @default(cuid())
+  workspace_id           String
+  user_id                String
+  name                   String
+  goal                   FitnessGoal
+  location               RoutineLocation
+  days_per_week          Int
+  source                 RoutineSource
+  ai_generation_id       String?
   // Coach-Templates V1 tracking (FASE 2). Both columns are optional —
   // legacy / pre-flag routines stay NULL. The migration that adds these
   // columns lives in packages/db/prisma/migrations/<ts>_add_coach_templates_tracking
   // and is NOT applied automatically. See SCHEMA.md in coach-templates/.
   template_id            String?
-  template_used_fallback Boolean? @default(false)
-  is_active         Boolean         @default(true)
-  started_at        DateTime        @default(now())
-  ended_at          DateTime?
-  created_at        DateTime        @default(now())
-  updated_at        DateTime        @updatedAt
+  template_used_fallback Boolean?        @default(false)
+  is_active              Boolean         @default(true)
+  started_at             DateTime        @default(now())
+  ended_at               DateTime?
+  created_at             DateTime        @default(now())
+  updated_at             DateTime        @updatedAt
 
   user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   ai_generation AIGeneration? @relation(fields: [ai_generation_id], references: [id])
@@ -870,26 +892,26 @@ model RoutineExercise {
 }
 
 model MealPlan {
-  id               String         @id @default(cuid())
-  workspace_id     String
-  user_id          String
-  name             String
-  goal             FitnessGoal
-  calories_target  Int
-  protein_g        Int
-  carbs_g          Int
-  fats_g           Int
-  restrictions     String[]
-  source           MealPlanSource
-  ai_generation_id String?
+  id                     String         @id @default(cuid())
+  workspace_id           String
+  user_id                String
+  name                   String
+  goal                   FitnessGoal
+  calories_target        Int
+  protein_g              Int
+  carbs_g                Int
+  fats_g                 Int
+  restrictions           String[]
+  source                 MealPlanSource
+  ai_generation_id       String?
   // Coach-Templates V1 tracking. Same caveats as Routine.
   template_id            String?
-  template_used_fallback Boolean? @default(false)
-  is_active        Boolean        @default(true)
-  started_at       DateTime       @default(now())
-  ended_at         DateTime?
-  created_at       DateTime       @default(now())
-  updated_at       DateTime       @updatedAt
+  template_used_fallback Boolean?       @default(false)
+  is_active              Boolean        @default(true)
+  started_at             DateTime       @default(now())
+  ended_at               DateTime?
+  created_at             DateTime       @default(now())
+  updated_at             DateTime       @updatedAt
 
   user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   ai_generation AIGeneration? @relation(fields: [ai_generation_id], references: [id])
