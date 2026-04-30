@@ -36,6 +36,24 @@ import {
   LayoutDashboard,
   Tag,
 } from 'lucide-react';
+import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js';
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from '@stripe/react-stripe-js';
+
+// Stripe.js loader — lazy & singleton. The promise is created once
+// per page-load; loadStripe() doesn't actually hit Stripe's CDN
+// until the <Elements> provider mounts.
+const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+let stripePromise: Promise<StripeJs | null> | null = null;
+function getStripePromise() {
+  if (!STRIPE_PUBLISHABLE_KEY) return null;
+  if (!stripePromise) stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+  return stripePromise;
+}
 
 /**
  * Extracts a human-readable message from an API error, stripping raw
@@ -378,7 +396,7 @@ function StepPlans({
 
       <p className="flex items-center justify-center gap-1.5 pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
         <ShieldCheck className="h-4 w-4 text-blue-600" />
-        Pagos seguros · Mercado Pago
+        Pagos cifrados · Stripe
       </p>
     </div>
   );
@@ -506,16 +524,14 @@ function PlanCardModal({
 }
 
 /* ════════════════════════════════════════════════════════════════════
- * STEP 2 — Embedded MP Card Brick
+ * STEP 2 — Embedded Stripe Payment Element
  * ════════════════════════════════════════════════════════════════════*/
 
 function StepPay({
   plan,
-  cycle,
   amount,
   promoCode,
   setPromoCode,
-  payerEmail,
   onSuccess,
   onBack,
 }: {
@@ -531,15 +547,18 @@ function StepPay({
   ) => void;
   onBack: () => void;
 }) {
-  const router = useRouter();
   const qc = useQueryClient();
 
+  // Two-stage: first the user sees the summary + promo input + a
+  // "Continuar al pago" button. On click we hit subscribe-stripe and
+  // mount the Payment Element with the returned clientSecret.
+  const [stage, setStage] = useState<'summary' | 'card'>('summary');
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
-  // Promo-code preview state. We call /promocodes/validate every time
-  // the user taps "Aplicar" and render the discount/total. On 100% off
-  // the modal shows the courtesy bypass button instead of the MP redirect.
+  // Promo-code preview state.
   const [promoDraft, setPromoDraft] = useState(promoCode);
   const [promoPreview, setPromoPreview] = useState<{
     valid: boolean;
@@ -600,114 +619,106 @@ function StepPay({
     setPromoPreview(null);
   };
 
-  const submitFree = async () => {
-    // 100%-off bypass: no card token. Backend detects amount === 0
-    // and activates the membership directly via the promo_100 branch.
+  // Start the Stripe checkout: create the Subscription server-side,
+  // get back the first invoice's PaymentIntent client_secret, then
+  // mount the PaymentElement so the user enters card data.
+  // 100% off bypass returns immediately with `bypass: true` and the
+  // membership already activated.
+  const startStripeCheckout = async () => {
+    if (!STRIPE_PUBLISHABLE_KEY) {
+      setLastError('Pago no configurado. Contacta soporte.');
+      return;
+    }
     setSubmitting(true);
     setLastError(null);
     try {
-      // Backend schema marks payer_email as .optional() (accepts
-      // undefined) but NOT .nullable() — explicitly omit the key when
-      // the user has no email on file instead of sending null.
-      const body: Record<string, unknown> = {
-        plan: plan.id,
-        cycle,
-        token: 'courtesy',
-        payment_method_id: 'courtesy',
-        installments: 1,
-      };
-      if (payerEmail) body.payer_email = payerEmail;
+      const body: Record<string, unknown> = { plan: plan.id };
       if (promoCode) body.promo_code = promoCode;
 
-      const { data } = await api.post('/memberships/subscribe-card', body);
-      if (data?.success) {
+      const { data } = await api.post('/memberships/subscribe-stripe', body);
+
+      if (data?.bypass) {
         toast.success('¡Membresía activada!');
-        // Bust caches so the dashboard / membership tile re-fetch the
-        // freshly activated membership instead of serving the stale
-        // "no active membership" snapshot.
         qc.invalidateQueries({ queryKey: ['memberships'] });
         qc.invalidateQueries({ queryKey: ['auth', 'me'] });
         onSuccess(data.welcome ?? {}, plan.name);
-      } else {
-        setLastError('No pudimos activar la membresía. Intenta de nuevo.');
+        return;
       }
+
+      if (!data?.client_secret || !data?.payment_id) {
+        setLastError('No pudimos iniciar el pago. Intenta de nuevo.');
+        setSubmitting(false);
+        return;
+      }
+      setClientSecret(data.client_secret);
+      setPaymentId(data.payment_id);
+      setStage('card');
     } catch (err: any) {
-      setLastError(friendlyApiError(err, 'No pudimos activar la membresía.'));
-      toast.error(friendlyApiError(err, 'No pudimos activar la membresía.'));
+      setLastError(friendlyApiError(err, 'No pudimos iniciar el pago.'));
+      toast.error(friendlyApiError(err, 'No pudimos iniciar el pago.'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Checkout Pro flow: create a preference on the backend and redirect
-  // the user to Mercado Pago's hosted checkout page. After payment, MP
-  // sends them back to /portal/membership?mp=success|failed|pending and
-  // the webhook activates the membership.
-  const startCheckoutPro = async () => {
-    setSubmitting(true);
-    setLastError(null);
-    try {
-      const body: Record<string, unknown> = {
-        plan: plan.id,
-        billing_cycle: 'MONTHLY',
-      };
-      if (promoCode) body.promo_code = promoCode;
+  // Stage 2: Payment Element form. Reuses the shared <Elements>
+  // provider with the clientSecret as the appearance key.
+  if (stage === 'card' && clientSecret && paymentId) {
+    return (
+      <div className="space-y-4">
+        <SummaryPill
+          planName={plan.name}
+          amount={amount}
+          effectiveAmount={effectiveAmount}
+          promoPreview={promoPreview}
+          promoCode={promoCode}
+        />
+        <Elements
+          stripe={getStripePromise()}
+          options={{
+            clientSecret,
+            appearance: {
+              theme: 'stripe',
+              variables: {
+                colorPrimary: '#2563eb', // matches the rest of the modal
+                borderRadius: '12px',
+                fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+              },
+            },
+            // Spanish (Mexico) for all Stripe Elements text.
+            locale: 'es-419',
+          }}
+        >
+          <CheckoutForm
+            paymentId={paymentId}
+            planName={plan.name}
+            onSuccess={(welcome) => {
+              qc.invalidateQueries({ queryKey: ['memberships'] });
+              qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+              onSuccess(welcome, plan.name);
+            }}
+            onBack={() => {
+              // Back from card → summary. We keep the clientSecret so
+              // re-entering doesn't recreate the subscription, but the
+              // user can also just close & re-open the modal.
+              setStage('summary');
+            }}
+          />
+        </Elements>
+      </div>
+    );
+  }
 
-      const { data } = await api.post('/memberships/subscribe', body);
-      const url = data?.init_point;
-      if (!url) {
-        setLastError('No pudimos iniciar el pago. Intenta de nuevo.');
-        setSubmitting(false);
-        return;
-      }
-      // Hand off to Mercado Pago. We don't reset `submitting` so the
-      // button stays disabled until the page actually navigates.
-      window.location.href = url;
-    } catch (err: any) {
-      const code = err?.code ?? err?.response?.data?.error?.code;
-      const message =
-        err?.message ??
-        err?.response?.data?.error?.message ??
-        'No pudimos iniciar el pago.';
-
-      if (code === 'SELFIE_REQUIRED') {
-        toast.error(message);
-        router.push('/portal/perfil');
-      }
-      const friendly = friendlyApiError(err, message);
-      toast.error(friendly);
-      setLastError(friendly);
-      setSubmitting(false);
-    }
-  };
-
+  // Stage 1: summary + promo + "Continuar al pago" or "Activar sin costo".
   return (
     <div className="space-y-4">
-      {/* Summary pill — shows total with discount applied if any */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-4 text-white">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
-            Mensual
-          </div>
-          <div className="font-display text-xl font-bold">{plan.name}</div>
-          {promoPreview?.valid && (
-            <div className="mt-0.5 text-[11px] text-white/90">
-              Código <span className="font-semibold">{promoCode}</span> · ahorras ${promoPreview.discount_mxn.toLocaleString('es-MX')}
-            </div>
-          )}
-        </div>
-        <div className="text-right">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Total</div>
-          {promoPreview?.valid && promoPreview.discount_mxn > 0 && (
-            <div className="text-xs text-white/70 line-through tabular-nums">
-              ${amount.toLocaleString('es-MX')}
-            </div>
-          )}
-          <div className="font-display text-2xl font-bold tabular-nums">
-            ${effectiveAmount.toLocaleString('es-MX')} <span className="text-xs">MXN</span>
-          </div>
-        </div>
-      </div>
+      <SummaryPill
+        planName={plan.name}
+        amount={amount}
+        effectiveAmount={effectiveAmount}
+        promoPreview={promoPreview}
+        promoCode={promoCode}
+      />
 
       {/* Promo code input */}
       <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
@@ -769,32 +780,30 @@ function StepPay({
         </div>
       )}
 
-      {/* 100%-off: skip MP, activate directly */}
-      {is100Off ? (
-        <button
-          type="button"
-          onClick={submitFree}
-          disabled={submitting}
-          className="w-full rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 py-4 font-display text-lg font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:from-emerald-600 hover:to-emerald-700 disabled:opacity-60"
-        >
-          {submitting ? 'Activando…' : '✓ Activar membresía sin costo'}
-        </button>
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={startCheckoutPro}
-            disabled={submitting}
-            className="w-full rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 py-4 font-display text-lg font-bold text-white shadow-lg shadow-blue-600/25 transition hover:from-blue-700 hover:to-sky-600 disabled:opacity-60"
-          >
-            {submitting ? 'Redirigiendo a Mercado Pago…' : `Pagar $${effectiveAmount.toLocaleString('es-MX')} con Mercado Pago`}
-          </button>
-          <p className="text-center text-[11px] text-slate-500">
-            Te llevamos a Mercado Pago para completar el cobro de forma segura.
-            <br />
-            Aceptamos tarjetas, OXXO, transferencia y wallet de MP.
-          </p>
-        </>
+      <button
+        type="button"
+        onClick={startStripeCheckout}
+        disabled={submitting}
+        className={cn(
+          'w-full rounded-2xl py-4 font-display text-lg font-bold text-white shadow-lg transition disabled:opacity-60',
+          is100Off
+            ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-emerald-500/25 hover:from-emerald-600 hover:to-emerald-700'
+            : 'bg-gradient-to-br from-blue-600 to-sky-500 shadow-blue-600/25 hover:from-blue-700 hover:to-sky-600',
+        )}
+      >
+        {submitting
+          ? 'Preparando…'
+          : is100Off
+          ? '✓ Activar membresía sin costo'
+          : `Continuar al pago · $${effectiveAmount.toLocaleString('es-MX')}`}
+      </button>
+
+      {!is100Off && (
+        <p className="text-center text-[11px] text-slate-500">
+          Pagas con tarjeta directamente aquí, sin salir de la app.
+          <br />
+          Tu pago lo procesa Stripe — nosotros nunca vemos tu tarjeta.
+        </p>
       )}
 
       <div className="flex items-center justify-between pt-1">
@@ -809,10 +818,185 @@ function StepPay({
         </button>
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
           <ShieldCheck className="h-4 w-4 text-blue-600" />
-          Protegido · MP
+          Protegido · Stripe
         </p>
       </div>
     </div>
+  );
+}
+
+/* ─── Reusable summary pill ────────────────────────────────────────── */
+
+function SummaryPill({
+  planName,
+  amount,
+  effectiveAmount,
+  promoPreview,
+  promoCode,
+}: {
+  planName: string;
+  amount: number;
+  effectiveAmount: number;
+  promoPreview: {
+    valid: boolean;
+    reason?: string | null;
+    discount_mxn: number;
+    final_amount: number;
+  } | null;
+  promoCode: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-4 text-white">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
+          Mensual
+        </div>
+        <div className="font-display text-xl font-bold">{planName}</div>
+        {promoPreview?.valid && (
+          <div className="mt-0.5 text-[11px] text-white/90">
+            Código <span className="font-semibold">{promoCode}</span> · ahorras ${promoPreview.discount_mxn.toLocaleString('es-MX')}
+          </div>
+        )}
+      </div>
+      <div className="text-right">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Total</div>
+        {promoPreview?.valid && promoPreview.discount_mxn > 0 && (
+          <div className="text-xs text-white/70 line-through tabular-nums">
+            ${amount.toLocaleString('es-MX')}
+          </div>
+        )}
+        <div className="font-display text-2xl font-bold tabular-nums">
+          ${effectiveAmount.toLocaleString('es-MX')} <span className="text-xs">MXN</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Inline Stripe Checkout form (inside <Elements>) ──────────────── */
+
+function CheckoutForm({
+  paymentId,
+  planName,
+  onSuccess,
+  onBack,
+}: {
+  paymentId: string;
+  planName: string;
+  onSuccess: (welcome: { title?: string; benefits?: string[] }) => void;
+  onBack: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    // Validate Element fields client-side first.
+    const { error: submitErr } = await elements.submit();
+    if (submitErr) {
+      setError(submitErr.message ?? 'Revisa los datos de la tarjeta.');
+      setSubmitting(false);
+      return;
+    }
+
+    // Confirm. `redirect: 'if_required'` keeps the user inside our
+    // modal unless 3DS forces a redirect (rare on cards saved for
+    // future renewals — Stripe handles 3DS in an iframe).
+    const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: typeof window !== 'undefined'
+          ? `${window.location.origin}/portal/membership?stripe=success&payment=${paymentId}`
+          : '',
+      },
+      redirect: 'if_required',
+    });
+
+    if (confirmErr) {
+      setError(confirmErr.message ?? 'No pudimos procesar el pago. Intenta otra tarjeta.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+      // Edge case: the card needs more steps and was redirected. The
+      // return_url page will pick it up.
+      setError('El pago necesita un paso adicional. Si no avanzó, vuelve a intentar.');
+      setSubmitting(false);
+      return;
+    }
+
+    // Success! Sync with backend so the membership activates without
+    // waiting on the webhook (idempotent, the webhook will dedupe).
+    try {
+      await api.post('/memberships/sync-stripe-payment', { payment_id: paymentId });
+    } catch (e) {
+      // We only log here. The webhook will eventually activate even
+      // if our sync call failed (network blip, etc).
+      // eslint-disable-next-line no-console
+      console.warn('[stripe] sync-stripe-payment failed (webhook will catch up)', e);
+    }
+
+    toast.success('¡Pago confirmado! Tu membresía está activa.');
+    onSuccess({});
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <PaymentElement
+          options={{
+            layout: { type: 'tabs', defaultCollapsed: false },
+            // Default to card payment method; Stripe still shows
+            // others if enabled on the account (Apple Pay, Google
+            // Pay, OXXO Pay) but card is the primary tab.
+            paymentMethodOrder: ['card'],
+            fields: {
+              billingDetails: {
+                email: 'auto',
+              },
+            },
+          }}
+        />
+      </div>
+
+      {error && (
+        <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={!stripe || !elements || submitting}
+        className="w-full rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 py-4 font-display text-lg font-bold text-white shadow-lg shadow-blue-600/25 transition hover:from-blue-700 hover:to-sky-600 disabled:opacity-60"
+      >
+        {submitting ? 'Procesando pago…' : `Pagar ahora · ${planName}`}
+      </button>
+
+      <div className="flex items-center justify-between pt-1">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={submitting}
+          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver
+        </button>
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+          <ShieldCheck className="h-4 w-4 text-blue-600" />
+          Cifrado · Stripe
+        </p>
+      </div>
+    </form>
   );
 }
 
