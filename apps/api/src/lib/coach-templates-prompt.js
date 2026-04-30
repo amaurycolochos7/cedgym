@@ -331,6 +331,114 @@ TONO: mexicano, cercano, práctico. Las descripciones son recetas paso a paso.
 
 Respondes SOLO con JSON válido. Nada antes, nada después.`;
 
+// ── Single-day variant: parallel generation ──────────────────────
+//
+// Generating 7 days × N meals in one OpenAI call costs 5k-10k output
+// tokens and ≥60s wall-clock (worse with retries). To bring that
+// down we now ask for ONE day per call and run 6 calls in parallel
+// (day 0 is the template verbatim, no AI needed). Total wall-clock
+// drops to whatever the single slowest day takes (~10-15s).
+//
+// `singleDayMealSchema` has NO plan-level fields and NO `day_of_week`
+// on each meal — the caller owns the day index and stamps it in.
+
+export const singleDayMealSchema = z.object({
+    meals: z.array(
+        z.object({
+            meal_type: z.enum(MEAL_TYPES),
+            order_index: z.number().int().min(0).max(5),
+            name: z.string().min(1).max(200),
+            description: z.string().min(1).max(2000),
+            ingredients: z.array(z.string().min(1).max(200)).min(1).max(25),
+            calories: z.number().int().nonnegative(),
+            protein_g: z.number().int().nonnegative(),
+            carbs_g: z.number().int().nonnegative(),
+            fats_g: z.number().int().nonnegative(),
+            prep_time_min: z.number().int().nonnegative().max(240).optional().nullable(),
+        }),
+    ).min(1).max(8),
+});
+
+const MEAL_SYSTEM_PROMPT_SINGLE_DAY = `Eres el asistente del nutriólogo de CED·GYM (equipo del Coach M.A. Samuel). Recibes un TEMPLATE OFICIAL de 1 día (day 0) y un día objetivo (1..6). Tu trabajo es generar SOLO las comidas de ese día respetando exactamente la estructura de slots del template.
+
+REGLAS:
+- Devuelves un array \`meals\` con EXACTAMENTE N comidas (N = comidas por día del template).
+- Mismo \`meal_type\` en cada \`order_index\` que el template.
+- Calorías de cada comida dentro de ±15% de la slot equivalente.
+- Balance macros (proteína/carbo/grasa) ±20% por comida.
+- VARÍA ingredientes/recetas respecto al day 0 — no copies el template, propón alternativas mexicanas.
+- Cantidades específicas en gramos/ml/piezas, recetas paso a paso (1., 2., 3., ... separadas por \\n), sin "al gusto".
+- Respeta restrictions y allergies SIN EXCEPCIÓN.
+- NO uses ingredientes en allergies / disliked_foods.
+
+NO incluyas \`day_of_week\` ni el objeto \`plan\` — solo el array \`meals\`.
+
+Respondes SOLO con JSON válido tipo \`{ "meals": [...] }\`. Nada antes, nada después.`;
+
+/**
+ * Build a prompt asking the model for ONE day's meals only. Run this
+ * 6 times in parallel (days 1-6) — day 0 is the template verbatim.
+ */
+export function buildSingleDayMealPrompt(template, profile, dayOfWeek) {
+    const firstName = (profile?.firstName || '').trim();
+    const restrictions = profile?.restrictions || [];
+    const allergies = profile?.allergies || [];
+    const dislikes = profile?.disliked_foods || [];
+    const country = profile?.country || template.country || 'MX';
+
+    const day0 = template.meals
+        .filter((m) => m.day_of_week === 0)
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((m) => ({
+            meal_type: m.meal_type,
+            order_index: m.order_index,
+            name: m.name,
+            calories: m.calories,
+            protein_g: m.protein_g,
+            carbs_g: m.carbs_g,
+            fats_g: m.fats_g,
+        }));
+
+    const slotMap = day0.map((m) => ({
+        order_index: m.order_index,
+        meal_type: m.meal_type,
+        calories_target: m.calories,
+        protein_target: m.protein_g,
+    }));
+
+    const userPrompt = `TEMPLATE OFICIAL DEL COACH (day 0 — referencia de slots y macros, NO copies estas comidas):
+${JSON.stringify(day0, null, 2)}
+
+ESTRUCTURA DE SLOTS (debes respetar esto):
+${JSON.stringify(slotMap, null, 2)}
+
+DÍA OBJETIVO: ${dayOfWeek} (1=martes, 2=miércoles, 3=jueves, 4=viernes, 5=sábado, 6=domingo)
+
+PERFIL DEL SOCIO:
+- Nombre: ${firstName || '(sin nombre)'}
+- País: ${country}
+- Restricciones: ${restrictions.join(', ') || '(ninguna)'}
+- Alergias: ${allergies.join(', ') || '(ninguna)'}
+- No le gusta: ${dislikes.join(', ') || '(nada)'}
+
+TAREA:
+1. Genera EXACTAMENTE ${day0.length} comidas para este día.
+2. Respeta el slotMap arriba: cada comida debe tener el mismo \`meal_type\` y \`order_index\` que la slot.
+3. Calorías por comida dentro de ±15% del calories_target de cada slot.
+4. Proteína por comida cerca de protein_target (±20%).
+5. VARÍA respecto al day 0 — propón ingredientes/recetas distintas, manteniendo macros.
+6. Recetas en paso a paso (1., 2., 3., separadas por \\n), 3-8 pasos.
+
+SCHEMA JSON (solo el array meals, sin day_of_week ni plan):
+{
+  "meals": [
+    { "meal_type": (de slot), "order_index": (de slot), "name": string, "description": string (receta paso a paso), "ingredients": [string], "calories": int, "protein_g": int, "carbs_g": int, "fats_g": int, "prep_time_min": int|null }
+  ]
+}`;
+
+    return { system: MEAL_SYSTEM_PROMPT_SINGLE_DAY, user: userPrompt, schema: singleDayMealSchema };
+}
+
 export function buildMealPromptFromTemplate(template, profile) {
     const firstName = (profile?.firstName || '').trim();
     const restrictions = profile?.restrictions || [];

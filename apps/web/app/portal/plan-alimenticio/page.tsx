@@ -1044,7 +1044,7 @@ function PlanView({
     availableDays.length > 0 ? Math.round(totalMeals / availableDays.length) : 0;
 
   return (
-    <div className="space-y-6 pb-24 sm:pb-6">
+    <div className="space-y-6">
       <AIGenerationOverlay open={regenerate.isPending} kind="meal_plan" />
       <MealPlanAddonModal
         open={addonOpen}
@@ -1111,8 +1111,11 @@ function PlanView({
               </div>
             </div>
 
-            {/* Desktop toolbar — adapted for dark bg */}
-            <div className="hidden md:flex md:flex-wrap md:gap-2">
+            {/* Toolbar — inline on mobile and desktop. Avoids the
+                fixed-bottom variant which would sit on top of the
+                portal layout's bottom tab bar (Inicio / Rutinas /
+                Plan alim. / Perfil). */}
+            <div className="flex flex-wrap gap-2">
               <DarkToolbarButton
                 onClick={() => regenerate.mutate()}
                 disabled={regenerate.isPending || regenerateDisabled}
@@ -1124,7 +1127,7 @@ function PlanView({
                 onClick={handleDownloadPdf}
                 disabled={downloadingPdf}
                 icon={<Download className={`h-4 w-4 ${downloadingPdf ? 'animate-pulse' : ''}`} />}
-                label={downloadingPdf ? 'Generando PDF…' : 'Descargar plan alimenticio'}
+                label={downloadingPdf ? 'Generando PDF…' : 'Descargar plan'}
               />
               {canBuyAnother && (
                 <DarkToolbarButton
@@ -1205,34 +1208,6 @@ function PlanView({
         )}
       </div>
 
-      {/* Mobile sticky toolbar */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-3 bg-gradient-to-t from-white via-white/95 to-transparent">
-        <div className="flex gap-2 rounded-2xl bg-white ring-1 ring-slate-200 shadow-lg p-2">
-          <ToolbarButton
-            onClick={() => regenerate.mutate()}
-            disabled={regenerate.isPending || regenerateDisabled}
-            icon={<RefreshCw className={`h-4 w-4 ${regenerate.isPending ? 'animate-spin' : ''}`} />}
-            label="Regenerar"
-            compact
-          />
-          <ToolbarButton
-            onClick={handleDownloadPdf}
-            disabled={downloadingPdf}
-            icon={<Download className={`h-4 w-4 ${downloadingPdf ? 'animate-pulse' : ''}`} />}
-            label={downloadingPdf ? 'Generando…' : 'Descargar plan'}
-            compact
-          />
-          {canBuyAnother && (
-            <ToolbarButton
-              onClick={() => setAddonOpen(true)}
-              icon={<Plus className="h-4 w-4" />}
-              label="+$499"
-              compact
-              primary
-            />
-          )}
-        </div>
-      </div>
     </div>
   );
 }
@@ -1284,41 +1259,6 @@ function DarkToolbarButton({
       disabled={disabled}
       title={title}
       className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm ${cls}`}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
-
-function ToolbarButton({
-  onClick,
-  disabled,
-  icon,
-  label,
-  primary,
-  compact,
-  title,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  icon: React.ReactNode;
-  label: string;
-  primary?: boolean;
-  compact?: boolean;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed ${
-        primary
-          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-600/20'
-          : 'bg-white ring-1 ring-slate-300 hover:bg-slate-50 text-slate-700'
-      } ${compact ? 'flex-1 px-3 py-2.5 text-xs' : 'px-4 py-2'}`}
     >
       {icon}
       {label}

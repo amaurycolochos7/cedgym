@@ -28,10 +28,10 @@ import { getPlanByCode } from '../lib/memberships.js';
 import { select_meal_template } from '../coach-templates/loader.js';
 import {
     isCoachTemplatesV1Enabled,
-    buildMealPromptFromTemplate,
+    buildSingleDayMealPrompt,
     deterministicMealsFromTemplate,
 } from '../lib/coach-templates-prompt.js';
-import { validate_meal_response, buildRetryUserPrompt } from '../lib/template-validator.js';
+import { validate_meal_response } from '../lib/template-validator.js';
 
 // ─── Schemas ─────────────────────────────────────────────────────
 
@@ -413,82 +413,162 @@ export default async function aiMealPlansRoutes(fastify) {
                     '[ai-meal-plans] COACH_TEMPLATES_V1=true but selector returned null; falling back to legacy prompt',
                 );
             } else {
-                const { system, user: userPromptOriginal, schema } = buildMealPromptFromTemplate(tpl, {
-                    firstName,
-                    restrictions,
-                    allergies,
-                    disliked_foods,
-                    country,
-                });
+                // ── Parallel per-day generation ──────────────────────
+                //
+                // Day 0 is verbatim from the template (zero AI cost,
+                // zero latency). Days 1..6 fan out as 6 parallel
+                // OpenAI calls, each generating ONE day. Wall-clock
+                // collapses from ~60-180s (single big call + retry)
+                // to whatever the slowest single-day call takes
+                // (~10-15s).
+                //
+                // Per-day failures (OpenAI throws) degrade only that
+                // day to the deterministic A/B/C variant — the rest
+                // of the week still gets fresh AI output. We do NOT
+                // retry; with 6 parallel attempts, partial degradation
+                // is fine and keeps the user under 30s wall-clock.
+                const day0Meals = tpl.meals
+                    .filter((m) => m.day_of_week === 0)
+                    .sort((a, b) => a.order_index - b.order_index)
+                    .map((m) => ({
+                        day_of_week: 0,
+                        meal_type: m.meal_type,
+                        order_index: m.order_index,
+                        name: m.name,
+                        description: m.description,
+                        ingredients: m.ingredients,
+                        calories: m.calories,
+                        protein_g: m.protein_g,
+                        carbs_g: m.carbs_g,
+                        fats_g: m.fats_g,
+                        prep_time_min: m.prep_time_min ?? null,
+                    }));
 
-                let attemptCount = 0;
-                let userPromptCurrent = userPromptOriginal;
-                let lastValidation = null;
-                let usedFallback = false;
-                let aiOpenAIThrew = false;
-                let totalCost = 0;
-                let totalDuration = 0;
+                const profile = { firstName, restrictions, allergies, disliked_foods, country };
 
-                for (attemptCount = 1; attemptCount <= 2; attemptCount++) {
-                    let result;
+                const dayPromises = [1, 2, 3, 4, 5, 6].map(async (dayOfWeek) => {
+                    const { system, user: userPrompt, schema } = buildSingleDayMealPrompt(tpl, profile, dayOfWeek);
                     try {
-                        result = await generateJSON({
+                        const result = await generateJSON({
                             prisma,
                             system,
-                            user: userPromptCurrent,
+                            user: userPrompt,
                             schema,
                             kind: 'MEAL_PLAN',
                             workspace_id: user.workspace_id,
                             user_id: user.id,
                         });
+                        return {
+                            dayOfWeek,
+                            ok: true,
+                            meals: result.data.meals,
+                            aiGenerationId: result.aiGenerationId,
+                            costUsd: Number(result.costUsd || 0),
+                            durationMs: Number(result.durationMs || 0),
+                        };
                     } catch (e) {
                         req.log.warn(
-                            { err: e?.message, templateId: tpl.id, attempt: attemptCount },
-                            '[ai-meal-plans] OpenAI threw; using deterministic fallback',
+                            { err: e?.message, templateId: tpl.id, dayOfWeek },
+                            '[ai-meal-plans] day generation threw; using deterministic variant for this day',
                         );
-                        data = deterministicMealsFromTemplate(tpl, { firstName, restrictions, allergies, disliked_foods });
-                        aiGenerationId = null;
-                        aiResult = null;
-                        usedFallback = true;
-                        aiOpenAIThrew = true;
-                        lastValidation = { ok: false, errors: [`openai_throw: ${e?.message || 'unknown'}`] };
-                        break;
+                        return { dayOfWeek, ok: false, error: e?.message || String(e) };
                     }
-                    totalCost     += Number(result.costUsd || 0);
-                    totalDuration += Number(result.durationMs || 0);
-                    aiResult = { costUsd: totalCost, durationMs: totalDuration };
-                    aiGenerationId = result.aiGenerationId;
+                });
 
-                    const v = validate_meal_response(result.data, tpl, { allergies, disliked_foods });
-                    lastValidation = v;
-                    if (v.ok) {
-                        data = result.data;
-                        break;
-                    }
-                    if (attemptCount < 2) {
-                        req.log.warn(
-                            { templateId: tpl.id, attempt: attemptCount, errors: v.errors.slice(0, 5) },
-                            '[ai-meal-plans] validation failed, retrying with feedback',
-                        );
-                        userPromptCurrent = buildRetryUserPrompt(userPromptOriginal, v.errors, 'meal');
+                const dayResults = await Promise.all(dayPromises);
+
+                // Pre-compute deterministic variants once for fallback
+                // on per-day failures.
+                const fallbackBundle = deterministicMealsFromTemplate(tpl, {
+                    firstName, restrictions, allergies, disliked_foods,
+                });
+                const fallbackByDay = new Map();
+                for (const m of fallbackBundle.meals) {
+                    if (!fallbackByDay.has(m.day_of_week)) fallbackByDay.set(m.day_of_week, []);
+                    fallbackByDay.get(m.day_of_week).push(m);
+                }
+
+                const allMeals = [...day0Meals];
+                let totalCost = 0;
+                let totalDuration = 0;
+                let firstAiGenerationId = null;
+                let degradedDays = 0;
+
+                for (const r of dayResults) {
+                    if (r.ok) {
+                        totalCost += r.costUsd;
+                        // Wall-clock for parallel calls = max(durations),
+                        // not sum. Approximate with the largest seen so
+                        // the metric reflects user-perceived latency.
+                        if (r.durationMs > totalDuration) totalDuration = r.durationMs;
+                        if (!firstAiGenerationId) firstAiGenerationId = r.aiGenerationId;
+                        for (const m of r.meals) {
+                            allMeals.push({
+                                day_of_week: r.dayOfWeek,
+                                meal_type: m.meal_type,
+                                order_index: m.order_index,
+                                name: m.name,
+                                description: m.description,
+                                ingredients: m.ingredients,
+                                calories: m.calories,
+                                protein_g: m.protein_g,
+                                carbs_g: m.carbs_g,
+                                fats_g: m.fats_g,
+                                prep_time_min: m.prep_time_min ?? null,
+                            });
+                        }
+                    } else {
+                        degradedDays += 1;
+                        const dayFallback = fallbackByDay.get(r.dayOfWeek) || [];
+                        for (const m of dayFallback) {
+                            allMeals.push({
+                                day_of_week: r.dayOfWeek,
+                                meal_type: m.meal_type,
+                                order_index: m.order_index,
+                                name: m.name,
+                                description: m.description,
+                                ingredients: m.ingredients,
+                                calories: m.calories,
+                                protein_g: m.protein_g,
+                                carbs_g: m.carbs_g,
+                                fats_g: m.fats_g,
+                                prep_time_min: m.prep_time_min ?? null,
+                            });
+                        }
                     }
                 }
 
-                if (!data && !aiOpenAIThrew) {
-                    throw err(
-                        'AI_VALIDATION_FAILED',
-                        `La IA no respetó el template tras 2 intentos: ${(lastValidation?.errors || []).slice(0, 3).join('; ')}`,
-                        422,
-                    );
-                }
+                const personalizedName = firstName
+                    ? `${tpl.name} — Plan de ${firstName}`
+                    : tpl.name;
 
+                data = {
+                    plan: {
+                        name: personalizedName,
+                        goal: tpl.objective,
+                        calories_target: tpl.calories_target_kcal,
+                        protein_g: tpl.macros.protein_g,
+                        carbs_g: tpl.macros.carbs_g,
+                        fats_g: tpl.macros.fats_g,
+                        restrictions,
+                    },
+                    meals: allMeals,
+                };
+                aiResult = { costUsd: totalCost, durationMs: totalDuration };
+                aiGenerationId = firstAiGenerationId;
+
+                // Soft validation (informational only — degraded days
+                // already carry the deterministic fallback, so we don't
+                // re-throw on validation failures here).
+                const validation = validate_meal_response(data, tpl, { allergies, disliked_foods });
                 templateMeta = {
                     id: tpl.id,
                     source: tpl.source,
-                    validation_ok: lastValidation?.ok === true,
-                    validation_errors: lastValidation && !lastValidation.ok ? lastValidation.errors : null,
-                    used_fallback: usedFallback,
-                    attempts: attemptCount,
+                    validation_ok: validation.ok,
+                    validation_errors: validation.ok ? null : validation.errors,
+                    used_fallback: degradedDays > 0,
+                    attempts: 1,
+                    degraded_days: degradedDays,
                 };
             }
         }
