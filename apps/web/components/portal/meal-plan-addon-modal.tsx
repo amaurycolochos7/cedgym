@@ -37,8 +37,24 @@ import {
   PartyPopper,
   Sparkles,
 } from 'lucide-react';
+import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js';
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from '@stripe/react-stripe-js';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+// Stripe.js loader — same lazy singleton pattern as plans-modal.
+const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+let stripePromise: Promise<StripeJs | null> | null = null;
+function getStripePromise() {
+  if (!STRIPE_PUBLISHABLE_KEY) return null;
+  if (!stripePromise) stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+  return stripePromise;
+}
 
 /* ─── Local helpers (mirrored from plans-modal) ──────────────────────── */
 
@@ -281,7 +297,6 @@ function StepPay({
   price,
   promoCode,
   setPromoCode,
-  payerEmail,
   onSuccess,
   onCancel,
 }: {
@@ -294,11 +309,11 @@ function StepPay({
 }) {
   const router = useRouter();
   const qc = useQueryClient();
-  const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
 
-  const [brickReady, setBrickReady] = useState(false);
-  const [sdkAvailable, setSdkAvailable] = useState<boolean | null>(null);
-  const [mpModules, setMpModules] = useState<any>(null);
+  // Two-stage: summary + promo + Continuar → <Elements> + PaymentElement.
+  const [stage, setStage] = useState<'summary' | 'card'>('summary');
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
@@ -311,33 +326,6 @@ function StepPay({
   } | null>(null);
   const [promoChecking, setPromoChecking] = useState(false);
   const [promoOpen, setPromoOpen] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!publicKey) {
-        setSdkAvailable(false);
-        return;
-      }
-      try {
-        const mod = await import('@mercadopago/sdk-react');
-        if (cancelled) return;
-        try {
-          mod.initMercadoPago(publicKey, { locale: 'es-MX' });
-        } catch {
-          /* idempotent re-init ok */
-        }
-        setMpModules(mod);
-        setSdkAvailable(true);
-      } catch (e) {
-        console.warn('[meal-plan-addon-modal] @mercadopago/sdk-react not available:', e);
-        setSdkAvailable(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [publicKey]);
 
   const effectiveAmount = promoPreview?.valid ? promoPreview.final_amount : price;
   const is100Off = promoPreview?.valid && promoPreview.final_amount === 0;
@@ -389,7 +377,6 @@ function StepPay({
   };
 
   const handlePurchaseError = (err: any) => {
-    const status = err?.status ?? err?.response?.status;
     const code = err?.code ?? err?.response?.data?.error?.code;
     const message =
       err?.message ?? err?.response?.data?.error?.message ?? 'No pudimos procesar el pago.';
@@ -407,38 +394,42 @@ function StepPay({
       onCancel();
       return;
     }
-    if (status === 402 || code === 'PAYMENT_DECLINED') {
-      const friendly = friendlyMpError(message);
-      toast.error(friendly);
-      setLastError(`${friendly} Puedes intentar con otra tarjeta.`);
-      return;
-    }
-    const friendly = friendlyApiError(err, friendlyMpError(message));
+    const friendly = friendlyApiError(err, message);
     toast.error(friendly);
     setLastError(friendly);
   };
 
-  const submitFree = async () => {
+  // Stripe checkout starter. 100%-off bypasses Stripe entirely; otherwise
+  // we get back a clientSecret and mount the Payment Element.
+  const startStripeCheckout = async () => {
+    if (!STRIPE_PUBLISHABLE_KEY && !is100Off) {
+      setLastError('Pago no configurado. Contacta soporte.');
+      return;
+    }
     setSubmitting(true);
     setLastError(null);
     try {
-      const body: Record<string, unknown> = {
-        token: 'courtesy',
-        payment_method_id: 'courtesy',
-        installments: 1,
-      };
-      if (payerEmail) body.payer_email = payerEmail;
+      const body: Record<string, unknown> = {};
       if (promoCode) body.promo_code = promoCode;
 
-      const { data } = await api.post('/addons/meal-plan/purchase-card', body);
-      if (data?.success) {
+      const { data } = await api.post('/addons/meal-plan/purchase-stripe', body);
+
+      if (data?.bypass) {
         toast.success('¡Plan extra activado!');
         qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
         qc.invalidateQueries({ queryKey: ['addons', 'meal-plan', 'me'] });
         onSuccess(data.welcome ?? {});
-      } else {
-        setLastError('No pudimos activar el plan extra. Intenta de nuevo.');
+        return;
       }
+
+      if (!data?.client_secret || !data?.payment_id) {
+        setLastError('No pudimos iniciar el pago. Intenta de nuevo.');
+        setSubmitting(false);
+        return;
+      }
+      setClientSecret(data.client_secret);
+      setPaymentId(data.payment_id);
+      setStage('card');
     } catch (err: any) {
       handlePurchaseError(err);
     } finally {
@@ -446,36 +437,65 @@ function StepPay({
     }
   };
 
-  const handleSubmit = async (formData: any) => {
-    setSubmitting(true);
-    setLastError(null);
-    try {
-      const body: Record<string, unknown> = {
-        token: formData.token,
-        payment_method_id: formData.payment_method_id,
-        installments: formData.installments ?? 1,
-      };
-      const emailFromBrick = formData.payer?.email;
-      if (emailFromBrick || payerEmail) {
-        body.payer_email = emailFromBrick || payerEmail;
-      }
-      if (promoCode) body.promo_code = promoCode;
-
-      const { data } = await api.post('/addons/meal-plan/purchase-card', body);
-      if (data?.success) {
-        toast.success('¡Pago aprobado! Activando tu plan extra…');
-        qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
-        qc.invalidateQueries({ queryKey: ['addons', 'meal-plan', 'me'] });
-        onSuccess(data.welcome ?? {});
-      } else {
-        setLastError('Respuesta inesperada del servidor.');
-      }
-    } catch (err: any) {
-      handlePurchaseError(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Stage 2: render the embedded Payment Element form.
+  if (stage === 'card' && clientSecret && paymentId) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl bg-blue-600 p-4 text-white sm:p-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+                <Utensils className="h-5 w-5" strokeWidth={2.25} />
+              </span>
+              <div className="min-w-0">
+                <div className="font-display text-lg font-bold leading-tight sm:text-xl">
+                  Plan alimenticio
+                </div>
+                <div className="mt-0.5 text-[12px] text-white/80">
+                  Pago único · 7 días personalizados
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0 text-right leading-none">
+              <div className="font-display text-[26px] font-bold tabular-nums">
+                ${effectiveAmount.toLocaleString('es-MX')}
+              </div>
+              <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
+                MXN
+              </div>
+            </div>
+          </div>
+        </div>
+        <Elements
+          stripe={getStripePromise()}
+          options={{
+            clientSecret,
+            appearance: {
+              theme: 'stripe',
+              variables: {
+                colorPrimary: '#2563eb',
+                borderRadius: '12px',
+                fontFamily:
+                  'system-ui, -apple-system, "Segoe UI", sans-serif',
+              },
+            },
+            locale: 'es-419',
+          }}
+        >
+          <AddonCheckoutForm
+            paymentId={paymentId}
+            effectiveAmount={effectiveAmount}
+            onSuccess={(welcome) => {
+              qc.invalidateQueries({ queryKey: ['ai', 'quota', 'me'] });
+              qc.invalidateQueries({ queryKey: ['addons', 'meal-plan', 'me'] });
+              onSuccess(welcome);
+            }}
+            onBack={() => setStage('summary')}
+          />
+        </Elements>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -606,52 +626,28 @@ function StepPay({
         </div>
       )}
 
-      {is100Off ? (
-        <button
-          type="button"
-          onClick={submitFree}
-          disabled={submitting}
-          className="w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60"
-        >
-          {submitting ? 'Activando…' : 'Activar mi plan sin costo'}
-        </button>
-      ) : sdkAvailable === false || !publicKey ? (
-        <MpFallback publicKeyMissing={!publicKey} />
-      ) : sdkAvailable === null ? (
-        <div className="h-72 animate-pulse rounded-2xl bg-slate-100" />
-      ) : (
-        <div className="rounded-2xl border border-slate-200 p-3 sm:p-4">
-          {!brickReady && <div className="mb-2 h-64 animate-pulse rounded-xl bg-slate-100" />}
-          {(() => {
-            const CardPayment: any = mpModules?.CardPayment;
-            if (!CardPayment) return null;
-            return (
-              <CardPayment
-                key={`brick-${effectiveAmount}`}
-                initialization={{
-                  amount: effectiveAmount,
-                  payer: payerEmail ? { email: payerEmail } : undefined,
-                }}
-                customization={{
-                  paymentMethods: {
-                    minInstallments: 1,
-                    maxInstallments: 12,
-                  },
-                  visual: { style: { theme: 'default' } },
-                }}
-                onReady={() => setBrickReady(true)}
-                onSubmit={async (data: any) => {
-                  const formData = data?.formData ?? data;
-                  await handleSubmit(formData);
-                }}
-                onError={(error: any) => {
-                  console.error('[CardPayment onError]', error);
-                  setLastError(friendlyMpError(error));
-                }}
-              />
-            );
-          })()}
-        </div>
+      <button
+        type="button"
+        onClick={startStripeCheckout}
+        disabled={submitting}
+        className={cn(
+          'w-full rounded-xl py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm transition disabled:opacity-60',
+          is100Off
+            ? 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
+            : 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-700',
+        )}
+      >
+        {submitting
+          ? 'Preparando…'
+          : is100Off
+          ? 'Activar mi plan sin costo'
+          : `Continuar al pago · $${effectiveAmount.toLocaleString('es-MX')}`}
+      </button>
+
+      {!is100Off && (
+        <p className="text-center text-[11px] text-slate-500">
+          Pagas con tarjeta sin salir de la app · Procesado por Stripe
+        </p>
       )}
 
       <div className="border-t border-slate-100 pt-3">
@@ -668,35 +664,114 @@ function StepPay({
   );
 }
 
-function MpFallback({ publicKeyMissing }: { publicKeyMissing: boolean }) {
+/* ─── Inline Stripe Checkout form (inside <Elements>) ──────────────── */
+
+function AddonCheckoutForm({
+  paymentId,
+  effectiveAmount,
+  onSuccess,
+  onBack,
+}: {
+  paymentId: string;
+  effectiveAmount: number;
+  onSuccess: (welcome: WelcomePayload) => void;
+  onBack: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    const { error: submitErr } = await elements.submit();
+    if (submitErr) {
+      setError(submitErr.message ?? 'Revisa los datos de la tarjeta.');
+      setSubmitting(false);
+      return;
+    }
+
+    const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url:
+          typeof window !== 'undefined'
+            ? `${window.location.origin}/portal/plan-alimenticio?stripe=success&payment=${paymentId}`
+            : '',
+      },
+      redirect: 'if_required',
+    });
+
+    if (confirmErr) {
+      setError(confirmErr.message ?? 'No pudimos procesar el pago.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+      setError('El pago necesita un paso adicional. Vuelve a intentar.');
+      setSubmitting(false);
+      return;
+    }
+
+    // Sync activation — idempotent with webhook.
+    try {
+      await api.post('/addons/meal-plan/sync-stripe-payment', { payment_id: paymentId });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[stripe-addon] sync failed (webhook will catch up)', e);
+    }
+
+    toast.success('¡Pago confirmado! Tu plan extra está listo.');
+    onSuccess({});
+  };
+
   return (
-    <div className="rounded-2xl bg-amber-50 p-5 ring-1 ring-amber-200">
-      <div className="flex items-start gap-3">
-        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-          <ShieldCheck className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-amber-900">
-            Pagos con tarjeta no están habilitados todavía
-          </div>
-          <div className="mt-1 text-sm text-amber-800/90">
-            {publicKeyMissing ? (
-              <>
-                Falta configurar <code className="font-mono">NEXT_PUBLIC_MP_PUBLIC_KEY</code> en{' '}
-                <code className="font-mono">apps/web/.env.local</code>. Contacta al
-                administrador.
-              </>
-            ) : (
-              <>
-                El paquete <code className="font-mono">@mercadopago/sdk-react</code> aún no está
-                instalado en el portal. Pídele al equipo que ejecute{' '}
-                <code className="font-mono">npm install @mercadopago/sdk-react</code>.
-              </>
-            )}
-          </div>
-        </div>
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <PaymentElement
+          options={{
+            layout: { type: 'tabs', defaultCollapsed: false },
+            paymentMethodOrder: ['card'],
+          }}
+        />
       </div>
-    </div>
+
+      {error && (
+        <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 ring-1 ring-rose-200">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={!stripe || !elements || submitting}
+        className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-bold uppercase tracking-[0.12em] text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60"
+      >
+        {submitting ? 'Procesando pago…' : `Pagar $${effectiveAmount.toLocaleString('es-MX')} ahora`}
+      </button>
+
+      <div className="flex items-center justify-between pt-1">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={submitting}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-900 disabled:opacity-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver
+        </button>
+        <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+          <ShieldCheck className="h-4 w-4 text-blue-600" />
+          Cifrado · Stripe
+        </p>
+      </div>
+    </form>
   );
 }
 
