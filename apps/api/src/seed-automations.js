@@ -46,7 +46,10 @@ const TEMPLATES = [
         code: 'payment.approved',
         name: 'Pago confirmado',
         channel: 'WHATSAPP',
-        body: `✅ *{gym}*\n\nPago confirmado, {nombre}.\nTu membresía *{plan}* está activa hasta *{fecha_venc}*.\n\nTu QR de acceso: {qr_url}`,
+        // Stripe-aware: shows monto, fecha exacta, método (Visa ····4242),
+        // ID de cobro (pi_...) y link al recibo. Vars vacías cuando vienen
+        // de un cobro no-Stripe (ej. courtesy bypass).
+        body: `✅ *{gym}*\n\nPago confirmado, {nombre}.\nTu membresía *{plan}* está activa hasta *{fecha_venc}*.\n\n*Detalles del cobro*\n• Monto: {monto_pagado}\n• Fecha: {fecha_pago}\n• Tarjeta: {metodo_pago}\n• ID: {pago_id}\n\nRecibo: {recibo_url}\nTu QR de acceso: {qr_url}`,
     },
     {
         code: 'member.created',

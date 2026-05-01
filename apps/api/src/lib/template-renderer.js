@@ -145,6 +145,25 @@ async function buildVars(body, context = {}) {
     out.code          = context.code || '';
     out.fecha_inicio  = context.fecha_inicio || (context.starts_at ? dayjs(context.starts_at).format('DD/MM/YYYY') : '');
 
+    // ── Stripe payment receipt vars ──
+    // Populated by webhook handlers / sync endpoints when fireEvent
+    // ships a `stripe` block. Empty strings (template-safe) when the
+    // payment came from a non-Stripe path (legacy MP rows, courtesy
+    // bypass, manual admin assign).
+    const stripe = context.stripe || {};
+    const paidAtMs =
+        typeof stripe.paid_at === 'number'
+            ? stripe.paid_at
+            : context.paid_at
+            ? Number(new Date(context.paid_at))
+            : null;
+    out.monto_pagado = context.amount != null ? formatMXN(context.amount) : '';
+    out.fecha_pago = paidAtMs ? dayjs(paidAtMs).format('DD/MM/YYYY HH:mm') : '';
+    out.metodo_pago = stripe.payment_method || '';
+    out.pago_id = stripe.payment_intent_id || '';
+    out.cobro_id = stripe.charge_id || '';
+    out.recibo_url = stripe.receipt_url || stripe.hosted_invoice_url || '';
+
     return out;
 }
 
