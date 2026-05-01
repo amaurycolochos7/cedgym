@@ -369,12 +369,10 @@ model Membership {
   expires_at             DateTime
   price_mxn              Int
   billing_cycle          BillingCycle     @default(MONTHLY)
-  mp_subscription_id     String?
-  // Stripe Subscription (real recurring) — replaces mp_subscription_id
-  // for new memberships. Stripe owns the renewal cadence: each cycle
-  // it invoices, charges the saved PaymentMethod, and emits
-  // invoice.payment_succeeded which our webhook converts into a
-  // Payment row + extends `expires_at`.
+  // Stripe Subscription (real recurring). Stripe owns the renewal
+  // cadence: each cycle it invoices, charges the saved PaymentMethod,
+  // and emits invoice.payment_succeeded which our webhook converts
+  // into a Payment row + extends `expires_at`.
   stripe_subscription_id String?          @unique
   // The Price the subscription was created with. Stored separately so
   // upgrades/downgrades can detect when a renewal hits at a different
@@ -470,7 +468,7 @@ model Course {
 }
 
 // ────────────────────────────────────────────────────────────────
-// Payments (Stripe — mp_* columns are legacy, kept until cleanup)
+// Payments (Stripe)
 // ────────────────────────────────────────────────────────────────
 model Payment {
   id                       String        @id @default(cuid())
@@ -480,9 +478,6 @@ model Payment {
   type                     PaymentType
   reference                String?
   description              String?
-  mp_payment_id            String?       @unique
-  mp_preference_id         String?       @unique
-  mp_status_detail         String?
   // Stripe IDs. payment_intent_id is the canonical handle for one-shot
   // payments (addons, first-cycle membership). For recurring payments,
   // stripe_invoice_id ties the Payment to the Stripe Invoice that

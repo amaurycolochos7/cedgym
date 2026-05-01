@@ -65,7 +65,7 @@ import {
     getOrCreateStripeCustomer,
     priceIdFor,
 } from '../lib/stripe.js';
-import { activateMembershipFromPayment } from './webhooks.js';
+import { activateMembershipFromPayment } from '../lib/payment-activation.js';
 
 // ─────────────────────────────────────────────────────────────────
 // Validation schemas

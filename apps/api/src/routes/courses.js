@@ -23,7 +23,7 @@
 
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
-import { createPreference } from '../lib/mercadopago.js';
+// Course payments not yet migrated to Stripe — see Phase 7 cleanup notes.
 import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 
 // ─── Validation schemas ──────────────────────────────────────────
@@ -159,42 +159,15 @@ export default async function coursesRoutes(fastify) {
                 },
             });
 
-            const mpPref = await createPreference({
-                userId: user.id,
-                type: 'COURSE',
-                reference: course.id,
-                items: [
-                    {
-                        id: course.id,
-                        title: `Curso: ${course.name}`,
-                        quantity: 1,
-                        unit_price: course.price_mxn,
-                    },
-                ],
-                payer: { email: user.email, name: user.full_name || user.name },
-                back_urls: {
-                    success: `${webappPublicUrl()}/courses/success?payment=${payment.id}`,
-                    failure: `${webappPublicUrl()}/courses/failed?payment=${payment.id}`,
-                    pending: `${webappPublicUrl()}/courses/pending?payment=${payment.id}`,
-                },
-                notification_url: `${apiPublicUrl()}/webhooks/mercadopago`,
-                external_reference: payment.id,
-                metadata: {
-                    course_id: course.id,
-                    workspace_id: course.workspace_id,
-                },
-            });
-
-            await prisma.payment.update({
-                where: { id: payment.id },
-                data: { mp_preference_id: mpPref.preferenceId },
-            });
-
-            return {
-                payment_id: payment.id,
-                init_point: mpPref.init_point,
-                sandbox_init_point: mpPref.sandbox_init_point,
-            };
+            // Course payment Stripe migration is not in scope of the
+            // current MP → Stripe migration. The payment row is created
+            // (PENDING) for audit; the route returns 503 so the caller
+            // surfaces a clear "feature en migración" message.
+            throw err(
+                'PAYMENT_NOT_AVAILABLE',
+                'El cobro de cursos está en migración a Stripe. Contacta al administrador.',
+                503,
+            );
         }
     );
 

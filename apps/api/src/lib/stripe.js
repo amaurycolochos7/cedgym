@@ -104,25 +104,24 @@ export async function getOrCreateStripeCustomer({ prisma, user }) {
 }
 
 // ── Price ID resolution ──────────────────────────────────────────
-// Membership plan + cycle → Stripe Price ID. Pulled from env so we
-// can change prices without a code deploy. Format:
-//   STRIPE_PRICE_<PLAN>_<CYCLE> = price_xxx
-// Examples:
-//   STRIPE_PRICE_STARTER_MONTHLY=price_1ABC
-//   STRIPE_PRICE_PRO_QUARTERLY=price_1XYZ
+// Membership plan → Stripe Price ID. Cycle is always MONTHLY today
+// (BillingCycle enum was reduced to MONTHLY-only on 2026-04-25).
+// Pulled from env so we can change prices without a code deploy:
+//   STRIPE_PRICE_STARTER_MONTHLY=price_xxx
+//   STRIPE_PRICE_PRO_MONTHLY=price_xxx
+//   STRIPE_PRICE_ELITE_MONTHLY=price_xxx
 // Addon (one-shot) uses STRIPE_PRICE_MEAL_PLAN_ADDON.
 
 const VALID_PLANS = ['STARTER', 'PRO', 'ELITE'];
-const VALID_CYCLES = ['MONTHLY', 'QUARTERLY'];
 
-export function priceIdFor({ plan, cycle }) {
+export function priceIdFor({ plan, cycle = 'MONTHLY' }) {
     if (!VALID_PLANS.includes(plan)) {
         throw err('BAD_PLAN', `Unknown plan: ${plan}`, 400);
     }
-    if (!VALID_CYCLES.includes(cycle)) {
-        throw err('BAD_CYCLE', `Unknown billing cycle: ${cycle}`, 400);
+    if (cycle !== 'MONTHLY') {
+        throw err('BAD_CYCLE', `Only MONTHLY billing is supported, got ${cycle}`, 400);
     }
-    const envKey = `STRIPE_PRICE_${plan}_${cycle}`;
+    const envKey = `STRIPE_PRICE_${plan}_MONTHLY`;
     const priceId = process.env[envKey];
     if (!priceId) {
         throw err(

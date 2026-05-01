@@ -32,7 +32,7 @@ import { constructWebhookEvent, getStripe } from '../lib/stripe.js';
 import {
     activateMembershipFromPayment,
     activateMealPlanAddonFromPayment,
-} from './webhooks.js';
+} from '../lib/payment-activation.js';
 
 const HANDLED_EVENTS = new Set([
     'payment_intent.succeeded',

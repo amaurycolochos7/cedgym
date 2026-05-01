@@ -305,8 +305,9 @@ export default function AdminPaymentsPage() {
                     }
                   />
                 )}
-                <Row k="MP payment ID" v={detail.mp_payment_id ?? '—'} />
-                <Row k="MP status detail" v={detail.mp_status_detail ?? '—'} />
+                <Row k="Stripe payment intent" v={detail.stripe_payment_intent_id ?? '—'} />
+                <Row k="Stripe charge" v={detail.stripe_charge_id ?? '—'} />
+                <Row k="Stripe invoice" v={detail.stripe_invoice_id ?? '—'} />
                 <Row
                   k="Fecha"
                   v={format(new Date(detail.created_at), 'PPpp')}

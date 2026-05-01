@@ -177,12 +177,6 @@ export function MealPlanAddonModal({ open, onClose, onSuccess }: MealPlanAddonMo
     return () => document.body.classList.remove('overflow-hidden');
   }, [open]);
 
-  // Pre-warm MP SDK so the brick mount feels instant.
-  useEffect(() => {
-    if (!open) return;
-    import('@mercadopago/sdk-react').catch(() => {});
-  }, [open]);
-
   // Esc to close — but never mid-payment.
   useEffect(() => {
     if (!open) return;

@@ -140,8 +140,9 @@ export interface AdminPayment {
   // 'CARD', 'CASH', 'TRANSFER', 'TERMINAL', 'COURTESY_PROMO',
   // 'COMPLIMENTARY', or null.
   method?: string | null;
-  mp_payment_id?: string | null;
-  mp_status_detail?: string | null;
+  stripe_payment_intent_id?: string | null;
+  stripe_charge_id?: string | null;
+  stripe_invoice_id?: string | null;
   reference?: string | null;
   description?: string | null;
   paid_at?: string | null;

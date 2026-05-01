@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * PlansModal — in-portal plan picker + Mercado Pago Checkout Pro redirect.
+ * PlansModal — in-portal plan picker with embedded Stripe checkout.
  *
  * Flow:
- *   1) 'plans'   — list plans from GET /memberships/plans, pick cycle.
- *   2) 'pay'     — POST /memberships/subscribe → window.location to MP's
- *                  hosted checkout page. After payment MP redirects back
- *                  to /portal/membership?mp=success|failed|pending.
- *   3) 'welcome' — only used for the 100% off bypass (no MP redirect).
+ *   1) 'plans'   — list plans from GET /memberships/plans, pick one.
+ *   2) 'pay'     — summary + promo + Continuar → embedded Payment
+ *                  Element (Stripe). On confirm we sync activation
+ *                  via /memberships/sync-stripe-payment, then move on.
+ *   3) 'welcome' — confirmation copy + CTAs.
  *
  * Gates:
  *   - Requires `me.user.selfie_url` and `me.user.full_name` before "Continuar".

@@ -40,7 +40,7 @@ import { z } from 'zod';
 import crypto from 'node:crypto';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
-import { createPreference } from '../lib/mercadopago.js';
+// Gift-card purchases not yet migrated to Stripe — see Phase 7 cleanup notes.
 
 // ─── Schemas ─────────────────────────────────────────────────────
 const purchaseBody = z.object({
@@ -169,44 +169,23 @@ export default async function giftCardsRoutes(fastify) {
             };
             await saveCard(redis, card);
 
-            // MP preference.
-            const mpPref = await createPreference({
-                userId,
-                type: 'DIGITAL_PRODUCT',
-                reference: product.id,
-                items: [{
-                    id: product.id,
-                    title: `Gift: ${product.title}`,
-                    quantity: 1,
-                    unit_price: amount,
-                }],
-                payer: { email: user.email, name: user.full_name || user.name },
-                back_urls: {
-                    success: `${webappPublicUrl()}/gift/success?payment=${payment.id}`,
-                    failure: `${webappPublicUrl()}/gift/failed?payment=${payment.id}`,
-                    pending: `${webappPublicUrl()}/gift/pending?payment=${payment.id}`,
-                },
-                notification_url: `${apiPublicUrl()}/webhooks/mercadopago`,
-                external_reference: payment.id,
-                metadata: {
-                    gift_card: true,
-                    gift_code: code,
-                    product_id: product.id,
-                    workspace_id: product.workspace_id,
-                },
-            });
-
-            await prisma.payment.update({
-                where: { id: payment.id },
-                data: { mp_preference_id: mpPref.preferenceId },
-            });
-
+            // Gift-card payment Stripe migration is not in scope of the
+            // current MP → Stripe migration. Returns 503 so the caller
+            // surfaces "feature en migración".
+            throw err(
+                'PAYMENT_NOT_AVAILABLE',
+                'La compra de gift cards está en migración a Stripe. Contacta al administrador.',
+                503,
+            );
+            // unreachable below — kept to silence linters that flag empty
+            // arrow functions; remove together with the throw on full migration.
+            // eslint-disable-next-line no-unreachable
             return {
                 payment_id: payment.id,
-                gift_code: code, // returned for dev/QA; in prod the sender sees it post-payment
+                gift_code: code,
                 amount_mxn: amount,
-                init_point: mpPref.init_point,
-                sandbox_init_point: mpPref.sandbox_init_point,
+                init_point: '',
+                sandbox_init_point: '',
             };
         }
     );

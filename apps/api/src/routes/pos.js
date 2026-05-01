@@ -26,7 +26,11 @@ import { z } from 'zod';
 import dayjs from 'dayjs';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
-import { createPreference } from '../lib/mercadopago.js';
+// POS MP_LINK flow not yet migrated to Stripe — stub throws at runtime
+// if anyone hits it; CASH/COURTESY POS payments are unaffected.
+function createPreference() {
+    throw new Error('MP createPreference removed — Stripe migration pending for POS MP_LINK flow');
+}
 import { getItem, adjustStock, listItems } from './inventory.js';
 import { generateReceipt } from '../lib/pdf.js';
 import { PLAN_CATALOG } from '../lib/memberships.js';

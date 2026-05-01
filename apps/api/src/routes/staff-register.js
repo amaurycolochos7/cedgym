@@ -37,7 +37,12 @@ import {
     planRequiresInscription,
     applyPromoToAmount,
 } from '../lib/memberships.js';
-import { createPreference } from '../lib/mercadopago.js';
+// Staff-driven member registration with MP redirect flow not yet migrated
+// to Stripe — stub throws at runtime if anyone hits the MP-pay paths.
+// CASH / TERMINAL / COMPLIMENTARY / TRANSFER methods are unaffected.
+function createPreference() {
+    throw new Error('MP createPreference removed — Stripe migration pending for staff-driven MP register flow');
+}
 import { detectGender } from '../lib/gender.js';
 import { signWelcomeToken } from '../lib/jwt.js';
 import { assertWorkspaceAccess } from '../lib/tenant-guard.js';

@@ -31,7 +31,11 @@ import { z } from 'zod';
 import crypto from 'node:crypto';
 import { err } from '../lib/errors.js';
 import { fireEvent } from '../lib/events.js';
-import { createPreference } from '../lib/mercadopago.js';
+// Digital product purchase flow not yet migrated to Stripe — stub throws
+// at runtime if anyone hits the purchase route.
+function createPreference() {
+    throw new Error('MP createPreference removed — Stripe migration pending for digital product purchase');
+}
 import { generateRoutinePDF } from '../lib/pdf.js';
 import { assertWorkspaceAccess } from '../lib/tenant-guard.js';
 

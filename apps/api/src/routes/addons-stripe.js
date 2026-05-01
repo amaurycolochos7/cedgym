@@ -33,7 +33,7 @@ import {
     getStripe,
     getOrCreateStripeCustomer,
 } from '../lib/stripe.js';
-import { activateMealPlanAddonFromPayment } from './webhooks.js';
+import { activateMealPlanAddonFromPayment } from '../lib/payment-activation.js';
 
 const MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN = 499;
 const ACTIVE_MEMBERSHIP_STATUSES = new Set(['ACTIVE', 'TRIAL']);
