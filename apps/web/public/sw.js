@@ -1,5 +1,8 @@
 // CED-GYM Service Worker
-const CACHE = 'cedgym-v1';
+// Cache name bumped to v2 in the Stripe migration so old clients drop
+// the v1 cache (which held HTML responses with the old MercadoPago CSP
+// header, breaking Stripe.js after the CSP was rotated).
+const CACHE = 'cedgym-v2';
 const OFFLINE_URLS = ['/offline', '/portal/qr'];
 
 self.addEventListener('install', (event) => {
@@ -24,6 +27,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
+  // Cross-origin requests must not go through the SW. Wrapping a
+  // <script src="https://js.stripe.com/..."> load in event.respondWith(fetch())
+  // turns it into a connect-src request, which our CSP doesn't grant to
+  // Stripe (only script-src does) — Stripe.js then fails to load and the
+  // Payment Element never bootstraps.
+  if (url.origin !== self.location.origin) return;
+
   // API calls: network-first with cache fallback only for qr-token
   if (url.pathname.startsWith('/checkins/me/qr-token') || url.pathname.includes('/qr-token')) {
     event.respondWith(
@@ -39,7 +49,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Same-origin page navigations: stale-while-revalidate
-  if (request.mode === 'navigate' && url.origin === self.location.origin) {
+  if (request.mode === 'navigate') {
     event.respondWith(
       caches.match(request).then((cached) => {
         const net = fetch(request)
