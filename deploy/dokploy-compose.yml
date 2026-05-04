@@ -150,11 +150,11 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-https://api.187-77-11-79.sslip.io}
-        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-https://api.187-77-11-79.sslip.io}
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
       NODE_ENV: production
     depends_on:
       - api
