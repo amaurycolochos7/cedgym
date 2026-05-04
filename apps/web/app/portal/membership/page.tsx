@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Snowflake, RefreshCw, Calendar, Camera } from 'lucide-react';
+import { Snowflake, RefreshCw, Calendar, Camera, AlertTriangle } from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
 import { PlansModal } from '@/components/portal/plans-modal';
 import { planDisplayName, paymentStatusLabel } from '@/lib/utils';
@@ -218,6 +218,13 @@ export default function PortalMembershipPage() {
             />
           </div>
 
+          {membership.stripe_subscription_id && (
+            <AutoRenewPanel
+              autoRenew={!!membership.auto_renew}
+              expiresAt={membership.expires_at}
+            />
+          )}
+
           <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6">
             <h3 className="text-lg font-semibold mb-4 text-slate-900">Historial de pagos</h3>
             {history?.items?.length ? (
@@ -307,6 +314,150 @@ function ActionCard({ icon, title, description, onClick, disabled }: any) {
       <div className="font-semibold text-slate-900">{title}</div>
       <div className="text-xs text-slate-500 mt-1">{description}</div>
     </button>
+  );
+}
+
+function AutoRenewPanel({
+  autoRenew,
+  expiresAt,
+}: {
+  autoRenew: boolean;
+  expiresAt: string;
+}) {
+  const qc = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const toggle = useMutation({
+    mutationFn: async (next: boolean) =>
+      (await api.patch('/memberships/me/auto-renewal', { enabled: next })).data,
+    onSuccess: (_, next) => {
+      qc.invalidateQueries({ queryKey: ['memberships', 'me'] });
+      toast.success(
+        next
+          ? 'Renovación automática reactivada.'
+          : 'Renovación automática desactivada. Tu acceso sigue hasta la fecha de vencimiento.',
+      );
+    },
+    onError: (e: any) => {
+      toast.error(
+        e?.response?.data?.error?.message ??
+          'No pudimos actualizar la renovación. Intenta de nuevo.',
+      );
+    },
+  });
+
+  const dateStr = expiresAt?.slice(0, 10) ?? '—';
+
+  return (
+    <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-5">
+      <div className="flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-[220px]">
+          <h3 className="text-base font-semibold text-slate-900">
+            Configuración de pagos
+          </h3>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Renovación automática mensual
+          </p>
+
+          <div className="mt-3 flex items-center gap-2">
+            <span
+              className={
+                autoRenew
+                  ? 'inline-flex items-center gap-1 rounded-full bg-emerald-50 ring-1 ring-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700'
+                  : 'inline-flex items-center gap-1 rounded-full bg-slate-100 ring-1 ring-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600'
+              }
+            >
+              {autoRenew ? '● Activa' : '○ Desactivada'}
+            </span>
+            <span className="text-xs text-slate-500">
+              {autoRenew
+                ? `Próximo cobro: ${dateStr}`
+                : `Acceso hasta: ${dateStr}`}
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500 mt-2 max-w-prose">
+            {autoRenew
+              ? 'Te cobramos automáticamente cada mes con la tarjeta que usaste. Puedes desactivarlo cuando quieras.'
+              : 'No se hará el próximo cobro. Tu acceso sigue activo hasta la fecha de vencimiento. Puedes reactivar la renovación en cualquier momento antes de esa fecha.'}
+          </p>
+        </div>
+
+        <div className="shrink-0">
+          {autoRenew ? (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none min-h-[40px]"
+              onClick={() => setConfirmOpen(true)}
+              disabled={toggle.isPending}
+            >
+              Desactivar
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-600/25 hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none min-h-[40px]"
+              onClick={() => toggle.mutate(true)}
+              disabled={toggle.isPending}
+            >
+              {toggle.isPending ? 'Procesando…' : 'Reactivar'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          onClick={() => !toggle.isPending && setConfirmOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white ring-1 ring-slate-200 shadow-xl rounded-2xl p-6 w-full max-w-md space-y-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-amber-50 p-2 ring-1 ring-amber-200">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-display text-xl font-bold text-slate-900">
+                  ¿Desactivar renovación automática?
+                </h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  No se hará el próximo cobro. Tu acceso sigue activo hasta el{' '}
+                  <span className="font-semibold text-slate-900">{dateStr}</span>
+                  . Después tendrás que renovar manualmente para no perder el
+                  servicio.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-xl bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 min-h-[40px]"
+                onClick={() => setConfirmOpen(false)}
+                disabled={toggle.isPending}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-rose-600/25 hover:bg-rose-700 disabled:opacity-50 min-h-[40px]"
+                onClick={() => {
+                  toggle.mutate(false, {
+                    onSuccess: () => setConfirmOpen(false),
+                  });
+                }}
+                disabled={toggle.isPending}
+              >
+                {toggle.isPending ? 'Desactivando…' : 'Sí, desactivar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
