@@ -290,8 +290,15 @@ function GenerateRoutineCard({
   }));
 
   const mut = useMutation({
+    // 180s mirrors the Fastify requestTimeout in apps/api/src/index.js.
+    // The COACH_TEMPLATES_V1 path runs up to 2 OpenAI calls (initial
+    // attempt + retry-with-feedback when the validator rejects the
+    // response), and each call can take 30-50s. The previous 90s
+    // limit aborted axios while the backend was still working, which
+    // surfaced as "No pudimos conectar con el servidor" in the toast.
+    // Same fix that meal-plans got in d441e50.
     mutationFn: async (body: GenerateFormState) =>
-      (await api.post('/ai/routines/generate', body, { timeout: 90_000 })).data,
+      (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data,
     onSuccess: () => {
       toast.success('Tu rutina está lista.');
       onGenerated();
@@ -1180,8 +1187,10 @@ function RegenerateModal({
   });
 
   const mut = useMutation({
+    // See the GenerateForm comment above — same 180s ceiling, same
+    // reason (template-path retry can run two OpenAI calls).
     mutationFn: async (body: GenerateFormState) =>
-      (await api.post('/ai/routines/generate', body, { timeout: 90_000 })).data,
+      (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data,
     onSuccess: () => {
       toast.success('Nueva rutina generada.');
       onDone();
