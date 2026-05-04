@@ -28,7 +28,7 @@ import {
 // Membership activation.
 // ─────────────────────────────────────────────────────────────────
 export async function activateMembershipFromPayment(fastify, payment) {
-    const { prisma } = fastify;
+    const { prisma, redis } = fastify;
     const meta = payment.metadata || {};
     const plan = meta.plan;
     const billingCycle = meta.billing_cycle;
@@ -37,6 +37,39 @@ export async function activateMembershipFromPayment(fastify, payment) {
             { paymentId: payment.id },
             '[activate-membership] payment missing plan/billing_cycle metadata',
         );
+        return;
+    }
+
+    // Per-payment idempotency. Without this, the sync-stripe-payment path
+    // and the invoice.payment_succeeded webhook race and BOTH extend
+    // expires_at — a monthly plan ends up with 60 days because the second
+    // call sees a future expires_at and adds another month on top.
+    //
+    // Two-layer guard:
+    //   1. Persistent stamp on payment.metadata.activated_at — survives
+    //      restarts and Redis flushes; covers the "second caller after the
+    //      first has already finished" case.
+    //   2. Redis SETNX lock on activate:membership:{id} (24 h TTL) —
+    //      atomic at the Redis layer; covers the concurrent-callers race
+    //      where neither has stamped yet.
+    if (meta.activated_at) {
+        return;
+    }
+    if (redis) {
+        const lockKey = `activate:membership:${payment.id}`;
+        const got = await redis.set(lockKey, '1', 'EX', 24 * 60 * 60, 'NX');
+        if (!got) {
+            return;
+        }
+    }
+
+    // Re-read the payment in case the lock winner above had already
+    // stamped activated_at before we took the lock (unlikely but cheap).
+    const fresh = await prisma.payment.findUnique({
+        where: { id: payment.id },
+        select: { metadata: true },
+    });
+    if (fresh?.metadata?.activated_at) {
         return;
     }
 
@@ -122,6 +155,23 @@ export async function activateMembershipFromPayment(fastify, payment) {
                 '[activate-membership] failed to mark inscription_paid_at',
             );
         }
+    }
+
+    // Stamp the payment so the second caller (sync vs webhook) bails
+    // out at the idempotency check above. Stamp BEFORE firing the event
+    // so a slow event handler can't widen the race window.
+    try {
+        await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+                metadata: { ...meta, activated_at: new Date().toISOString() },
+            },
+        });
+    } catch (e) {
+        fastify.log.warn(
+            { err: e, paymentId: payment.id },
+            '[activate-membership] failed to stamp activated_at',
+        );
     }
 
     await fireEvent(isRenewal ? 'membership.renewed' : 'member.verified', {
