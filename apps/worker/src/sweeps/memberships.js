@@ -26,10 +26,13 @@ export async function runExpiringSweep(redis) {
         const from = dayjs().add(days, 'day').startOf('day').toDate();
         const to   = dayjs().add(days, 'day').endOf('day').toDate();
 
+        // Restrict to athlete memberships. Admin/SUPERADMIN/RECEPTIONIST
+        // courtesy memberships shouldn't generate renewal nags.
         const expiring = await prisma.membership.findMany({
             where: {
                 status: 'ACTIVE',
                 expires_at: { gte: from, lte: to },
+                user: { role: 'ATHLETE' },
             },
             select: {
                 id: true,
@@ -75,6 +78,7 @@ export async function runExpiredSweep(redis) {
         where: {
             expires_at: { gte: from, lte: to },
             status: { in: ['ACTIVE', 'EXPIRED'] },
+            user: { role: 'ATHLETE' },
         },
         select: {
             id: true,

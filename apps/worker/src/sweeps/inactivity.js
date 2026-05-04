@@ -15,6 +15,12 @@ export async function runInactivitySweep(redis) {
     // Candidate set: ACTIVE members whose most recent check_in is
     // older than 14 days (or who have no check_ins at all). We do
     // this in SQL so we don't ship 10k users over the wire.
+    //
+    // Restricted to role=ATHLETE on purpose. Admins/SUPERADMIN/
+    // RECEPTIONIST often hold a courtesy membership for testing or
+    // their own training but don't physically check in at the gym,
+    // so the previous unfiltered query nagged the gym owner with
+    // "te echamos de menos" reactivation messages every month.
     const rows = await prisma.$queryRaw`
         SELECT
           u.id           AS user_id,
@@ -25,6 +31,7 @@ export async function runInactivitySweep(redis) {
         LEFT JOIN check_ins c ON c.user_id = u.id
         WHERE m.status = 'ACTIVE'
           AND u.status = 'ACTIVE'
+          AND u.role   = 'ATHLETE'
         GROUP BY u.id, u.workspace_id
         HAVING MAX(c.scanned_at) IS NULL
             OR MAX(c.scanned_at) < ${cutoff}

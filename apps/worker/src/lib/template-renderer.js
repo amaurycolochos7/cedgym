@@ -37,10 +37,16 @@ function groupReferenced(body, keys) {
 async function buildVars(body, context = {}) {
     const out = {};
 
+    // API-side fireEvent calls (Stripe webhook, memberships-stripe,
+    // badges) ship `userId` (camelCase); worker sweeps ship `user_id`
+    // (snake_case). Accept both so payment.approved templates render
+    // {nombre}/{plan}/{fecha_venc} instead of empty strings.
+    const ctxUserId = context.user_id || context.userId;
+
     let user = null;
-    if (context.user_id && groupReferenced(body, ['nombre', 'qr_url', 'link_portal', 'link_pago'])) {
+    if (ctxUserId && groupReferenced(body, ['nombre', 'qr_url', 'link_portal', 'link_pago'])) {
         user = await prisma.user.findUnique({
-            where: { id: context.user_id },
+            where: { id: ctxUserId },
             select: { id: true, name: true, full_name: true, email: true, phone: true, workspace_id: true },
         }).catch(() => null);
     }
@@ -62,9 +68,9 @@ async function buildVars(body, context = {}) {
             membership = await prisma.membership.findUnique({
                 where: { id: context.membership_id },
             }).catch(() => null);
-        } else if (context.user_id) {
+        } else if (ctxUserId) {
             membership = await prisma.membership.findUnique({
-                where: { user_id: context.user_id },
+                where: { user_id: ctxUserId },
             }).catch(() => null);
         }
     }
@@ -123,6 +129,26 @@ async function buildVars(body, context = {}) {
     out.code          = context.code || '';
     out.referred_name = context.referred_name || '';
     out.fecha_inicio  = context.fecha_inicio || (context.starts_at ? dayjs(context.starts_at).format('DD/MM/YYYY') : '');
+
+    // ── Stripe payment receipt vars ──
+    // Mirrors the block in apps/api/src/lib/template-renderer.js. The
+    // worker is what actually executes templates when an AutomationJob
+    // runs, so without these the payment.approved message would render
+    // with empty {monto_pagado}/{fecha_pago}/{metodo_pago}/{pago_id}/
+    // {recibo_url} slots even when the webhook ships the data.
+    const stripe = context.stripe || {};
+    const paidAtMs =
+        typeof stripe.paid_at === 'number'
+            ? stripe.paid_at
+            : context.paid_at
+            ? Number(new Date(context.paid_at))
+            : null;
+    out.monto_pagado = context.amount != null ? formatMXN(context.amount) : '';
+    out.fecha_pago   = paidAtMs ? dayjs(paidAtMs).format('DD/MM/YYYY HH:mm') : '';
+    out.metodo_pago  = stripe.payment_method || '';
+    out.pago_id      = stripe.payment_intent_id || '';
+    out.cobro_id     = stripe.charge_id || '';
+    out.recibo_url   = stripe.receipt_url || stripe.hosted_invoice_url || '';
 
     return out;
 }

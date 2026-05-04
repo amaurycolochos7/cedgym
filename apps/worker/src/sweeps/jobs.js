@@ -35,13 +35,20 @@ async function loadAutomation(automationId) {
 //   1. params.to === 'member' → user.phone (from context.user_id)
 //   2. params.phone           → explicit override
 //   3. context.phone          → event-provided phone (OTP flow)
+//
+// Callers in the codebase aren't consistent about casing: worker
+// sweeps fire with `user_id` (snake_case), API routes (Stripe webhook,
+// memberships-stripe, badges) fire with `userId` (camelCase). Accept
+// both — otherwise the Stripe-side events resolve to no phone and the
+// post-payment WhatsApp silently fails into FAILED jobs.
 async function resolveDestinationPhone(params, context) {
     if (params?.phone) return params.phone;
     if (context?.phone) return context.phone;
     const target = params?.to || 'member';
-    if (target === 'member' && context.user_id) {
+    const userId = context?.user_id || context?.userId;
+    if (target === 'member' && userId) {
         const user = await prisma.user.findUnique({
-            where: { id: context.user_id },
+            where: { id: userId },
             select: { phone: true },
         });
         return user?.phone || null;

@@ -16,8 +16,8 @@ export async function runBirthdaySweep(redis) {
     const year = now.year();
 
     // EXTRACT lets us match MM-DD directly in Postgres without loading
-    // every user. Active-status filter keeps us from nagging SUSPENDED
-    // accounts.
+    // every user. Active-status + role filter keeps us from sending the
+    // gym's own birthday/discount blast to admins/staff.
     const rows = await prisma.$queryRaw`
         SELECT
           id            AS user_id,
@@ -26,6 +26,7 @@ export async function runBirthdaySweep(redis) {
           phone
         FROM users
         WHERE status = 'ACTIVE'
+          AND role   = 'ATHLETE'
           AND birth_date IS NOT NULL
           AND EXTRACT(MONTH FROM birth_date) = ${month}
           AND EXTRACT(DAY   FROM birth_date) = ${day}
