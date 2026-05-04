@@ -38,7 +38,7 @@ function renderUpsell({ name, appUrl }) {
         `Vimos que tu cuenta en *CED·GYM* todavía no tiene plan activo.`,
         `Arranca hoy y marca la diferencia 💪`,
         ``,
-        `👉 ${portal}/planes`,
+        `👉 ${portal}/portal/membership`,
         ``,
         `📣 *Bonus*: usa el código *PRIMERA10* y obtén 10% de descuento en tu primer mes.`,
         ``,
