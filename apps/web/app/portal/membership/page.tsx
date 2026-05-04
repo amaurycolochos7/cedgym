@@ -21,30 +21,38 @@ export default function PortalMembershipPage() {
   const [freezeOpen, setFreezeOpen] = useState(false);
   const [selfieOpen, setSelfieOpen] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
+  // Plan to highlight inside the modal when it opens. Driven by the
+  // ?plan=STARTER|PRO|ELITE query param the landing page sends after
+  // a fresh registration ("Elegir Pro" → /register?redirect=...&plan=PRO),
+  // and falls back to the user's current membership plan otherwise.
+  const [highlightPlanFromUrl, setHighlightPlanFromUrl] = useState<
+    'STARTER' | 'PRO' | 'ELITE' | null
+  >(null);
 
-  // Handle return from Mercado Pago Checkout Pro. The webhook usually
-  // beats this redirect, so by the time we re-fetch the membership it
-  // should already be active for `success`. If the webhook is still in
-  // flight (rare) the user can refresh in a few seconds.
-  //
+  // Handle deep-link params on first paint:
+  //   ?plan=STARTER|PRO|ELITE   → auto-open the plans modal with that highlight
+  //   ?stripe=success&payment=X → confirmation toast after a 3DS-redirect return
   // We read window.location instead of useSearchParams() to avoid
   // forcing a Suspense boundary in the page (Next 14 build constraint).
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const mpStatus = params.get('mp');
-    if (!mpStatus) return;
-    if (mpStatus === 'success') {
-      toast.success('¡Pago aprobado! Activando tu membresía…');
+
+    const planParam = (params.get('plan') || '').toUpperCase();
+    if (planParam === 'STARTER' || planParam === 'PRO' || planParam === 'ELITE') {
+      setHighlightPlanFromUrl(planParam);
+      setPlansOpen(true);
+    }
+
+    const stripeStatus = params.get('stripe');
+    if (stripeStatus === 'success') {
+      toast.success('¡Pago confirmado! Activando tu membresía…');
       qc.invalidateQueries({ queryKey: ['memberships'] });
       qc.invalidateQueries({ queryKey: ['auth', 'me'] });
-    } else if (mpStatus === 'failed') {
-      toast.error('El pago no pudo completarse. Intenta de nuevo.');
-    } else if (mpStatus === 'pending') {
-      toast.message('Tu pago está pendiente de confirmación.');
     }
-    // Clean the query params so a refresh doesn't re-fire the toast.
-    ['mp', 'payment', 'payment_id', 'status', 'preference_id'].forEach((k) =>
+
+    // Clean the query params so a refresh doesn't re-fire the toast or modal.
+    ['plan', 'stripe', 'payment', 'payment_id', 'status'].forEach((k) =>
       params.delete(k),
     );
     const next = params.toString();
@@ -275,9 +283,11 @@ export default function PortalMembershipPage() {
         open={plansOpen}
         onClose={() => {
           setPlansOpen(false);
+          setHighlightPlanFromUrl(null);
           qc.invalidateQueries({ queryKey: ['memberships'] });
         }}
         highlightPlan={
+          highlightPlanFromUrl ??
           (membership?.plan?.toUpperCase?.() as 'STARTER' | 'PRO' | 'ELITE') ??
           undefined
         }

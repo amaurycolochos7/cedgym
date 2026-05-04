@@ -248,7 +248,7 @@ export default async function HomePage() {
                 resolved.STARTER.enabled && (
                   <PlanCard
                     key="STARTER"
-                    href="/register?redirect=/checkout/starter&product=starter&type=membership"
+                    href="/register?redirect=%2Fportal%2Fmembership%3Fplan%3DSTARTER&product=starter&type=membership"
                     tier="Básico" subtitle="Para empezar"
                     icon={<Dumbbell className="h-6 w-6" strokeWidth={2.25} />}
                     priceMonth={resolved.STARTER.priceMonth}
@@ -264,7 +264,7 @@ export default async function HomePage() {
                 resolved.PRO.enabled && (
                   <PlanCard
                     key="PRO"
-                    href="/register?redirect=/checkout/pro&product=pro&type=membership"
+                    href="/register?redirect=%2Fportal%2Fmembership%3Fplan%3DPRO&product=pro&type=membership"
                     tier="Pro" subtitle="Atleta regular" popular
                     icon={<Flame className="h-6 w-6" strokeWidth={2.25} />}
                     priceMonth={resolved.PRO.priceMonth}
@@ -283,7 +283,7 @@ export default async function HomePage() {
                 resolved.ELITE.enabled && (
                   <PlanCard
                     key="ELITE"
-                    href="/register?redirect=/checkout/elite&product=elite&type=membership"
+                    href="/register?redirect=%2Fportal%2Fmembership%3Fplan%3DELITE&product=elite&type=membership"
                     tier="Élite" subtitle="Preparación deportiva"
                     icon={<Trophy className="h-6 w-6" strokeWidth={2.25} />}
                     priceMonth={resolved.ELITE.priceMonth}
