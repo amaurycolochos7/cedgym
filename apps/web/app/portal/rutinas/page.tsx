@@ -18,7 +18,7 @@
  * -------------------------------------------------------------------------*/
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -641,6 +641,20 @@ function ActiveRoutineView({
     setOpenKey(null);
   }, [activeDayIdx]);
 
+  // Day-pill refs, used by the effect below to pull the active pill
+  // into view once per change. Previous version put scrollIntoView in
+  // the JSX ref callback, which fires on EVERY render — so expanding
+  // an exercise (setOpenKey) re-rendered, the active pill ref re-ran,
+  // and the page jerked back to the top of the day. Tracking refs in
+  // an array + scrolling only when activeDayIdx changes fixes that.
+  const dayPillRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  useEffect(() => {
+    const node = dayPillRefs.current[activeDayIdx];
+    if (node) {
+      node.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    }
+  }, [activeDayIdx]);
+
   const dayExerciseCount = activeDay?.exercises.length ?? 0;
   const dayDoneCount = activeDay
     ? activeDay.exercises.filter((_, i) => doneSet.has(`${activeDay.day_of_week}-${i}`)).length
@@ -781,15 +795,14 @@ function ActiveRoutineView({
                   key={day.id ?? `${day.day_of_week}-${idx}`}
                   type="button"
                   onClick={() => setActiveDayIdx(idx)}
-                  // On mount (or when the active idx is this pill),
-                  // pull it into view. Matters on mobile when the
-                  // default active day isn't "Lun" — without this,
-                  // someone opening the app on Thursday sees a
-                  // scrolled-off active pill.
+                  // Store the node so the day-change effect above can
+                  // scroll the active pill into view. The actual
+                  // scrollIntoView lives there — putting it in this
+                  // ref callback (the previous shape) fired on every
+                  // render and dragged the page back to the top each
+                  // time the user expanded an exercise.
                   ref={(node) => {
-                    if (active && node) {
-                      node.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
-                    }
+                    dayPillRefs.current[idx] = node;
                   }}
                   className={[
                     'snap-start shrink-0 relative flex items-center gap-2 pl-2 pr-4 py-2 rounded-full text-sm font-semibold transition-all',

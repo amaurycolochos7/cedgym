@@ -145,12 +145,28 @@ function buildUserPrompt({
             level: e.level,
         }))
     );
-    const equipmentStr = (available_equipment && available_equipment.length > 0)
+    const hasEquipment = available_equipment && available_equipment.length > 0;
+    const equipmentStr = hasEquipment
         ? available_equipment.join(', ')
-        : '(ninguno/no aplica)';
+        : (location === 'HOME' ? 'NINGUNO — solo peso corporal' : '(no aplica)');
     const injuriesStr = (injuries && injuries.length > 0)
         ? injuries.join(', ')
         : '(ninguna)';
+    // Hard rule block injected only for HOME with no declared equipment.
+    // Without it the AI casually pencils in "press de pierna en máquina",
+    // "mancuernas", "bicicleta estática" — gear the member doesn't have.
+    // The library filter already excludes those rows, but the model can
+    // still INVENT exercises with exercise_id=null, which bypasses the
+    // filter entirely. So we say it explicitly in plain Spanish.
+    const homeStrictBlock =
+        location === 'HOME' && !hasEquipment
+            ? `\n\nMODO CASA SIN EQUIPO (estricto):
+- El socio NO tiene mancuernas, ni barras, ni máquinas, ni bandas, ni bicicleta/elíptica/cinta, ni step, ni TRX, ni pesas rusas.
+- TODOS los ejercicios deben ser de PESO CORPORAL (lagartijas, sentadillas libres, desplantes, plancha, mountain climbers, burpees, brincos, abdominales, escaladores, etc.) o usar objetos cotidianos del hogar (mochila cargada, botellas con agua, silla, pared, toalla).
+- PROHIBIDO: "press en banco con mancuernas", "sentadilla goblet", "prensa de piernas", "remo con mancuerna", "curl con mancuerna", "bicicleta estática", "press hombro con mancuernas", "peso muerto rumano con mancuernas", "saltar la cuerda" (asume que tampoco tiene cuerda), o cualquier ejercicio que requiera una pieza de equipo.
+- PARA CARDIO/CALENTAMIENTO en casa sin equipo: usa "trote en sitio", "jumping jacks", "high knees", "skipping en sitio", "saltos de tijera", "shadow boxing".
+- Si crees que el ejercicio "queda raro" sin pesa, AUMENTA reps/series o agrega tempo (ej. "sentadilla 4 segundos abajo, sube en 1") en vez de meter equipo.`
+            : '';
     const notesStr = notes && notes.trim() ? notes.trim() : '(sin notas)';
     const disciplineStr = discipline ? discipline : '(no aplica)';
     const firstNameStr = firstName && firstName.trim() ? firstName.trim() : '(sin nombre)';
@@ -167,13 +183,13 @@ PERFIL:
 - Duración por sesión: ${session_duration_min} minutos
 - Equipo disponible en casa: ${equipmentStr}
 - Lesiones/restricciones: ${injuriesStr}
-- Notas adicionales: ${notesStr}
+- Notas adicionales: ${notesStr}${homeStrictBlock}
 
 BIBLIOTECA DE EJERCICIOS DEL COACH (usa SIEMPRE estos nombres cuando el ejercicio esté en la lista — son los nombres que el Coach Samuel usa con sus atletas. Solo inventa si realmente no hay equivalente):
 ${libJson}
 
 REGLAS DEL MÉTODO CED·GYM:
-- SIEMPRE arranca cada día con calentamiento: bicicleta 10-20 min (o cardio ligero equivalente).
+- SIEMPRE arranca cada día con calentamiento 10-20 min. EN GYM: bicicleta o cardio en máquina. EN HOME sin equipo: trote en sitio, jumping jacks o cardio de peso corporal — NUNCA "bicicleta" si no la tiene.
 - SIEMPRE cierra cada día con 100 repeticiones de abdominales (o equivalente core si el day_of_week ya es día de core).
 - Alterna grupos musculares — nunca entrenar el mismo grupo 2 días seguidos.
 - Incluye 1 día de descanso mínimo si days_per_week < 7.
