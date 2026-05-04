@@ -325,12 +325,98 @@ export default async function membershipsRoutes(fastify) {
         }
     );
 
+    // ─── PATCH /memberships/me/auto-renewal ───────────────────────
+    //
+    // Bidirectional toggle: lets the user turn auto-renewal off (so
+    // the next cycle isn't charged) or back on (re-enable billing
+    // after a previous cancellation, before the period actually ends).
+    //
+    // Mirrors `cancel_at_period_end` on the Stripe Subscription:
+    //   enabled=false → cancel_at_period_end=true   (stop billing)
+    //   enabled=true  → cancel_at_period_end=false  (resume billing)
+    //
+    // The local `auto_renew` flag is the source of truth surfaced to
+    // the frontend; the webhook handler in webhooks-stripe.js mirrors
+    // any out-of-band changes (e.g. customer cancelling via the Stripe
+    // customer portal) back into this column.
+    fastify.patch(
+        '/memberships/me/auto-renewal',
+        {
+            preHandler: [fastify.authenticate],
+            // Cap at 6 toggles/min — well above any legitimate
+            // pattern, low enough to defang accidental loops.
+            config: { rateLimit: { max: 6, timeWindow: '1 minute' } },
+        },
+        async (req) => {
+            const parsed = z
+                .object({ enabled: z.boolean() })
+                .safeParse(req.body);
+            if (!parsed.success) {
+                throw err('BAD_BODY', parsed.error.message, 400);
+            }
+            const { enabled } = parsed.data;
+
+            const userId = req.user.sub || req.user.id;
+            const membership = await prisma.membership.findUnique({
+                where: { user_id: userId },
+            });
+            if (!membership) {
+                throw err('NO_MEMBERSHIP', 'No hay membresía', 404);
+            }
+            if (!membership.stripe_subscription_id) {
+                // Manual / cash memberships have nothing to auto-renew.
+                throw err(
+                    'NO_SUBSCRIPTION',
+                    'Esta membresía no tiene suscripción recurrente',
+                    400,
+                );
+            }
+            if (membership.auto_renew === enabled) {
+                // Idempotent — no Stripe round-trip if state already matches.
+                return { membership };
+            }
+
+            try {
+                const stripe = getStripe();
+                await stripe.subscriptions.update(
+                    membership.stripe_subscription_id,
+                    { cancel_at_period_end: !enabled },
+                );
+            } catch (e) {
+                fastify.log.error(
+                    { err: e, subId: membership.stripe_subscription_id, enabled },
+                    '[memberships] Stripe auto-renewal toggle failed',
+                );
+                throw err(
+                    'STRIPE_ERROR',
+                    'No pudimos actualizar tu suscripción. Intenta de nuevo.',
+                    502,
+                );
+            }
+
+            const updated = await prisma.membership.update({
+                where: { id: membership.id },
+                data: { auto_renew: enabled },
+            });
+
+            await fireEvent(
+                enabled ? 'membership.auto_renewal.enabled' : 'membership.canceled',
+                {
+                    workspaceId: membership.workspace_id,
+                    userId,
+                    membershipId: membership.id,
+                },
+            );
+
+            return { membership: updated };
+        },
+    );
+
     // ─── POST /memberships/cancel ─────────────────────────────────
     //
-    // We never wipe the membership — the user keeps access until
-    // `expires_at`. We just flip auto_renew off and tell Stripe to
-    // stop billing them at period end (`cancel_at_period_end: true`)
-    // so there's no surprise recharge.
+    // Legacy endpoint — kept for any older callers. Equivalent to
+    // PATCH /memberships/me/auto-renewal { enabled: false }. Prefer
+    // the PATCH endpoint for new code.
     fastify.post(
         '/memberships/cancel',
         { preHandler: [fastify.authenticate] },
@@ -697,8 +783,28 @@ export default async function membershipsRoutes(fastify) {
                 ...auditCtx(req),
             });
 
-            // Hard delete (Prisma will cascade to freezes via schema FKs).
-            await prisma.membership.delete({ where: { id: membershipId } });
+            // Hard delete. We delete child rows explicitly first because
+            // production schema came from `prisma db push` which doesn't
+            // always recreate FKs with ON DELETE CASCADE — leaving an
+            // orphan freeze that blocks the parent delete with a 23503.
+            // Mirrors the cascade pattern in admin-members.js.
+            try {
+                await prisma.membershipFreeze.deleteMany({
+                    where: { membership_id: membershipId },
+                });
+                await prisma.membership.delete({ where: { id: membershipId } });
+            } catch (e) {
+                fastify.log.error(
+                    { err: e?.message, membershipId },
+                    '[memberships.delete] failed'
+                );
+                throw err(
+                    'DELETE_FAILED',
+                    'No se pudo eliminar: hay datos referenciados que no pudimos limpiar. Contacta a soporte.',
+                    409,
+                    { reason: e?.message }
+                );
+            }
 
             return { ok: true, deleted_id: membershipId };
         }
