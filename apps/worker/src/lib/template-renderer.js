@@ -84,14 +84,20 @@ async function buildVars(body, context = {}) {
     out.precio_desc = price != null ? formatMXN(Math.round(price * 0.8)) : '';
     out.descuento   = '20%';
 
-    out.link_portal = `${webappUrl()}/portal`;
+    // Every URL below MUST resolve to a real Next route — these are
+    // the destinations the user lands on from a WhatsApp message, so
+    // a 404 here is an immediate complaint. Verified against
+    // apps/web/app/ on 2026-05-04.
+    //   /portal         → no page.tsx → was 404. Use /portal/dashboard.
+    //   /renew          → never existed (legacy MP path). Use the
+    //                     embedded renewal flow at /portal/membership.
+    //   /tienda/X/review → no review page exists yet. Fall back to
+    //                     the marketplace landing so the link still
+    //                     works; revisit when the review form ships.
+    out.link_portal = `${webappUrl()}/portal/dashboard`;
     out.qr_url      = `${webappUrl()}/portal/qr`;
-    out.link_pago   = membership?.id
-        ? `${webappUrl()}/renew?m=${membership.id}`
-        : `${webappUrl()}/renew`;
-    out.link_review = context.product_id
-        ? `${webappUrl()}/tienda/${context.product_id}/review`
-        : `${webappUrl()}/tienda`;
+    out.link_pago   = `${webappUrl()}/portal/membership`;
+    out.link_review = `${webappUrl()}/tienda`;
 
     if (context.trainer_id && groupReferenced(body, ['coach'])) {
         const trainer = await prisma.user.findUnique({
