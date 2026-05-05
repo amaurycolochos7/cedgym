@@ -88,6 +88,7 @@ export default function StaffWalkInPage() {
     name: '',
     phone: '',
     email: '',
+    birthDate: '', // YYYY-MM-DD — recepción lo captura verbal
     plan: 'PRO' as PlanCode,
     method: 'CASH' as PaymentMethod,
     promoCode: '',
@@ -150,6 +151,7 @@ export default function StaffWalkInPage() {
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim() || undefined,
+        birth_date: form.birthDate, // YYYY-MM-DD del input
         plan: form.plan,
         billing_cycle: 'MONTHLY',
         payment_method: form.method,
@@ -164,6 +166,7 @@ export default function StaffWalkInPage() {
   const canSubmit =
     form.name.trim().length >= 2 &&
     /^\+?\d{10,15}$/.test(form.phone.trim().replace(/\s/g, '')) &&
+    !!form.birthDate &&
     !register.isPending;
 
   async function sendWhatsappLink() {
@@ -227,10 +230,22 @@ export default function StaffWalkInPage() {
                 inputMode="tel"
               />
             </div>
+            <div>
+              <label className={labelCls}>Fecha de nacimiento *</label>
+              <input
+                type="date"
+                value={form.birthDate}
+                onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                className={inputCls}
+                max={new Date().toISOString().slice(0, 10)}
+              />
+            </div>
           </div>
           <p className="text-[11px] text-slate-500">
             Email no es necesario — el WhatsApp es su login y donde recibe
-            todo (link de bienvenida, recibos, recordatorios).
+            todo (link de bienvenida, recibos, recordatorios). La fecha de
+            nacimiento es obligatoria; la foto de perfil la sube el socio en
+            el portal con el link que recibe por WhatsApp.
           </p>
         </section>
 
@@ -490,6 +505,7 @@ export default function StaffWalkInPage() {
                   name: '',
                   phone: '',
                   email: '',
+                  birthDate: '',
                   plan: 'PRO',
                   method: 'CASH',
                   promoCode: '',

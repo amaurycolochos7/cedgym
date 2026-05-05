@@ -159,6 +159,14 @@ const updateMeSchema = z.object({
             if (v === '' || v === null) return null;
             return v?.toLowerCase();
         }),
+    // Política 2026-05: la fecha de nacimiento es obligatoria para
+    // comprar membresía. Aceptamos ISO datetime o YYYY-MM-DD del
+    // <input type="date"> del FE.
+    birth_date: z
+        .string()
+        .datetime()
+        .or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+        .optional(),
 });
 
 const phoneChangeStartSchema = z.object({
@@ -983,6 +991,9 @@ export default async function authRoutes(fastify) {
             if (parsed.data.email !== undefined) {
                 updates.email = parsed.data.email;
                 updates.email_verified_at = null;
+            }
+            if (parsed.data.birth_date !== undefined) {
+                updates.birth_date = new Date(parsed.data.birth_date);
             }
 
             // Any explicit save against the perfil page counts as

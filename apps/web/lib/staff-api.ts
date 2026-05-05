@@ -64,6 +64,8 @@ export interface RegisterMemberBody {
   name: string;
   phone: string;
   email?: string;
+  /** YYYY-MM-DD — recepción captura verbalmente. Obligatorio. */
+  birth_date: string;
   plan: PlanCode;
   billing_cycle: BillingCycle;
   payment_method: PaymentMethod;

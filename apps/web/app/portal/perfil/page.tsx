@@ -96,8 +96,10 @@ export default function PortalPerfilPage() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [fullName, setFullName] = useState('');
   const [emailInput, setEmailInput] = useState('');
+  const [birthDate, setBirthDate] = useState(''); // YYYY-MM-DD
   const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
   const [profileApiError, setProfileApiError] = useState<string | null>(null);
 
   // Phone change modal (2-step OTP flow).
@@ -114,6 +116,11 @@ export default function PortalPerfilPage() {
     if (me?.user && !editingProfile) {
       setFullName(me.user.full_name ?? me.user.name ?? '');
       setEmailInput(me.user.email ?? '');
+      setBirthDate(
+        me.user.birth_date
+          ? String(me.user.birth_date).slice(0, 10)
+          : '',
+      );
     }
   }, [me, editingProfile]);
 
@@ -121,12 +128,16 @@ export default function PortalPerfilPage() {
   const currentName = me?.user?.full_name ?? me?.user?.name ?? '—';
   const currentEmail: string | null = me?.user?.email ?? null;
   const currentPhone: string | null = me?.user?.phone ?? null;
+  const currentBirthDate: string | null = me?.user?.birth_date
+    ? String(me.user.birth_date).slice(0, 10)
+    : null;
 
   const saveProfile = useMutation({
     mutationFn: async () => {
       const payload: Record<string, unknown> = {};
       const trimmedName = fullName.trim();
       const trimmedEmail = emailInput.trim();
+      const trimmedBirth = birthDate.trim();
 
       if (trimmedName && trimmedName !== currentName) {
         payload.full_name = trimmedName;
@@ -134,6 +145,11 @@ export default function PortalPerfilPage() {
       // Treat "" as "clear email" so user can drop it. null ≡ cleared.
       if (trimmedEmail !== (currentEmail ?? '')) {
         payload.email = trimmedEmail === '' ? null : trimmedEmail;
+      }
+      // birth_date sólo se manda si cambió. Una vez seteado nunca se
+      // limpia (la política exige que esté antes de comprar membresía).
+      if (trimmedBirth && trimmedBirth !== (currentBirthDate ?? '')) {
+        payload.birth_date = trimmedBirth;
       }
       // Always send the patch — even with no field changes — so the
       // backend can mark profile_completed=true and silence the
@@ -157,8 +173,10 @@ export default function PortalPerfilPage() {
     setProfileApiError(null);
     setNameError(null);
     setEmailError(null);
+    setBirthDateError(null);
     const trimmedName = fullName.trim();
     const trimmedEmail = emailInput.trim();
+    const trimmedBirth = birthDate.trim();
 
     if (trimmedName.length < 2) {
       setNameError('Nombre demasiado corto');
@@ -169,6 +187,12 @@ export default function PortalPerfilPage() {
       setEmailError('Correo inválido');
       return;
     }
+    // birth_date obligatorio para poder comprar membresía. No
+    // bloqueamos editar otros campos sin él, pero avisamos.
+    if (trimmedBirth && !/^\d{4}-\d{2}-\d{2}$/.test(trimmedBirth)) {
+      setBirthDateError('Fecha inválida');
+      return;
+    }
     saveProfile.mutate();
   };
 
@@ -176,9 +200,11 @@ export default function PortalPerfilPage() {
     setEditingProfile(false);
     setNameError(null);
     setEmailError(null);
+    setBirthDateError(null);
     setProfileApiError(null);
     setFullName(currentName === '—' ? '' : currentName);
     setEmailInput(currentEmail ?? '');
+    setBirthDate(currentBirthDate ?? '');
   };
 
   return (
@@ -297,6 +323,21 @@ export default function PortalPerfilPage() {
                       value={emailInput}
                       onChange={(e) => setEmailInput(e.target.value)}
                       placeholder="tucorreo@ejemplo.com"
+                    />
+                  </LightField>
+
+                  <LightField
+                    id="birth_date"
+                    label="Fecha de nacimiento"
+                    error={birthDateError ?? undefined}
+                  >
+                    <input
+                      id="birth_date"
+                      type="date"
+                      className={INPUT_CLS}
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      max={new Date().toISOString().slice(0, 10)}
                     />
                   </LightField>
 

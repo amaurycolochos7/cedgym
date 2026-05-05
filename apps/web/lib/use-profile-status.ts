@@ -13,6 +13,7 @@ interface MeShape {
     full_name?: string | null;
     name?: string | null;
     selfie_url?: string | null;
+    birth_date?: string | null;
   } | null;
 }
 
@@ -21,11 +22,13 @@ export interface ProfileStatus {
   hasFullName: boolean;
   /** Selfie has been uploaded. */
   hasSelfie: boolean;
+  /** Birth date is set (política 2026-05). */
+  hasBirthDate: boolean;
   /** Gate flag — true when the user is allowed to purchase a membership. */
   canPurchaseMembership: boolean;
   /** How many of the REQUIRED fields are filled in (0..requiredTotal). */
   requiredComplete: number;
-  /** Total number of REQUIRED fields. Currently 2 (full name + selfie). */
+  /** Total number of REQUIRED fields (full name + selfie + birth_date = 3). */
   requiredTotal: number;
 }
 
@@ -45,14 +48,17 @@ export function useProfileStatus(): ProfileStatus {
   const rawName = me?.user?.full_name || me?.user?.name || '';
   const hasFullName = rawName.trim().length >= 2;
   const hasSelfie = !!me?.user?.selfie_url;
+  const hasBirthDate = !!me?.user?.birth_date;
 
-  const requiredComplete = (hasFullName ? 1 : 0) + (hasSelfie ? 1 : 0);
-  const requiredTotal = 2;
-  const canPurchaseMembership = hasFullName && hasSelfie;
+  const requiredComplete =
+    (hasFullName ? 1 : 0) + (hasSelfie ? 1 : 0) + (hasBirthDate ? 1 : 0);
+  const requiredTotal = 3;
+  const canPurchaseMembership = hasFullName && hasSelfie && hasBirthDate;
 
   return {
     hasFullName,
     hasSelfie,
+    hasBirthDate,
     canPurchaseMembership,
     requiredComplete,
     requiredTotal,

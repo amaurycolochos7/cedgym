@@ -1,7 +1,13 @@
 // ─────────────────────────────────────────────────────────────────
 // Membership sweeps:
-//   • Expiring in 8 / 3 / 1 days  → fire 'membership.expiring_soon'
-//   • Expired yesterday            → fire 'membership.expired'
+//   • Expiring in 5 / 1 days  → fire 'membership.expiring_soon'
+//   • Expired yesterday       → fire 'membership.expired'
+//
+// Both están filtrados a `auto_renew: false` — sólo le mandamos
+// recordatorio de renovación a quien debe pagar manualmente
+// (efectivo / terminal / cortesía / suscripción cancelada). Los
+// que pagaron con tarjeta y siguen con auto-renovación activa NO
+// reciben nada porque Stripe les recobra solo.
 //
 // Both are guarded by Redis idempotency keys so the sweep can run
 // every few minutes without generating duplicate jobs.
@@ -11,13 +17,17 @@ import dayjs from 'dayjs';
 import { prisma } from '@cedgym/db';
 import { fireEventInWorker } from './fire-event.js';
 
-const EXPIRY_THRESHOLDS = [8, 3, 1];
+const EXPIRY_THRESHOLDS = [5, 1];
 
 /**
  * For each threshold, find memberships whose expires_at falls
  * inside the [now+days, now+days+1) day window — this gives us a
  * ~24h band per threshold, so running the sweep every 5 min just
  * re-hits the same set (Redis idempotency stops re-fires).
+ *
+ * `auto_renew: false` filter: gym recharges manually (cash, card
+ * terminal, courtesy, or user explicitly disabled auto-renew). We
+ * don't nag people with an active Stripe subscription.
  */
 export async function runExpiringSweep(redis) {
     let fired = 0;
@@ -31,6 +41,7 @@ export async function runExpiringSweep(redis) {
         const expiring = await prisma.membership.findMany({
             where: {
                 status: 'ACTIVE',
+                auto_renew: false,
                 expires_at: { gte: from, lte: to },
                 user: { role: 'ATHLETE' },
             },
@@ -69,6 +80,9 @@ export async function runExpiringSweep(redis) {
 /**
  * Memberships that expired in the last 24h (state still ACTIVE or
  * already flipped to EXPIRED). We fire once per membership/day.
+ *
+ * Same `auto_renew: false` filter — Stripe will re-charge active
+ * subs naturally; we only nudge manual-pay members.
  */
 export async function runExpiredSweep(redis) {
     const from = dayjs().subtract(1, 'day').startOf('day').toDate();
@@ -77,6 +91,7 @@ export async function runExpiredSweep(redis) {
     const rows = await prisma.membership.findMany({
         where: {
             expires_at: { gte: from, lte: to },
+            auto_renew: false,
             status: { in: ['ACTIVE', 'EXPIRED'] },
             user: { role: 'ATHLETE' },
         },

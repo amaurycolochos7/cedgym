@@ -564,6 +564,25 @@ export default async function membershipsRoutes(fastify) {
             });
             if (!user) throw err('USER_NOT_FOUND', 'Socio no encontrado', 404);
 
+            // Profile gate — el socio debe tener foto + fecha de
+            // nacimiento antes de que se le pueda asignar plan,
+            // sin importar si lo hace recepción o el panel admin.
+            // Si llega a este endpoint sin esos datos, recepción
+            // tiene que pedirle al socio que los complete en línea
+            // (portal/perfil) antes de cobrar.
+            if (!user.selfie_url || !user.birth_date) {
+                throw err(
+                    'PROFILE_INCOMPLETE',
+                    'El socio debe tener foto de perfil y fecha de nacimiento antes de asignarle un plan. Pídele que complete su perfil en /portal/perfil.',
+                    400,
+                    {
+                        user_id: user.id,
+                        missing_selfie: !user.selfie_url,
+                        missing_birth_date: !user.birth_date,
+                    }
+                );
+            }
+
             // Active membership → refuse UNLESS the admin explicitly
             // opted into replacement via `replace_active: true`. The
             // upsert below already handles the update path correctly;

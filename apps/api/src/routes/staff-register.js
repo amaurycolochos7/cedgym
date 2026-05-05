@@ -56,6 +56,11 @@ const registerBody = z.object({
     name: z.string().trim().min(2).max(200),
     phone: z.string().trim().regex(/^\+?\d{10,15}$/, 'Teléfono inválido'),
     email: z.string().email().optional(),
+    // Recepción captura la fecha verbalmente al socio. Política
+    // 2026-05: foto + fecha de nacimiento son obligatorias antes
+    // de cualquier asignación de plan. La selfie no se puede
+    // requerir aquí (el usuario aún no existe), pero birth_date sí.
+    birth_date: z.string().datetime().or(z.string().date()),
     plan: z.enum(PLAN_ENUM),
     billing_cycle: z.enum(CYCLE_ENUM),
     payment_method: z.enum(PAYMENT_METHODS),
@@ -201,6 +206,11 @@ async function activateMembershipNow(prisma, { user, plan, billingCycle, priceMx
                     expires_at: newExpiresAt,
                     status: 'ACTIVE',
                     price_mxn: priceMxn,
+                    // El gym recobra manualmente cada ciclo. Sin esto la
+                    // columna conserva su default true del schema y el
+                    // sweep de recordatorios filtra al socio fuera de
+                    // la lista de "renovar pronto".
+                    auto_renew: false,
                 },
             }),
             isRenewal: true,
@@ -218,6 +228,7 @@ async function activateMembershipNow(prisma, { user, plan, billingCycle, priceMx
                 expires_at: newExpiresAt,
                 status: 'ACTIVE',
                 price_mxn: priceMxn,
+                auto_renew: false,
             },
         }),
         isRenewal: false,
@@ -354,6 +365,10 @@ export default async function staffRegisterRoutes(fastify) {
         if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
         const { name, email, plan, billing_cycle, payment_method, promo_code } = parsed.data;
         const phone = normalizePhone(parsed.data.phone);
+        const birthDate = new Date(parsed.data.birth_date);
+        if (Number.isNaN(birthDate.getTime())) {
+            throw err('BAD_BODY', 'Fecha de nacimiento inválida', 400);
+        }
 
         const workspaceId = assertWorkspaceAccess(req);
         if (!workspaceId) throw err('NO_WORKSPACE', 'Workspace no resuelto', 400);
@@ -403,6 +418,7 @@ export default async function staffRegisterRoutes(fastify) {
                 full_name: name,
                 email: email || null,
                 phone,
+                birth_date: birthDate,
                 role: 'ATHLETE',
                 status: 'ACTIVE',
                 phone_verified_at: new Date(), // receptionist saw them in person
@@ -577,6 +593,22 @@ export default async function staffRegisterRoutes(fastify) {
 
         const user = await prisma.user.findUnique({ where: { id: user_id } });
         if (!user) throw err('USER_NOT_FOUND', 'Socio no encontrado', 404);
+
+        // Profile gate — socio existente debe tener foto + fecha
+        // de nacimiento antes de renovar. Si no, pídele que complete
+        // su perfil en línea (portal/perfil) antes de cobrar.
+        if (!user.selfie_url || !user.birth_date) {
+            throw err(
+                'PROFILE_INCOMPLETE',
+                'El socio debe tener foto de perfil y fecha de nacimiento antes de renovar. Pídele que complete su perfil en /portal/perfil.',
+                400,
+                {
+                    user_id: user.id,
+                    missing_selfie: !user.selfie_url,
+                    missing_birth_date: !user.birth_date,
+                }
+            );
+        }
 
         const existing = await prisma.membership.findUnique({
             where: { user_id: user.id },

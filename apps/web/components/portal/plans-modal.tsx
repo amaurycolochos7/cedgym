@@ -180,7 +180,12 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
   const user = me?.user;
   const hasSelfie = !!user?.selfie_url;
   const hasFullName = !!(user?.full_name || user?.name);
-  const profileReady = hasSelfie && hasFullName;
+  const hasBirthDate = !!user?.birth_date;
+  // Política 2026-05: foto + fecha de nacimiento son obligatorios
+  // antes de comprar membresía. El backend rechaza con
+  // PROFILE_INCOMPLETE si falta cualquiera; este gate evita el
+  // round-trip y guía al socio a /portal/perfil.
+  const profileReady = hasSelfie && hasFullName && hasBirthDate;
 
   const selectedPlanDTO = useMemo(
     () => plansData?.plans.find((p) => p.id === selectedPlan) ?? null,
@@ -265,6 +270,7 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
               profileReady={profileReady}
               hasSelfie={hasSelfie}
               hasFullName={hasFullName}
+              hasBirthDate={hasBirthDate}
               onContinue={(planId) => {
                 if (!planId) {
                   toast.error('Elige un plan para continuar');
@@ -325,6 +331,7 @@ function StepPlans({
   profileReady,
   hasSelfie,
   hasFullName,
+  hasBirthDate,
   onContinue,
 }: {
   loading: boolean;
@@ -336,8 +343,23 @@ function StepPlans({
   profileReady: boolean;
   hasSelfie: boolean;
   hasFullName: boolean;
+  hasBirthDate: boolean;
   onContinue: (planId: PlanId) => void;
 }) {
+  // Mensaje específico según qué falta. El backend rechaza con
+  // PROFILE_INCOMPLETE si {selfie, birth_date, full_name} no están,
+  // así que el aviso refleja exactamente lo mismo.
+  const missingLabel = (() => {
+    const missing = [
+      !hasFullName && 'tu nombre completo',
+      !hasSelfie && 'tu foto de perfil',
+      !hasBirthDate && 'tu fecha de nacimiento',
+    ].filter(Boolean) as string[];
+    if (missing.length === 0) return null;
+    if (missing.length === 1) return `Falta ${missing[0]}`;
+    return `Completa tu perfil antes de comprar (${missing.join(', ')})`;
+  })();
+
   return (
     <div className="space-y-5">
       {!profileReady && (
@@ -347,14 +369,11 @@ function StepPlans({
           </span>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-amber-900">
-              {!hasSelfie && !hasFullName
-                ? 'Completa tu perfil antes de comprar'
-                : !hasSelfie
-                ? 'Falta tu selfie'
-                : 'Falta tu nombre completo'}
+              {missingLabel}
             </div>
             <div className="mt-0.5 text-sm text-amber-800/80">
-              La usamos para identificarte en recepción.{' '}
+              La foto sirve para identificarte en recepción y la fecha de
+              nacimiento es obligatoria por política del gym.{' '}
               <Link
                 href="/portal/perfil"
                 className="font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"

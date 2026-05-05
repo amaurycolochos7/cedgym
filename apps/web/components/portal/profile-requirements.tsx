@@ -23,6 +23,7 @@ export function ProfileRequirements() {
   const {
     hasFullName,
     hasSelfie,
+    hasBirthDate,
     canPurchaseMembership,
     requiredComplete,
     requiredTotal,
@@ -34,6 +35,14 @@ export function ProfileRequirements() {
       label: 'Nombre completo',
       description: 'Como aparece en tu INE — lo usamos en tu recibo.',
       done: hasFullName,
+      required: true,
+      anchor: '#datos-personales',
+    },
+    {
+      key: 'birth_date',
+      label: 'Fecha de nacimiento',
+      description: 'Obligatoria por política del gym; también la usamos para felicitarte en tu cumple.',
+      done: hasBirthDate,
       required: true,
       anchor: '#datos-personales',
     },

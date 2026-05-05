@@ -175,13 +175,19 @@ export default async function membershipsStripeRoutes(fastify) {
                 throw err('PLAN_INVALID', 'Plan o ciclo inválido', 400);
             }
 
-            // Selfie gate — same rule as the MP path. Staff IDs the
-            // member at check-in by the selfie.
-            if (!user.selfie_url) {
+            // Profile gate — selfie + fecha de nacimiento son
+            // requisitos para comprar membresía. Staff IDs the
+            // member at check-in by the selfie; birth_date entra en
+            // el flujo de cumpleaños y registro LFPDPPP.
+            if (!user.selfie_url || !user.birth_date) {
                 throw err(
-                    'SELFIE_REQUIRED',
-                    'Debes subir una selfie antes de comprar tu membresía.',
+                    'PROFILE_INCOMPLETE',
+                    'Completa tu foto de perfil y tu fecha de nacimiento antes de comprar tu membresía.',
                     400,
+                    {
+                        missing_selfie: !user.selfie_url,
+                        missing_birth_date: !user.birth_date,
+                    },
                 );
             }
 

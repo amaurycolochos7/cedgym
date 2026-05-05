@@ -22,6 +22,7 @@
 
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
+import { fireEvent } from '../lib/events.js';
 import { generateJSON } from '../lib/openai.js';
 import { assertAIQuota } from '../lib/ai-quota.js';
 import { getPlanByCode } from '../lib/memberships.js';
@@ -743,6 +744,16 @@ export default async function aiMealPlansRoutes(fastify) {
         if (useTemplates && templateMeta) {
             response.template = templateMeta;
         }
+
+        // Recordatorio WA 1h después: la automation `meal_plan.generated`
+        // tiene delay_minutes: 60. Fire-and-forget — no rompe el
+        // response al socio si el bus está abajo.
+        await fireEvent('meal_plan.generated', {
+            workspaceId: req.user.workspace_id,
+            userId,
+            mealPlanId: created.plan.id,
+        });
+
         return response;
     });
 

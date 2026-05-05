@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 import { err } from '../lib/errors.js';
+import { fireEvent } from '../lib/events.js';
 import { generateJSON } from '../lib/openai.js';
 import { assertAIQuota } from '../lib/ai-quota.js';
 import { searchExerciseVideosBatch } from '../lib/youtube.js';
@@ -650,6 +651,16 @@ export default async function aiRoutinesRoutes(fastify) {
                     attempts: templateAttempts,
                 };
             }
+
+            // Recordatorio WA 1h después: la automation `routine.generated`
+            // tiene delay_minutes: 60. Fire-and-forget — no rompe el
+            // response al socio si el bus está abajo.
+            await fireEvent('routine.generated', {
+                workspaceId: req.user.workspace_id,
+                userId,
+                routineId: routine.id,
+            });
+
             return reply.status(201).send(responsePayload);
         }
     );

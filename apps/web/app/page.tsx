@@ -23,7 +23,6 @@ import {
   Users,
   Wifi,
 } from 'lucide-react';
-import { FeaturedProducts } from '@/components/home/featured-products';
 import { FounderSection } from '@/components/home/founder-section';
 import { InteractivityClient } from '@/components/home/InteractivityClient';
 import { MobileMenu } from '@/components/home/mobile-menu';
@@ -611,9 +610,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ═════════ PRODUCTS ═════════ */}
-      <FeaturedProducts />
 
       {/* ═════════ UBICACIÓN ═════════ */}
       <section id="ubicacion" className="bg-slate-50 px-4 py-16 sm:py-20">
