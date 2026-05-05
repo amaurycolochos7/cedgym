@@ -35,6 +35,23 @@ import {
     computeExpiresAt,
     daysRemaining,
 } from '../lib/memberships.js';
+
+// FE envía `cycle: 'monthly'` (lowercase) — la columna BillingCycle
+// del enum es 'MONTHLY'. Este map sobrevivió al uso en /admin/memberships/assign
+// después de eliminar /subscribe-card en la migración a Stripe.
+const CYCLE_MAP = {
+    monthly: 'MONTHLY',
+};
+
+// Copy mostrado tras la asignación manual. Reintroducido aquí porque
+// la helper original vivía en /subscribe-card y se eliminó junto con MP.
+function welcomeCopyFor(plan) {
+    const meta = getPlanByCode(plan);
+    return {
+        title: `¡Bienvenid@ al plan ${meta?.name || plan}!`,
+        benefits: meta?.features ? [...meta.features] : [],
+    };
+}
 import { SETTING_KEYS, getWorkspaceSettings, setWorkspaceSetting } from '../lib/settings.js';
 import { getStripe } from '../lib/stripe.js';
 import { activateMembershipFromPayment } from '../lib/payment-activation.js';
