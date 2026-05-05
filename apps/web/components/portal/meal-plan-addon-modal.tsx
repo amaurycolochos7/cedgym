@@ -2,7 +2,7 @@
 
 /**
  * MealPlanAddonModal — in-portal one-shot purchase of the "Plan Alimenticio"
- * add-on ($499 MXN) for users whose membership doesn't include the feature
+ * add-on ($630 MXN) for users whose membership doesn't include the feature
  * (STARTER) or who already used their period quota and want another plan
  * before renewal.
  *
@@ -11,7 +11,7 @@
  *   2) 'welcome' — confirmation copy + CTAs to generate the plan / close.
  *
  * Backend contract:
- *   GET  /addons/meal-plan/price       → { price_mxn: 499, currency: 'MXN' }
+ *   GET  /addons/meal-plan/price       → { price_mxn: 630, currency: 'MXN' }
  *   POST /addons/meal-plan/purchase-card → { success, payment, addon, welcome }
  *   POST /promocodes/validate (applies_to: 'MEAL_PLAN_ADDON')
  *
@@ -148,7 +148,7 @@ export interface MealPlanAddonModalProps {
   onSuccess?: () => void;
 }
 
-const DEFAULT_PRICE = 499;
+const DEFAULT_PRICE = 630;
 
 const ADDON_BENEFITS = [
   '7 días de comidas mexicanas balanceadas',

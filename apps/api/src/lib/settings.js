@@ -18,7 +18,7 @@
 //     null/undefined falls back to the catalog default.
 //
 //   • meal_plan_addon.price_mxn → integer. Overrides the
-//     default $499 for the one-time meal-plan add-on.
+//     default $630 for the one-time meal-plan add-on.
 //
 // ─────────────────────────────────────────────────────────────────
 

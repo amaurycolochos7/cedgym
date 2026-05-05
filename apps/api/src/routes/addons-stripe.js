@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────
-// Stripe addon routes — meal-plan add-on (one-shot $499 MXN).
+// Stripe addon routes — meal-plan add-on (one-shot $630 MXN).
 //
 // POST /addons/meal-plan/purchase-stripe
 //   Body: { promo_code? }
@@ -35,7 +35,7 @@ import {
 } from '../lib/stripe.js';
 import { activateMealPlanAddonFromPayment } from '../lib/payment-activation.js';
 
-const MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN = 499;
+const MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN = 630;
 const ACTIVE_MEMBERSHIP_STATUSES = new Set(['ACTIVE', 'TRIAL']);
 
 const purchaseStripeBody = z.object({

@@ -768,7 +768,7 @@ function MealPlansTab({ memberId }: { memberId: string }) {
           <p>
             <strong>Cómo funciona:</strong> los planes alimenticios los
             genera el socio desde su portal con AI. Si quieres regalárselo
-            (sin cobrarle el plan extra de $499), usa el botón de abajo y queda
+            (sin cobrarle el plan extra de $630), usa el botón de abajo y queda
             activado.
           </p>
           <button

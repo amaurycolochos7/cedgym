@@ -259,13 +259,13 @@ export async function assertAIQuota(prisma, userId, kind) {
             'FEATURE_NOT_IN_PLAN',
             kind === 'ROUTINE'
                 ? 'Tu plan no incluye generación de rutinas con IA.'
-                : 'Tu plan no incluye plan alimenticio con IA. Mejora a PRO o Élite, o compra el add-on por $499.',
+                : 'Tu plan no incluye plan alimenticio con IA. Mejora a PRO o Élite, o compra el add-on por $630.',
             403,
             {
                 kind,
                 plan: quota.plan,
                 // Frontend uses this to decide whether to surface the
-                // "Comprar add-on $499" CTA instead of the upgrade-plan one.
+                // "Comprar add-on $630" CTA instead of the upgrade-plan one.
                 can_buy_addon: kind === 'MEAL_PLAN',
             }
         );

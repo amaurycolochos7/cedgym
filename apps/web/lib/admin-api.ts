@@ -672,7 +672,7 @@ export const adminApi = {
       .then((r) => r.data);
   },
 
-  // Meal-plan add-on (one-time $499 unlock). KV-backed, admin-editable.
+  // Meal-plan add-on (one-time $630 unlock). KV-backed, admin-editable.
   getMealPlanAddonPrice: () =>
     api
       .get<MealPlanAddonPrice>('/admin/addons/meal-plan/price')

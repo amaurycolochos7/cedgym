@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────
 // Add-ons.
 //
-// Currently ships ONE add-on: a $499 MXN one-time purchase that
+// Currently ships ONE add-on: a $630 MXN one-time purchase that
 // unlocks a single AI meal plan generation for users whose plan
 // (STARTER) doesn't include that feature, or who have already
 // burned their PRO monthly quota.
@@ -25,7 +25,7 @@ import { SETTING_KEYS, getWorkspaceSetting, setWorkspaceSetting } from '../lib/s
 // Default price used when no admin override is set. Admins can
 // change the effective price via PATCH /admin/addons/meal-plan/price
 // which writes to workspace_settings[meal_plan_addon.price_mxn].
-const MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN = 499;
+const MEAL_PLAN_ADDON_DEFAULT_PRICE_MXN = 630;
 
 // Resolve the currently-effective addon price for `workspaceId`,
 // falling back to the default when no override exists.

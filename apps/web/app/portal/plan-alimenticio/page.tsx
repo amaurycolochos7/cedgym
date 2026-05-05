@@ -717,7 +717,7 @@ function PaywallSection({
       >
         <span>Quiero mi plan</span>
         <span className="inline-flex items-baseline gap-1 rounded-lg bg-white/15 px-2.5 py-0.5 tabular-nums">
-          <span className="text-sm font-bold">$499</span>
+          <span className="text-sm font-bold">$630</span>
           <span className="text-[10px] font-semibold opacity-80">MXN</span>
         </span>
         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -810,7 +810,7 @@ function ExhaustedCountdown({
               className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase tracking-[0.12em] text-xs px-5 py-3 rounded-xl shadow-sm shadow-blue-600/25 transition"
             >
               <Plus className="h-4 w-4" />
-              Comprar otro plan · $499
+              Comprar otro plan · $630
             </button>
             {membershipEndsFirst && (
               <Link
@@ -1133,7 +1133,7 @@ function PlanView({
                 <DarkToolbarButton
                   onClick={() => setAddonOpen(true)}
                   icon={<Plus className="h-4 w-4" />}
-                  label="Otro plan +$499"
+                  label="Otro plan +$630"
                   primary
                 />
               )}
