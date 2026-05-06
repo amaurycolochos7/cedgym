@@ -19,7 +19,10 @@ import { api, normalizeError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ApiError } from '@/lib/schemas';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
-import { ProfileRequirements } from '@/components/portal/profile-requirements';
+import {
+  ProfileRequirements,
+  type RequirementKey,
+} from '@/components/portal/profile-requirements';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
 import { COUNTRIES, DEFAULT_COUNTRY, parseE164, toE164, type Country } from '@/lib/countries';
 import { cn } from '@/lib/utils';
@@ -196,6 +199,29 @@ export default function PortalPerfilPage() {
     saveProfile.mutate();
   };
 
+  // Drives the "Completar →" buttons in the requirements checklist. Just
+  // scrolling is useless because the personal-data form starts collapsed —
+  // we have to flip into edit mode AND focus the right input. For selfie
+  // we open the capture modal directly. The double rAF is needed so the
+  // input we want to focus has actually been rendered.
+  const onCompleteRequirement = (key: RequirementKey) => {
+    if (key === 'selfie') {
+      setSelfieOpen(true);
+      return;
+    }
+    setEditingProfile(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document
+          .getElementById('datos-personales')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const focusId = key === 'birth_date' ? 'birth_date' : 'full_name';
+        const el = document.getElementById(focusId) as HTMLInputElement | null;
+        el?.focus();
+      });
+    });
+  };
+
   const onCancelEdit = () => {
     setEditingProfile(false);
     setNameError(null);
@@ -245,7 +271,7 @@ export default function PortalPerfilPage() {
       {tab === 'cuenta' && (
         <div className="space-y-4 sm:space-y-5">
           {/* Checklist de requisitos para comprar membresía. */}
-          <ProfileRequirements />
+          <ProfileRequirements onComplete={onCompleteRequirement} />
 
           {/* Datos personales — collapsed summary by default, form on edit.
               Name+email save inline via PATCH /auth/me. Phone change opens

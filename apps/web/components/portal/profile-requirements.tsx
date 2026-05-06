@@ -4,13 +4,14 @@ import { CheckCircle2, Circle, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useProfileStatus } from '@/lib/use-profile-status';
 import { cn } from '@/lib/utils';
 
+export type RequirementKey = 'full_name' | 'birth_date' | 'selfie';
+
 interface RequirementItem {
-  key: string;
+  key: RequirementKey;
   label: string;
   description: string;
   done: boolean;
   required: boolean;
-  anchor: string;
 }
 
 /**
@@ -18,8 +19,16 @@ interface RequirementItem {
  *
  * - Required fields (full name + selfie) gate membership purchase.
  * - When all required items are done, collapses into a success badge.
+ *
+ * The parent owns the action — clicking "Completar" calls `onComplete(key)`
+ * so the page can open the right form/modal AND focus the missing field
+ * (just scrolling to the section is useless if the form is collapsed).
  */
-export function ProfileRequirements() {
+export function ProfileRequirements({
+  onComplete,
+}: {
+  onComplete?: (key: RequirementKey) => void;
+}) {
   const {
     hasFullName,
     hasSelfie,
@@ -36,7 +45,6 @@ export function ProfileRequirements() {
       description: 'Como aparece en tu INE — lo usamos en tu recibo.',
       done: hasFullName,
       required: true,
-      anchor: '#datos-personales',
     },
     {
       key: 'birth_date',
@@ -44,7 +52,6 @@ export function ProfileRequirements() {
       description: 'Obligatoria por política del gym; también la usamos para felicitarte en tu cumple.',
       done: hasBirthDate,
       required: true,
-      anchor: '#datos-personales',
     },
     {
       key: 'selfie',
@@ -52,7 +59,6 @@ export function ProfileRequirements() {
       description: 'El staff la usa para reconocerte en recepción.',
       done: hasSelfie,
       required: true,
-      anchor: '#selfie',
     },
   ];
 
@@ -182,13 +188,14 @@ export function ProfileRequirements() {
               </p>
             </div>
             {!it.done && (
-              <a
-                href={it.anchor}
+              <button
+                type="button"
+                onClick={() => onComplete?.(it.key)}
                 className="shrink-0 inline-flex items-center gap-1 self-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 transition"
               >
                 Completar
                 <ArrowRight size={12} />
-              </a>
+              </button>
             )}
           </li>
         ))}
