@@ -251,12 +251,13 @@ export default async function membershipsRoutes(fastify) {
     // ─── POST /memberships/freeze ─────────────────────────────────
     //
     // Rules:
+    //   • Solo PRO / ELITE pueden congelar — STARTER queda bloqueado
+    //     en el endpoint (la UI también esconde/desactiva el botón).
     //   • min 7 days, max 30 days.
     //   • Total frozen days per rolling 365 days ≤ 30.
-    //   • PRO / ELITE → auto-approved, extends expires_at.
-    //   • STARTER    → queued for admin approval (we still persist
-    //                  the row but don't bump expires_at; admins flip
-    //                  `approved_by` via the admin endpoint).
+    //   • Auto-aprobado (extends expires_at) — el admin override
+    //     anterior (approved_by manual) ya no se usa porque básico
+    //     no entra al endpoint.
     //
     fastify.post(
         '/memberships/freeze',
@@ -277,6 +278,13 @@ export default async function membershipsRoutes(fastify) {
             }
             if (membership.status !== 'ACTIVE') {
                 throw err('NOT_ACTIVE', 'Solo membresías activas pueden congelarse', 400);
+            }
+            if (membership.plan === 'STARTER') {
+                throw err(
+                    'FREEZE_NOT_ALLOWED',
+                    'Tu plan Básico no incluye congelamiento. Mejora a Pro o Élite para activar este beneficio.',
+                    403,
+                );
             }
 
             // Yearly quota — sum of days_frozen in the last 365 days.

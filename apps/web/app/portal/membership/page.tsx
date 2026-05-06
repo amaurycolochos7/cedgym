@@ -5,7 +5,16 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
-import { Snowflake, RefreshCw, Calendar, Camera, AlertTriangle } from 'lucide-react';
+import {
+  Snowflake,
+  RefreshCw,
+  Calendar,
+  Camera,
+  AlertTriangle,
+  Check,
+  Lock,
+  Sparkles,
+} from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
 import { PlansModal } from '@/components/portal/plans-modal';
 import { planDisplayName, paymentStatusLabel } from '@/lib/utils';
@@ -85,12 +94,26 @@ export default function PortalMembershipPage() {
     queryFn: async () => (await api.get('/memberships/history')).data,
   });
 
+  // Catálogo público de planes — lo usamos para mostrar la lista de
+  // beneficios incluidos en el plan actual del socio (sección
+  // "Beneficios de tu plan"). Cacheable: el catálogo cambia muy
+  // pocas veces.
+  const { data: plansResp } = useQuery({
+    queryKey: ['memberships', 'plans'],
+    queryFn: async () => (await api.get('/memberships/plans')).data,
+    staleTime: 5 * 60 * 1000,
+  });
+
   if (isLoading) return <div className="text-slate-500">Cargando…</div>;
 
   const days = membership?.days_remaining ?? 0;
   const totalDays = membership?.total_days ?? 30;
   const progressPct = Math.max(0, Math.min(100, 100 - (days / totalDays) * 100));
   const earlyDiscount = days <= 8 && days > 0;
+  // STARTER no incluye congelamiento — la UI lo deshabilita y el
+  // backend (POST /memberships/freeze) tira FREEZE_NOT_ALLOWED si
+  // alguien lo intenta saltar.
+  const canFreeze = membership?.plan === 'PRO' || membership?.plan === 'ELITE';
 
   return (
     <div className="space-y-6">
@@ -202,10 +225,31 @@ export default function PortalMembershipPage() {
               disabled={needsSelfie}
             />
             <ActionCard
-              icon={<Snowflake className="w-5 h-5" />}
+              icon={
+                canFreeze ? (
+                  <Snowflake className="w-5 h-5" />
+                ) : (
+                  <Lock className="w-5 h-5" />
+                )
+              }
               title="Congelar"
-              description="Pausa por viaje o lesión"
-              onClick={() => setFreezeOpen(true)}
+              description={
+                canFreeze
+                  ? 'Pausa por viaje o lesión'
+                  : 'Solo plan Pro y Élite — actualiza para activarlo'
+              }
+              onClick={() => {
+                if (canFreeze) {
+                  setFreezeOpen(true);
+                } else {
+                  // STARTER → mandamos al modal de planes para upsell.
+                  toast.message('El congelamiento está disponible en Pro y Élite.', {
+                    description: 'Actualiza tu plan para pausar tu membresía cuando viajes o te lesiones.',
+                  });
+                  setPlansOpen(true);
+                }
+              }}
+              locked={!canFreeze}
             />
             <ActionCard
               icon={<Calendar className="w-5 h-5" />}
@@ -217,6 +261,15 @@ export default function PortalMembershipPage() {
               disabled={needsSelfie}
             />
           </div>
+
+          {/* Beneficios incluidos en el plan actual + CTA upgrade
+              cuando aplica (STARTER → "ver Pro/Élite"). Las features
+              vienen del catálogo público de /memberships/plans. */}
+          <PlanBenefits
+            currentPlan={membership.plan}
+            plans={plansResp?.plans ?? []}
+            onSeeOtherPlans={() => setPlansOpen(true)}
+          />
 
           {membership.stripe_subscription_id && (
             <AutoRenewPanel
@@ -303,15 +356,136 @@ export default function PortalMembershipPage() {
   );
 }
 
-function ActionCard({ icon, title, description, onClick, disabled }: any) {
+/**
+ * PlanBenefits — muestra la lista de beneficios del plan actual del
+ * socio + sugerencia de upgrade cuando está en un plan inferior.
+ *
+ * Las features vienen del catálogo público /memberships/plans
+ * (mismo origen que el modal de planes), así que la lista es siempre
+ * la misma copy oficial sin duplicarla en frontend.
+ */
+function PlanBenefits({
+  currentPlan,
+  plans,
+  onSeeOtherPlans,
+}: {
+  currentPlan: string;
+  plans: Array<{
+    id: string;
+    name: string;
+    tagline?: string;
+    monthly_price_mxn: number;
+    features: string[];
+  }>;
+  onSeeOtherPlans: () => void;
+}) {
+  const me = plans.find((p) => p.id === currentPlan);
+  if (!me) return null;
+  // Determinamos si hay un plan superior al que se podría subir
+  // (STARTER → Pro/Élite, PRO → Élite, ELITE → ya es el tope).
+  const tierOrder: Record<string, number> = {
+    STARTER: 1,
+    PRO: 2,
+    ELITE: 3,
+  };
+  const myTier = tierOrder[currentPlan] ?? 0;
+  const canUpgrade = myTier > 0 && myTier < 3;
+
+  return (
+    <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6">
+      <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-blue-600">
+            Beneficios de tu plan
+          </div>
+          <h3 className="font-display text-xl font-bold text-slate-900 mt-0.5">
+            {me.name}{' '}
+            {me.tagline && (
+              <span className="font-normal text-sm text-slate-500">
+                · {me.tagline}
+              </span>
+            )}
+          </h3>
+        </div>
+        {canUpgrade && (
+          <button
+            type="button"
+            onClick={onSeeOtherPlans}
+            className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Ver otros planes
+          </button>
+        )}
+      </div>
+      <ul className="space-y-2">
+        {me.features.map((f, i) => (
+          <li key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
+            <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <Check className="w-3 h-3" />
+            </span>
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      {currentPlan === 'STARTER' && (
+        <p className="mt-4 text-xs text-slate-500">
+          Beneficios como <strong>congelar tu membresía</strong>,{' '}
+          <strong>rutinas IA ilimitadas</strong> y plan de comidas están
+          incluidos en Pro. Mejora tu plan cuando lo necesites.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ActionCard({
+  icon,
+  title,
+  description,
+  onClick,
+  disabled,
+  locked,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  onClick: () => void;
+  disabled?: boolean;
+  /**
+   * locked = la acción no está disponible para el plan actual (ej.
+   * STARTER no puede congelar). Visualmente se ve "bloqueado" pero
+   * sigue siendo clickable para abrir el modal de upgrade.
+   */
+  locked?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="text-left bg-white shadow-sm hover:shadow-md ring-1 ring-slate-200 hover:ring-blue-300 rounded-xl p-5 transition disabled:opacity-50"
+      className={
+        locked
+          ? 'text-left bg-slate-50 shadow-sm hover:shadow-md ring-1 ring-slate-200 hover:ring-amber-300 rounded-xl p-5 transition disabled:opacity-50'
+          : 'text-left bg-white shadow-sm hover:shadow-md ring-1 ring-slate-200 hover:ring-blue-300 rounded-xl p-5 transition disabled:opacity-50'
+      }
     >
-      <div className="text-blue-600 mb-2">{icon}</div>
-      <div className="font-semibold text-slate-900">{title}</div>
+      <div className={locked ? 'text-amber-600 mb-2' : 'text-blue-600 mb-2'}>
+        {icon}
+      </div>
+      <div
+        className={
+          locked
+            ? 'font-semibold text-slate-700 flex items-center gap-1.5'
+            : 'font-semibold text-slate-900'
+        }
+      >
+        {title}
+        {locked && (
+          <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-amber-200">
+            Pro
+          </span>
+        )}
+      </div>
       <div className="text-xs text-slate-500 mt-1">{description}</div>
     </button>
   );
