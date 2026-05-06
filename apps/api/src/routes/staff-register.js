@@ -495,20 +495,17 @@ export default async function staffRegisterRoutes(fastify) {
                 priceMxn: planAmount,
             });
 
-            await fireEvent('member.verified', {
-                workspaceId,
-                userId: user.id,
-                membershipId: membership.id,
-                plan,
-                billingCycle: billing_cycle,
-            });
-
-            // En walk-in NO disparamos payment.approved como evento
-            // separado. En lugar de mandar dos WhatsApps (bienvenida
-            // + recibo), embebemos el recibo dentro del mismo
-            // mensaje de bienvenida (ver sendWalkinWelcome abajo).
-            // Para online sí se sigue disparando porque el usuario
-            // ya tiene cuenta y no recibe bienvenida.
+            // Walk-in NO dispara member.verified ni payment.approved.
+            // En lugar de eso mandamos UN solo WhatsApp con la
+            // bienvenida + recibo embebido + link /welcome?t=... para
+            // que el socio cree contraseña y suba selfie (ver
+            // sendWalkinWelcome abajo). Si firamos member.verified
+            // aquí, la automation "Bienvenida al activar membresía"
+            // mandaría un segundo mensaje que dice "ya puedes acceder
+            // con tu QR" — pero es mentira: el socio todavía no tiene
+            // contraseña ni selfie aprobada, así que NO puede entrar.
+            // Para flujos online (Stripe checkout) sí se sigue
+            // disparando porque el usuario ya tiene cuenta lista.
 
             // Welcome link — single-use signed token, valid 7 days. The
             // socio uses this to set their password + upload selfie.

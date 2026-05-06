@@ -21,6 +21,13 @@ export async function runInactivitySweep(redis) {
     // their own training but don't physically check in at the gym,
     // so the previous unfiltered query nagged the gym owner with
     // "te echamos de menos" reactivation messages every month.
+    //
+    // u.created_at < cutoff es CRÍTICO: sin esto, un socio que se
+    // inscribe en recepción y todavía no ha pisado el gym entra
+    // de inmediato a "MAX(c.scanned_at) IS NULL" y le pega un
+    // "te echamos de menos" minutos después de inscribirse.
+    // Con created_at < cutoff exigimos al menos 14 días desde el
+    // alta antes de considerarlo inactivo.
     const rows = await prisma.$queryRaw`
         SELECT
           u.id           AS user_id,
@@ -32,6 +39,7 @@ export async function runInactivitySweep(redis) {
         WHERE m.status = 'ACTIVE'
           AND u.status = 'ACTIVE'
           AND u.role   = 'ATHLETE'
+          AND u.created_at < ${cutoff}
         GROUP BY u.id, u.workspace_id
         HAVING MAX(c.scanned_at) IS NULL
             OR MAX(c.scanned_at) < ${cutoff}
