@@ -33,6 +33,7 @@ import {
     activateMembershipFromPayment,
     activateMealPlanAddonFromPayment,
 } from '../lib/payment-activation.js';
+import { humanMembershipDescription } from '../lib/memberships.js';
 
 const HANDLED_EVENTS = new Set([
     'payment_intent.succeeded',
@@ -372,7 +373,7 @@ async function handleInvoicePaymentSucceeded(fastify, event) {
                 amount: Math.round((invoice.amount_paid || 0) / 100),
                 type: 'MEMBERSHIP',
                 reference: `${membership.plan}:${membership.billing_cycle}`,
-                description: `Renovación ${membership.plan} — ${membership.billing_cycle}`,
+                description: humanMembershipDescription(membership.plan, membership.billing_cycle, 'online_renew'),
                 status: 'APPROVED',
                 stripe_invoice_id: invoice.id,
                 stripe_payment_intent_id: piId,

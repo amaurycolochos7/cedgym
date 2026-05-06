@@ -190,6 +190,37 @@ export function getPlanByCode(planCode) {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Human-readable descripciones de pagos en español. El socio ve esto
+// en su historial de pagos del portal — antes generábamos strings
+// como "Alta walk-in STARTER MONTHLY" que no decían nada al usuario.
+//
+// kind:
+//   'walkin_new'    — alta nueva en recepción (cash/terminal)
+//   'walkin_renew'  — renovación en recepción
+//   'online_new'    — primer cargo Stripe (suscripción nueva)
+//   'online_renew'  — renovación recurrente Stripe
+// ────────────────────────────────────────────────────────────────
+const CYCLE_LABEL_ES = { MONTHLY: 'mensual' };
+
+export function humanMembershipDescription(planCode, billingCycle, kind) {
+    const planName = getPlanByCode(planCode)?.name || planCode;
+    const cycleLabel = CYCLE_LABEL_ES[billingCycle] || billingCycle?.toLowerCase() || '';
+    const planLine = `Plan ${planName}${cycleLabel ? ` (${cycleLabel})` : ''}`;
+    switch (kind) {
+        case 'walkin_new':
+            return `Inscripción en recepción — ${planLine}`;
+        case 'walkin_renew':
+            return `Renovación en recepción — ${planLine}`;
+        case 'online_new':
+            return `Inscripción en línea — ${planLine}`;
+        case 'online_renew':
+            return `Renovación en línea — ${planLine}`;
+        default:
+            return planLine;
+    }
+}
+
+// ────────────────────────────────────────────────────────────────
 // Expires-at math.
 //
 // When the webhook flips a payment to APPROVED we extend (or

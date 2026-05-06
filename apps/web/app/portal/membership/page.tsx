@@ -21,6 +21,7 @@ import {
   planDisplayName,
   paymentStatusLabel,
   visiblePlanFeatures,
+  formatPaymentDescription,
 } from '@/lib/utils';
 
 const BTN_PRIMARY =
@@ -386,7 +387,7 @@ function PaymentRow({ payment: p }: { payment: any }) {
         </div>
         {p.description && (
           <div className="mt-1 truncate text-[11px] text-slate-500">
-            {p.description}
+            {formatPaymentDescription(p.description)}
           </div>
         )}
       </div>

@@ -43,6 +43,7 @@ import {
   planDisplayName,
   membershipStatusLabel,
   paymentStatusLabel,
+  formatPaymentDescription,
 } from '@/lib/utils';
 import { GAMIFICATION_UI_ENABLED } from '@/lib/feature-flags';
 
@@ -821,9 +822,9 @@ function PaymentsTab({ memberId }: { memberId: string }) {
                 </td>
                 <td className="py-2 pr-3">
                   <div className="text-sm text-slate-900">
-                    {p.description ??
-                      PAYMENT_TYPE_LABEL[p.type] ??
-                      p.type}
+                    {p.description
+                      ? formatPaymentDescription(p.description)
+                      : (PAYMENT_TYPE_LABEL[p.type] ?? p.type)}
                   </div>
                   {p.reference && (
                     <div className="text-[11px] text-slate-500">

@@ -33,6 +33,7 @@ import {
     getPlanByCode,
     computeExpiresAt,
     daysRemaining,
+    humanMembershipDescription,
     INSCRIPTION_PRICE_MXN,
     planRequiresInscription,
     applyPromoToAmount,
@@ -460,7 +461,7 @@ export default async function staffRegisterRoutes(fastify) {
                     amount: totalAmount,
                     type: 'MEMBERSHIP',
                     reference: `${plan}:${billing_cycle}:WALKIN`,
-                    description: `Alta walk-in ${plan} ${billing_cycle}`,
+                    description: humanMembershipDescription(plan, billing_cycle, 'walkin_new'),
                     status: 'APPROVED',
                     paid_at: new Date(),
                     metadata: {
@@ -573,7 +574,7 @@ export default async function staffRegisterRoutes(fastify) {
                 amount: totalAmount,
                 type: 'MEMBERSHIP',
                 reference: `${plan}:${billing_cycle}:WALKIN`,
-                description: `Alta walk-in ${plan} ${billing_cycle}`,
+                description: humanMembershipDescription(plan, billing_cycle, 'walkin_new'),
                 status: 'PENDING',
                 metadata: {
                     plan,
@@ -691,7 +692,7 @@ export default async function staffRegisterRoutes(fastify) {
                     amount,
                     type: 'MEMBERSHIP',
                     reference: `${plan}:${billing_cycle}:RENEW_WALKIN`,
-                    description: `Renovación walk-in ${plan} ${billing_cycle}`,
+                    description: humanMembershipDescription(plan, billing_cycle, 'walkin_renew'),
                     status: 'APPROVED',
                     paid_at: new Date(),
                     metadata: {
@@ -797,7 +798,7 @@ export default async function staffRegisterRoutes(fastify) {
                 amount,
                 type: 'MEMBERSHIP',
                 reference: `${plan}:${billing_cycle}:RENEW_WALKIN`,
-                description: `Renovación walk-in ${plan} ${billing_cycle}`,
+                description: humanMembershipDescription(plan, billing_cycle, 'walkin_renew'),
                 status: 'PENDING',
                 metadata: {
                     plan,
@@ -878,7 +879,7 @@ export default async function staffRegisterRoutes(fastify) {
                     amount: course.price_mxn,
                     type: 'COURSE',
                     reference: course.id,
-                    description: `Inscripción walk-in curso: ${course.name}`,
+                    description: `Inscripción a curso en recepción — ${course.name}`,
                     status: 'APPROVED',
                     paid_at: new Date(),
                     metadata: {
@@ -920,7 +921,7 @@ export default async function staffRegisterRoutes(fastify) {
                 amount: course.price_mxn,
                 type: 'COURSE',
                 reference: course.id,
-                description: `Inscripción walk-in curso: ${course.name}`,
+                description: `Inscripción a curso en recepción — ${course.name}`,
                 status: 'PENDING',
                 metadata: {
                     course_id: course.id,

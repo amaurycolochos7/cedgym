@@ -28,6 +28,68 @@ export function visiblePlanFeatures(features: string[]): string[] {
   );
 }
 
+// Diccionario de plan codes legacy → nombre comercial en español.
+// Lo usamos al traducir descripciones de pago que se grabaron en
+// inglés antes del 2026-05 (ej. "Alta walk-in STARTER MONTHLY").
+const PLAN_CODE_ES: Record<string, string> = {
+  STARTER: 'Básico',
+  PRO: 'Pro',
+  ELITE: 'Élite',
+};
+const CYCLE_CODE_ES: Record<string, string> = {
+  MONTHLY: 'mensual',
+  QUARTERLY: 'trimestral',
+  ANNUAL: 'anual',
+};
+
+/**
+ * Traduce descripciones legacy de pagos que quedaron en inglés en
+ * la DB (ej. "Alta walk-in STARTER MONTHLY") al copy en español que
+ * generan los flujos nuevos. Las descripciones nuevas ya están en
+ * español al guardarse, así que pasan tal cual. Operación
+ * idempotente: si no matchea ningún patrón legacy, devuelve el
+ * input sin cambios.
+ */
+export function formatPaymentDescription(raw?: string | null): string {
+  if (!raw) return 'Membresía';
+  const s = String(raw).trim();
+  if (!s) return 'Membresía';
+
+  // Patrón 1: "Alta walk-in {PLAN} {CYCLE}" — recepción nuevo socio.
+  const altaWalkin = s.match(/^Alta walk-in (\w+) (\w+)$/i);
+  if (altaWalkin) {
+    const plan = PLAN_CODE_ES[altaWalkin[1].toUpperCase()] ?? altaWalkin[1];
+    const cycle = CYCLE_CODE_ES[altaWalkin[2].toUpperCase()] ?? altaWalkin[2];
+    return `Inscripción en recepción — Plan ${plan} (${cycle})`;
+  }
+
+  // Patrón 2: "Renovación walk-in {PLAN} {CYCLE}" — recepción renovación.
+  const renovWalkin = s.match(/^Renovaci[óo]n walk-in (\w+) (\w+)$/i);
+  if (renovWalkin) {
+    const plan = PLAN_CODE_ES[renovWalkin[1].toUpperCase()] ?? renovWalkin[1];
+    const cycle = CYCLE_CODE_ES[renovWalkin[2].toUpperCase()] ?? renovWalkin[2];
+    return `Renovación en recepción — Plan ${plan} (${cycle})`;
+  }
+
+  // Patrón 3: "Renovación {PLAN} — {CYCLE}" — webhook Stripe (auto-renew).
+  const renovOnline = s.match(/^Renovaci[óo]n (\w+) [—-] (\w+)$/i);
+  if (renovOnline) {
+    const plan = PLAN_CODE_ES[renovOnline[1].toUpperCase()] ?? renovOnline[1];
+    const cycle = CYCLE_CODE_ES[renovOnline[2].toUpperCase()] ?? renovOnline[2];
+    return `Renovación en línea — Plan ${plan} (${cycle})`;
+  }
+
+  // Patrón 4: "Inscripción walk-in curso: {NAME}" — curso por recepción.
+  const cursoWalkin = s.match(/^Inscripci[óo]n walk-in curso:\s*(.+)$/i);
+  if (cursoWalkin) {
+    return `Inscripción a curso en recepción — ${cursoWalkin[1].trim()}`;
+  }
+
+  // Sin match → asumir que ya es texto user-friendly (los flujos
+  // nuevos generan español directo, no necesitan traducción).
+  return s;
+}
+
 /** Persist small JSON blobs with a TTL (ms). */
 export function lsSetJSON<T>(key: string, value: T, ttlMs: number): void {
   if (typeof window === 'undefined') return;
