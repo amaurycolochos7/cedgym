@@ -17,7 +17,11 @@ import {
 } from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
 import { PlansModal } from '@/components/portal/plans-modal';
-import { planDisplayName, paymentStatusLabel } from '@/lib/utils';
+import {
+  planDisplayName,
+  paymentStatusLabel,
+  visiblePlanFeatures,
+} from '@/lib/utils';
 
 const BTN_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none min-h-[44px]';
@@ -419,7 +423,7 @@ function PlanBenefits({
         )}
       </div>
       <ul className="space-y-2">
-        {me.features.map((f, i) => (
+        {visiblePlanFeatures(me.features).map((f, i) => (
           <li key={i} className="flex items-start gap-2.5 text-sm text-slate-700">
             <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
               <Check className="w-3 h-3" />

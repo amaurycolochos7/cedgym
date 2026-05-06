@@ -94,7 +94,7 @@ function reasonLabel(reason?: string | null) {
   }
 }
 import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { cn, visiblePlanFeatures } from '@/lib/utils';
 
 /* ─── Types matching GET /memberships/plans ────────────────────────── */
 
@@ -519,7 +519,7 @@ function PlanCardModal({
       </div>
 
       <ul className="mb-2 space-y-1.5 text-xs">
-        {plan.features.slice(0, 5).map((f) => (
+        {visiblePlanFeatures(plan.features).slice(0, 5).map((f) => (
           <li
             key={f}
             className={cn(

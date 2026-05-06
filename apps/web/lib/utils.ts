@@ -5,6 +5,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Features que existen en el catálogo público (/memberships/plans)
+// pero todavía NO queremos mostrar al socio en el frontend porque
+// la funcionalidad no está liberada. Filtra por substring (case-
+// insensitive) para tolerar pequeños cambios de copy en el backend
+// sin tener que sincronizar el filtro al milímetro.
+//
+// Cuando el feature se libere en producto, simplemente sacar la
+// línea de aquí — la UI vuelve a mostrarlo automáticamente sin
+// tocar nada más.
+const HIDDEN_FEATURE_SUBSTRINGS = [
+  'panel del atleta', // pendiente de habilitar
+];
+
+/** Filtra features del catálogo de planes que aún no están liberadas. */
+export function visiblePlanFeatures(features: string[]): string[] {
+  return features.filter(
+    (f) =>
+      !HIDDEN_FEATURE_SUBSTRINGS.some((needle) =>
+        f.toLowerCase().includes(needle),
+      ),
+  );
+}
+
 /** Persist small JSON blobs with a TTL (ms). */
 export function lsSetJSON<T>(key: string, value: T, ttlMs: number): void {
   if (typeof window === 'undefined') return;

@@ -255,7 +255,6 @@ export default async function HomePage() {
                     features={[
                       { t: '1 visita al día al gym' },
                       { t: '1 rutina gratis generada en la app' },
-                      { t: 'Panel del atleta + progreso' },
                     ]}
                     cta="Elegir Básico"
                   />
