@@ -253,6 +253,60 @@ export default async function adminMembersRoutes(fastify) {
     return { success: true };
   });
 
+  // ─── POST /admin/miembros/:id/mark-inscription-paid ──────────────
+  //
+  // Grandfathering manual: marca al socio como "ya cumplió la
+  // inscripción única de $100" estampando inscription_paid_at.
+  // A partir de ahí, el sistema lo trata como socio antiguo y
+  // cualquier compra futura (online vía Stripe o asignación manual)
+  // cobra solo el plan, sin agregar inscripción.
+  //
+  // Idempotente: si ya está marcado, devolvemos el dato actual sin
+  // sobreescribir, así el botón se puede tocar dos veces sin riesgo.
+  fastify.post('/admin/miembros/:id/mark-inscription-paid', adminOnly, async (req, reply) => {
+    const workspaceId = assertWorkspaceAccess(req);
+    const target = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { select: { id: true, inscription_paid_at: true } },
+    );
+
+    if (target.inscription_paid_at) {
+      return {
+        success: true,
+        already_marked: true,
+        inscription_paid_at: target.inscription_paid_at,
+      };
+    }
+
+    const now = new Date();
+    await fastify.prisma.user.update({
+      where: { id: target.id },
+      data: { inscription_paid_at: now },
+    });
+
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'member.inscription_grandfathered',
+      target_type: 'user',
+      target_id: target.id,
+      metadata: {
+        reason: 'admin_marked_grandfathered',
+        actor_role: req.user?.role || null,
+      },
+      ...auditCtx(req),
+    });
+
+    return {
+      success: true,
+      already_marked: false,
+      inscription_paid_at: now,
+    };
+  });
+
   // ─── POST /admin/miembros/:id/reset-password ──────────────────
   // Admin envía un magic-link al WhatsApp del socio. El socio toca el
   // link, llega a /reset-password?ref=<otp_id>&token=<raw> y arma su

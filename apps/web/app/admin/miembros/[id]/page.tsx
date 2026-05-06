@@ -6,7 +6,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
+  CheckCircle2,
   ChevronsLeftRight,
+  IdCard,
   KeyRound,
   MoreVertical,
   Pause,
@@ -66,8 +68,11 @@ export default function AdminMemberDetailPage() {
   const [waBody, setWaBody] = React.useState('');
   const [assignOpen, setAssignOpen] = React.useState(false);
   const [actionsOpen, setActionsOpen] = React.useState(false);
+  const [markInscOpen, setMarkInscOpen] = React.useState(false);
 
   const membership = (m as any)?.membership ?? null;
+  const inscriptionPaidAt: string | null =
+    (m as any)?.inscription_paid_at ?? null;
 
   const invalidate = () =>
     qc.invalidateQueries({ queryKey: ['admin', 'member', id] });
@@ -80,6 +85,20 @@ export default function AdminMemberDetailPage() {
       setWaBody('');
     },
     onError: () => toast.error('No se pudo enviar'),
+  });
+
+  const markInscMut = useMutation({
+    mutationFn: () => adminApi.markInscriptionPaid(id),
+    onSuccess: (res) => {
+      toast.success(
+        res.already_marked
+          ? 'Este socio ya estaba marcado como antiguo.'
+          : 'Marcado como socio antiguo. No se le cobrará inscripción.',
+      );
+      setMarkInscOpen(false);
+      invalidate();
+    },
+    onError: () => toast.error('No se pudo marcar al socio'),
   });
 
   return (
@@ -255,34 +274,87 @@ export default function AdminMemberDetailPage() {
         </TabsList>
 
         <TabsContent value="general">
-          <Section title="Información general">
-            <DetailGrid
-              items={[
-                ['ID', id],
-                ['Nombre', m?.full_name || m?.name || '—'],
-                ['Teléfono', m?.phone ?? '—'],
-                ['Email', (m?.email as string) ?? '—'],
-                [
-                  'Fecha de nacimiento',
-                  formatBirthDate((m as any)?.birth_date),
-                ],
-                ['Creado', formatDate(m?.created_at as string | undefined)],
-                [
-                  'Total check-ins',
-                  String((m as any)?.stats?.total_checkins ?? 0),
-                ],
-                [
-                  'Último check-in',
-                  formatDate((m as any)?.stats?.last_checkin_at),
-                ],
-                ...(GAMIFICATION_UI_ENABLED
-                  ? ([['XP', String((m as any)?.stats?.xp ?? 0)]] as Array<
-                      [string, string]
-                    >)
-                  : []),
-              ]}
-            />
-          </Section>
+          <div className="space-y-4">
+            <Section title="Información general">
+              <DetailGrid
+                items={[
+                  ['ID', id],
+                  ['Nombre', m?.full_name || m?.name || '—'],
+                  ['Teléfono', m?.phone ?? '—'],
+                  ['Email', (m?.email as string) ?? '—'],
+                  [
+                    'Fecha de nacimiento',
+                    formatBirthDate((m as any)?.birth_date),
+                  ],
+                  ['Creado', formatDate(m?.created_at as string | undefined)],
+                  [
+                    'Total check-ins',
+                    String((m as any)?.stats?.total_checkins ?? 0),
+                  ],
+                  [
+                    'Último check-in',
+                    formatDate((m as any)?.stats?.last_checkin_at),
+                  ],
+                  ...(GAMIFICATION_UI_ENABLED
+                    ? ([['XP', String((m as any)?.stats?.xp ?? 0)]] as Array<
+                        [string, string]
+                      >)
+                    : []),
+                ]}
+              />
+            </Section>
+
+            {/* ─── Inscripción única ──────────────────────────────
+                Marca al socio como "ya cumplió la inscripción única
+                de $100". Útil para socios antiguos que ya pagaban
+                en efectivo afuera del sistema y queremos que cuando
+                paguen online les aparezca solo el plan ($630), sin
+                inscripción. */}
+            <Section title="Inscripción única ($100)">
+              {inscriptionPaidAt ? (
+                <div className="flex flex-wrap items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-emerald-900">
+                      Socio antiguo — inscripción cumplida
+                    </div>
+                    <div className="mt-0.5 text-xs text-emerald-800/80">
+                      Marcado el {formatDate(inscriptionPaidAt)}. Cuando este
+                      socio compre o renueve online, pagará solo el plan
+                      mensual; nunca se le cobrarán los $100 de inscripción.
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                    <IdCard className="h-5 w-5" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-amber-900">
+                      Pagaría inscripción al comprar online
+                    </div>
+                    <div className="mt-0.5 text-xs text-amber-800/80">
+                      Si este socio compra Básico online, le aparecerán $730
+                      ($630 plan + $100 inscripción). Si ya era socio del gym
+                      antes (pagaba en efectivo, etc.), márcalo como antiguo
+                      para que no se le cobre la inscripción.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMarkInscOpen(true)}
+                    className={BTN_SECONDARY}
+                  >
+                    <IdCard className="h-3.5 w-3.5" />
+                    Marcar como socio antiguo
+                  </button>
+                </div>
+              )}
+            </Section>
+          </div>
         </TabsContent>
 
         <TabsContent value="membership">
@@ -382,6 +454,16 @@ export default function AdminMemberDetailPage() {
         onConfirm={async () => {
           await adminApi.resetMemberPassword(id);
           toast.success('Código enviado');
+        }}
+      />
+      <ConfirmDialog
+        open={markInscOpen}
+        onOpenChange={setMarkInscOpen}
+        title="Marcar como socio antiguo"
+        description="A partir de aquí, este socio no pagará la inscripción única de $100 cuando compre o renueve. Úsalo solo si ya era socio del gym antes de habilitar el sistema online."
+        confirmLabel="Marcar"
+        onConfirm={async () => {
+          await markInscMut.mutateAsync();
         }}
       />
       <ConfirmDialog

@@ -537,6 +537,16 @@ export const adminApi = {
     api.post(`/admin/miembros/${id}/reactivate`).then((r) => r.data),
   resetMemberPassword: (id: string) =>
     api.post(`/admin/miembros/${id}/reset-password`).then((r) => r.data),
+  // Marca al socio como "ya cumplió la inscripción única". Útil
+  // para socios antiguos que ya pagaban en efectivo afuera del
+  // sistema. Idempotente: si ya estaba marcado, devuelve la fecha
+  // existente sin sobreescribir.
+  markInscriptionPaid: (id: string) =>
+    api
+      .post<{ success: true; already_marked: boolean; inscription_paid_at: string }>(
+        `/admin/miembros/${id}/mark-inscription-paid`,
+      )
+      .then((r) => r.data),
   deleteMember: (id: string) =>
     // Fastify rechaza DELETE con Content-Type: application/json y body
     // vacío; mandamos {} explícito para evitar FST_ERR_CTP_EMPTY_JSON_BODY.
