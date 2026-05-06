@@ -57,20 +57,22 @@ export default function AdminReportsPage() {
           Exportaciones para contabilidad y seguimiento.
         </p>
       </div>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
         {REPORTS.map((r) => (
           <button
             type="button"
             key={r.key}
             onClick={() => download(r.path, r.label)}
-            className="text-left bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-2xl p-5 transition"
+            className="text-left bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200 hover:border-blue-300 rounded-2xl p-4 sm:p-5 transition w-full"
           >
             <span className="inline-flex rounded-lg bg-blue-50 p-2.5 text-blue-700 mb-3">
               <FileText className="w-5 h-5" />
             </span>
-            <div className="font-semibold text-slate-900">{r.label}</div>
+            <div className="font-semibold text-slate-900 break-words">
+              {r.label}
+            </div>
             <div className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-              <Download className="w-3 h-3" /> Exportar CSV
+              <Download className="w-3 h-3 shrink-0" /> Exportar CSV
             </div>
           </button>
         ))}

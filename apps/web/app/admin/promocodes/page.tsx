@@ -291,7 +291,7 @@ export default function AdminPromocodesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Códigos promocionales
@@ -300,7 +300,11 @@ export default function AdminPromocodesPage() {
             Descuentos aplicables a membresías, cursos o rutinas.
           </p>
         </div>
-        <button type="button" onClick={openCreate} className={BTN_PRIMARY}>
+        <button
+          type="button"
+          onClick={openCreate}
+          className={`${BTN_PRIMARY} w-full sm:w-auto`}
+        >
           <Plus className="w-4 h-4" /> Nuevo código
         </button>
       </div>
@@ -553,11 +557,11 @@ export default function AdminPromocodesPage() {
               </div>
             )}
 
-            <div className="flex gap-2 justify-end pt-2">
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeModal}
-                className={BTN_SECONDARY}
+                className={`${BTN_SECONDARY} w-full sm:w-auto`}
               >
                 Cancelar
               </button>
@@ -565,7 +569,7 @@ export default function AdminPromocodesPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className={BTN_PRIMARY}
+                className={`${BTN_PRIMARY} w-full sm:w-auto`}
               >
                 {submitting
                   ? modalMode === 'create'

@@ -327,11 +327,11 @@ function NewMemberDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className={BTN_SECONDARY}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
           >
             Cancelar
           </button>
@@ -339,7 +339,7 @@ function NewMemberDialog({
             type="button"
             onClick={() => mut.mutate()}
             disabled={mut.isPending}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             {mut.isPending ? 'Creando…' : 'Crear'}
           </button>

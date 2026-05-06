@@ -139,7 +139,7 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
         <div>
           <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Inventario POS
@@ -153,15 +153,19 @@ export default function AdminInventoryPage() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={exportCsv} className={BTN_SECONDARY}>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <button
+            type="button"
+            onClick={exportCsv}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
+          >
             <Download className="h-4 w-4" />
             Exportar CSV
           </button>
           <button
             type="button"
             onClick={() => setNewOpen(true)}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             <Plus className="h-4 w-4" />
             Nuevo ítem
@@ -169,20 +173,20 @@ export default function AdminInventoryPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar SKU, nombre o categoría"
-            className={`${INPUT_CLS} w-72 pl-9`}
+            className={`${INPUT_CLS} pl-9`}
           />
         </div>
         <select
           value={cat}
           onChange={(e) => setCat(e.target.value)}
-          className={`${INPUT_CLS} w-48`}
+          className={`${INPUT_CLS} sm:w-48`}
         >
           <option value="">Todas las categorías</option>
           {categories.map((c) => (
@@ -191,14 +195,14 @@ export default function AdminInventoryPage() {
             </option>
           ))}
         </select>
-        <span className="ml-auto text-xs text-slate-500">
+        <span className="text-xs text-slate-500 sm:ml-auto">
           {filtered.length} ítems
         </span>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-slate-50 text-left text-slate-700">
               <tr>
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">
@@ -474,7 +478,7 @@ function NewItemDialog({
             Nuevo ítem de inventario
           </DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-semibold text-slate-600">
               SKU
@@ -570,11 +574,11 @@ function NewItemDialog({
             />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className={BTN_SECONDARY}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
           >
             Cancelar
           </button>
@@ -582,7 +586,7 @@ function NewItemDialog({
             type="button"
             onClick={() => mut.mutate()}
             disabled={mut.isPending || !form.sku || !form.name}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             {mut.isPending ? 'Creando…' : 'Crear'}
           </button>
@@ -707,15 +711,19 @@ function AdjustDialog({
             </div>
           )}
         </div>
-        <DialogFooter>
-          <button type="button" onClick={onClose} className={BTN_SECONDARY}>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
+          >
             Cancelar
           </button>
           <button
             type="button"
             onClick={() => mut.mutate()}
             disabled={mut.isPending || delta === 0}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             {mut.isPending ? 'Aplicando…' : 'Aplicar'}
           </button>

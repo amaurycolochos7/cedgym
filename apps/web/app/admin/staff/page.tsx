@@ -77,7 +77,7 @@ export default function AdminStaffPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:flex-wrap sm:gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Mi equipo
@@ -89,7 +89,7 @@ export default function AdminStaffPage() {
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className={BTN_PRIMARY}
+          className={`${BTN_PRIMARY} w-full sm:w-auto`}
         >
           <UserPlus className="w-4 h-4" /> Nuevo integrante
         </button>
@@ -311,12 +311,12 @@ function CreateStaffModal({
 
   return (
     <div
-      className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-4"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white border border-slate-200 rounded-2xl p-6 w-full max-w-md space-y-4 shadow-xl"
+        className="bg-white border border-slate-200 w-full h-[100dvh] overflow-y-auto p-5 space-y-4 shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:p-6 sm:max-w-md"
       >
         <h3 className="text-xl font-bold text-slate-900">
           Nuevo integrante del equipo
@@ -416,8 +416,12 @@ function CreateStaffModal({
 
         {err && <p className="text-sm text-rose-600">{err}</p>}
 
-        <div className="flex gap-2 justify-end pt-2">
-          <button type="button" onClick={onClose} className={BTN_SECONDARY}>
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
+          >
             Cancelar
           </button>
           <button
@@ -436,7 +440,7 @@ function CreateStaffModal({
               create.mutate();
             }}
             disabled={create.isPending}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             {create.isPending ? 'Creando…' : 'Crear integrante'}
           </button>

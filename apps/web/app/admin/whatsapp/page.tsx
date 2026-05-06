@@ -147,17 +147,17 @@ export default function AdminWhatsAppPage() {
 
       {/* === CONECTADO === */}
       {connected && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <div className="w-12 h-12 shrink-0 rounded-full bg-emerald-100 flex items-center justify-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-700" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="text-lg font-bold text-emerald-700">
                   Conectado
                 </div>
-                <div className="text-sm text-slate-600">
+                <div className="text-sm text-slate-600 break-words">
                   {status?.phone_number && (
                     <span className="font-mono">+{status.phone_number}</span>
                   )}
@@ -185,7 +185,7 @@ export default function AdminWhatsAppPage() {
                 }
               }}
               disabled={logout.isPending}
-              className={BTN_DANGER}
+              className={`${BTN_DANGER} w-full sm:w-auto`}
             >
               <LogOut className="w-4 h-4" />
               {logout.isPending ? 'Cerrando…' : 'Cerrar sesión'}
@@ -221,12 +221,12 @@ export default function AdminWhatsAppPage() {
                 </p>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
                 <button
                   type="button"
                   onClick={() => ensureDefaults.mutate()}
                   disabled={ensureDefaults.isPending}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 w-full sm:w-auto"
                 >
                   <Bell className="h-4 w-4" />
                   {ensureDefaults.isPending
@@ -248,7 +248,7 @@ export default function AdminWhatsAppPage() {
 
       {/* === NO CONECTADO === */}
       {!connected && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-5">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
             <div className="font-semibold text-slate-900">
@@ -262,17 +262,17 @@ export default function AdminWhatsAppPage() {
 
           <div className="grid md:grid-cols-[auto_1fr] gap-6 items-start">
             {/* QR */}
-            <div className="bg-white rounded-xl overflow-hidden min-w-[304px] min-h-[304px] flex items-center justify-center p-4 shadow-sm border border-slate-200">
+            <div className="bg-white rounded-xl overflow-hidden w-full max-w-xs sm:max-w-sm md:w-auto md:max-w-none mx-auto md:mx-0 md:min-w-[304px] md:min-h-[304px] aspect-square md:aspect-auto flex items-center justify-center p-4 shadow-sm border border-slate-200">
               {hasQR ? (
                 <img
                   src={qrData.qr}
                   alt="QR WhatsApp"
                   width={272}
                   height={272}
-                  className="block"
+                  className="block w-full h-auto max-w-[272px]"
                 />
               ) : (
-                <div className="w-64 h-64 flex flex-col items-center justify-center text-slate-500 text-sm text-center px-4 gap-3">
+                <div className="w-full max-w-64 aspect-square flex flex-col items-center justify-center text-slate-500 text-sm text-center px-4 gap-3">
                   <RefreshCw className="w-10 h-10 animate-spin text-blue-600" />
                   <span className="text-slate-600">
                     Generando código seguro…

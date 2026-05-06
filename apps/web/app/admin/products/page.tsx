@@ -143,7 +143,7 @@ export default function AdminProductsPage() {
   });
 
   const renderActionsPending = (p: AdminProduct) => (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={() => approve.mutate(p.id)}
@@ -176,7 +176,7 @@ export default function AdminProductsPage() {
   );
 
   const renderActionsPublished = (p: AdminProduct) => (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={() => {
@@ -201,7 +201,7 @@ export default function AdminProductsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Marketplace
@@ -216,7 +216,7 @@ export default function AdminProductsPage() {
             setEditing(null);
             setEditorOpen(true);
           }}
-          className={BTN_PRIMARY}
+          className={`${BTN_PRIMARY} w-full sm:w-auto`}
         >
           <Plus className="h-4 w-4" />
           Crear rutina/producto
@@ -305,7 +305,7 @@ export default function AdminProductsPage() {
         open={!!rejectTarget}
         onOpenChange={(o) => !o && setRejectTarget(null)}
       >
-        <DialogContent className="bg-white border-slate-200 text-slate-900">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg bg-white border-slate-200 text-slate-900">
           <DialogHeader>
             <DialogTitle className="text-slate-900">
               Rechazar producto
@@ -320,11 +320,11 @@ export default function AdminProductsPage() {
             placeholder="Motivo (ej. imágenes de baja calidad)"
             className={INPUT_CLS}
           />
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => setRejectTarget(null)}
-              className={BTN_SECONDARY}
+              className={`${BTN_SECONDARY} w-full sm:w-auto`}
             >
               Cancelar
             </button>
@@ -332,7 +332,7 @@ export default function AdminProductsPage() {
               type="button"
               onClick={() => rejectMut.mutate()}
               disabled={rejectMut.isPending || reason.trim().length < 3}
-              className={BTN_DANGER}
+              className={`${BTN_DANGER} w-full sm:w-auto`}
             >
               {rejectMut.isPending ? 'Rechazando…' : 'Rechazar'}
             </button>
@@ -705,7 +705,7 @@ function ProductEditor({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl bg-white border-slate-200 text-slate-900">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl bg-white border-slate-200 text-slate-900">
         <DialogHeader>
           <DialogTitle className="text-slate-900">
             {isEdit ? 'Editar producto' : 'Nuevo producto'}
@@ -714,7 +714,7 @@ function ProductEditor({
 
         <div className="max-h-[75vh] overflow-y-auto pr-1">
           <Tabs defaultValue="info">
-            <TabsList>
+            <TabsList className="flex-wrap">
               <TabsTrigger value="info">Info</TabsTrigger>
               <TabsTrigger value="content">Contenido</TabsTrigger>
               <TabsTrigger value="media">Multimedia</TabsTrigger>
@@ -960,10 +960,10 @@ function ProductEditor({
                             {(d.exercises ?? []).map((ex, ei) => (
                               <div
                                 key={ei}
-                                className="grid grid-cols-12 gap-2"
+                                className="grid grid-cols-1 gap-2 sm:grid-cols-12"
                               >
                                 <input
-                                  className={`${INPUT_CLS_SM} col-span-5`}
+                                  className={`${INPUT_CLS_SM} sm:col-span-5`}
                                   placeholder="Ejercicio"
                                   value={ex.name}
                                   onChange={(e) =>
@@ -973,7 +973,7 @@ function ProductEditor({
                                   }
                                 />
                                 <input
-                                  className={`${INPUT_CLS_SM} col-span-2`}
+                                  className={`${INPUT_CLS_SM} sm:col-span-2`}
                                   placeholder="Sets"
                                   type="number"
                                   value={ex.sets ?? ''}
@@ -987,7 +987,7 @@ function ProductEditor({
                                   }
                                 />
                                 <input
-                                  className={`${INPUT_CLS_SM} col-span-2`}
+                                  className={`${INPUT_CLS_SM} sm:col-span-2`}
                                   placeholder="Reps"
                                   value={ex.reps ?? ''}
                                   onChange={(e) =>
@@ -997,7 +997,7 @@ function ProductEditor({
                                   }
                                 />
                                 <input
-                                  className={`${INPUT_CLS_SM} col-span-2`}
+                                  className={`${INPUT_CLS_SM} sm:col-span-2`}
                                   placeholder="Notas"
                                   value={ex.notes ?? ''}
                                   onChange={(e) =>
@@ -1011,9 +1011,12 @@ function ProductEditor({
                                   onClick={() =>
                                     removeExercise(wi, di, ei)
                                   }
-                                  className="col-span-1 rounded-md p-1.5 text-rose-600 hover:bg-rose-50"
+                                  className="inline-flex items-center justify-center gap-1 rounded-md p-1.5 text-rose-600 hover:bg-rose-50 sm:col-span-1"
                                 >
                                   <Trash2 className="h-3 w-3" />
+                                  <span className="text-xs sm:hidden">
+                                    Eliminar
+                                  </span>
                                 </button>
                               </div>
                             ))}
@@ -1069,7 +1072,7 @@ function ProductEditor({
                     <img
                       src={state.cover_url}
                       alt="portada"
-                      className="mt-2 h-40 w-full rounded-lg object-cover"
+                      className="mt-2 h-40 w-full max-w-full rounded-lg object-cover"
                     />
                   )}
                 </div>
@@ -1118,11 +1121,11 @@ function ProductEditor({
           </Tabs>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className={BTN_SECONDARY}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
           >
             Cancelar
           </button>
@@ -1130,7 +1133,7 @@ function ProductEditor({
             type="button"
             onClick={() => save.mutate()}
             disabled={save.isPending || disabled}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             {save.isPending
               ? 'Guardando…'

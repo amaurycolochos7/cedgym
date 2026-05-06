@@ -271,7 +271,7 @@ export default function AdminEjerciciosPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Biblioteca de Ejercicios
@@ -291,11 +291,11 @@ export default function AdminEjerciciosPage() {
               ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={() => setImportOpen(true)}
-            className={BTN_SECONDARY}
+            className={cn(BTN_SECONDARY, 'w-full sm:w-auto')}
           >
             <Upload className="h-3.5 w-3.5" />
             Importar Excel
@@ -306,7 +306,7 @@ export default function AdminEjerciciosPage() {
               setEditing(null);
               setModalOpen(true);
             }}
-            className={BTN_PRIMARY}
+            className={cn(BTN_PRIMARY, 'w-full sm:w-auto')}
           >
             <Plus className="h-4 w-4" />
             Nuevo ejercicio
@@ -386,7 +386,7 @@ export default function AdminEjerciciosPage() {
 
       {/* Server-side pagination */}
       {total > limit && (
-        <div className="flex items-center justify-end gap-2 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-500">
           <button
             type="button"
             disabled={page <= 1}
@@ -395,7 +395,7 @@ export default function AdminEjerciciosPage() {
           >
             Anterior
           </button>
-          <span>
+          <span className="order-first w-full text-center sm:order-none sm:w-auto sm:text-left">
             Página {page} de {totalPages}
           </span>
           <button
@@ -649,7 +649,7 @@ function ExerciseFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white border-slate-200 text-slate-900">
+      <DialogContent className="max-w-[95vw] bg-white border-slate-200 text-slate-900 sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-slate-900">
             {editing ? 'Editar ejercicio' : 'Nuevo ejercicio'}
@@ -714,12 +714,12 @@ function ExerciseFormDialog({
               <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Nivel *
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {LEVELS.map((l) => (
                   <label
                     key={l.value}
                     className={cn(
-                      'flex flex-1 cursor-pointer items-center justify-center rounded-lg border px-2 py-2.5 text-xs font-semibold uppercase tracking-wider transition',
+                      'flex min-w-[6rem] flex-1 cursor-pointer items-center justify-center rounded-lg border px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider transition',
                       form.level === l.value
                         ? 'border-blue-300 bg-blue-50 text-blue-700'
                         : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
@@ -819,7 +819,7 @@ function ExerciseFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-semibold text-slate-600">
                 Sets
@@ -882,11 +882,11 @@ function ExerciseFormDialog({
           </label>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className={BTN_SECONDARY}
+            className={cn(BTN_SECONDARY, 'w-full sm:w-auto')}
           >
             Cancelar
           </button>
@@ -894,7 +894,7 @@ function ExerciseFormDialog({
             type="button"
             onClick={submit}
             disabled={saveMut.isPending}
-            className={BTN_PRIMARY}
+            className={cn(BTN_PRIMARY, 'w-full sm:w-auto')}
           >
             {saveMut.isPending
               ? 'Guardando…'
@@ -1105,7 +1105,7 @@ function BulkImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl bg-white border-slate-200 text-slate-900">
+      <DialogContent className="max-w-[95vw] bg-white border-slate-200 text-slate-900 sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-slate-900">
             Importar ejercicios desde Excel
@@ -1246,7 +1246,7 @@ function BulkImportDialog({
         {result && (
           <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
             <div className="font-semibold text-slate-900">Resultado</div>
-            <div className="flex gap-4 text-xs">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
               <span className="text-emerald-700">
                 Creados: {result.created}
               </span>
@@ -1269,11 +1269,11 @@ function BulkImportDialog({
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-2">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className={BTN_SECONDARY}
+            className={cn(BTN_SECONDARY, 'w-full sm:w-auto')}
           >
             {result ? 'Cerrar' : 'Cancelar'}
           </button>
@@ -1282,7 +1282,7 @@ function BulkImportDialog({
               type="button"
               onClick={() => importMut.mutate()}
               disabled={importMut.isPending || valid === 0}
-              className={BTN_PRIMARY}
+              className={cn(BTN_PRIMARY, 'w-full sm:w-auto')}
             >
               {importMut.isPending
                 ? 'Importando…'

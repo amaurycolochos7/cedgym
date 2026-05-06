@@ -209,7 +209,7 @@ export default function AdminMembershipsPage() {
   return (
     <div className="space-y-6">
       <section>
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
               Planes
@@ -221,7 +221,7 @@ export default function AdminMembershipsPage() {
           <button
             type="button"
             onClick={() => setAssignPicker(true)}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             <Plus className="h-4 w-4" />
             Asignar plan a miembro
@@ -245,7 +245,7 @@ export default function AdminMembershipsPage() {
       </section>
 
       <section>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
             Membresías activas
           </h2>
@@ -253,12 +253,12 @@ export default function AdminMembershipsPage() {
             placeholder="Buscar socio"
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            className={`${INPUT_CLS} ml-4 max-w-xs`}
+            className={`${INPUT_CLS} sm:ml-4 sm:max-w-xs`}
           />
           <select
             value={filters.plan}
             onChange={(e) => setFilters({ ...filters, plan: e.target.value })}
-            className={`${INPUT_CLS} max-w-[160px]`}
+            className={`${INPUT_CLS} sm:max-w-[160px]`}
           >
             <option value="">Todos los planes</option>
             <option value="starter">Básico</option>
@@ -266,12 +266,12 @@ export default function AdminMembershipsPage() {
             <option value="elite">Élite</option>
           </select>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:ml-auto">
             <button
               type="button"
               disabled={selected.size === 0 || broadcast.isPending}
               onClick={() => broadcast.mutate()}
-              className={BTN_SECONDARY}
+              className={`${BTN_SECONDARY} w-full sm:w-auto`}
             >
               <Send className="h-3.5 w-3.5" />
               Recordatorio ({selected.size})
@@ -311,11 +311,11 @@ export default function AdminMembershipsPage() {
               del todo usa el ícono rojo (basura).
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => setToCancel(null)}
-              className={BTN_SECONDARY}
+              className={`${BTN_SECONDARY} w-full sm:w-auto`}
               disabled={cancel.isPending}
             >
               Cancelar
@@ -323,7 +323,7 @@ export default function AdminMembershipsPage() {
             <button
               type="button"
               onClick={() => toCancel && cancel.mutate(toCancel.id)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-60 disabled:pointer-events-none"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-700 disabled:opacity-60 disabled:pointer-events-none sm:w-auto"
               disabled={cancel.isPending}
             >
               <Ban className="h-4 w-4" />
@@ -354,11 +354,11 @@ export default function AdminMembershipsPage() {
               setAssignFor(m);
             }}
           />
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => setAssignPicker(false)}
-              className={BTN_SECONDARY}
+              className={`${BTN_SECONDARY} w-full sm:w-auto`}
             >
               Cancelar
             </button>
@@ -434,12 +434,12 @@ function DeleteMembershipDialog({
           />
         </label>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className={BTN_SECONDARY}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
           >
             Cancelar
           </button>
@@ -447,7 +447,7 @@ function DeleteMembershipDialog({
             type="button"
             onClick={() => onConfirm(reason.trim())}
             disabled={loading}
-            className={BTN_DANGER}
+            className={`${BTN_DANGER} w-full sm:w-auto`}
           >
             {loading ? 'Eliminando…' : 'Eliminar membresía'}
           </button>

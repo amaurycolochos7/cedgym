@@ -266,7 +266,7 @@ export default function AdminPaymentsPage() {
                   ID: {detail.id}
                 </DialogDescription>
               </DialogHeader>
-              <dl className="grid grid-cols-2 gap-3 text-sm">
+              <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <Row k="Socio" v={detail.user_name ?? '—'} />
                 <Row
                   k="Tipo"
@@ -313,11 +313,11 @@ export default function AdminPaymentsPage() {
                   v={format(new Date(detail.created_at), 'PPpp')}
                 />
               </dl>
-              <DialogFooter>
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setDetail(null)}
-                  className={BTN_SECONDARY}
+                  className={`${BTN_SECONDARY} w-full sm:w-auto`}
                 >
                   Cerrar
                 </button>
@@ -328,7 +328,7 @@ export default function AdminPaymentsPage() {
                       setRefund(detail);
                       setDetail(null);
                     }}
-                    className={BTN_DANGER}
+                    className={`${BTN_DANGER} w-full sm:w-auto`}
                   >
                     Reembolsar
                   </button>

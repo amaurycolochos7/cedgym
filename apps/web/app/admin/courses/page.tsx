@@ -78,7 +78,7 @@ export default function AdminCoursesPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Cursos
@@ -90,7 +90,7 @@ export default function AdminCoursesPage() {
         <button
           type="button"
           onClick={() => setNewOpen(true)}
-          className={BTN_PRIMARY}
+          className={`${BTN_PRIMARY} w-full sm:w-auto`}
         >
           <Plus className="h-4 w-4" />
           Nuevo curso
@@ -400,7 +400,7 @@ function CourseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white border-slate-200 text-slate-900">
+      <DialogContent className="max-w-[95vw] bg-white border-slate-200 text-slate-900 sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-slate-900">
             {isEdit ? 'Editar curso' : 'Nuevo curso'}
@@ -546,11 +546,11 @@ function CourseDialog({
           </label>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className={BTN_SECONDARY}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
           >
             Cancelar
           </button>
@@ -558,7 +558,7 @@ function CourseDialog({
             type="button"
             onClick={() => save.mutate()}
             disabled={save.isPending || disabled}
-            className={BTN_PRIMARY}
+            className={`${BTN_PRIMARY} w-full sm:w-auto`}
           >
             {save.isPending
               ? 'Guardando…'
@@ -591,13 +591,13 @@ function EnrollmentsDialog({
 
   return (
     <Dialog open={!!course} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl bg-white border-slate-200 text-slate-900">
+      <DialogContent className="max-w-[95vw] bg-white border-slate-200 text-slate-900 sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-slate-900">
             Inscritos — {course?.name}
           </DialogTitle>
         </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto">
+        <div className="max-h-[60vh] overflow-x-auto overflow-y-auto">
           {isLoading && (
             <div className="p-4 text-sm text-slate-500">Cargando…</div>
           )}
@@ -607,7 +607,7 @@ function EnrollmentsDialog({
             </div>
           )}
           {!isLoading && data && data.total > 0 && (
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-700">
                 <tr>
                   <th className="py-2 px-3">Nombre</th>
@@ -642,8 +642,12 @@ function EnrollmentsDialog({
             </table>
           )}
         </div>
-        <DialogFooter>
-          <button type="button" onClick={onClose} className={BTN_SECONDARY}>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className={`${BTN_SECONDARY} w-full sm:w-auto`}
+          >
             Cerrar
           </button>
         </DialogFooter>

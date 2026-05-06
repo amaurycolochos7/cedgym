@@ -23,15 +23,15 @@ export default function AdminSettingsPage() {
 
       <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 space-y-3">
         <h3 className="font-semibold text-slate-900">Gym</h3>
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-slate-600 break-words">
           Nombre:{' '}
           <span className="text-slate-900 font-medium">
             {data?.name ?? 'CED·GYM'}
           </span>
         </div>
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-slate-600 break-words">
           Slug:{' '}
-          <code className="text-blue-600 font-semibold">
+          <code className="text-blue-600 font-semibold break-all">
             {data?.slug ?? 'ced-gym'}
           </code>
         </div>
@@ -86,13 +86,13 @@ export default function AdminSettingsPage() {
 
 function StatusRow({ label, status }: any) {
   return (
-    <div className="flex items-center justify-between text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
       <span className="text-slate-700">{label}</span>
       <span
         className={
           status === 'ok'
-            ? 'inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700'
-            : 'inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700'
+            ? 'inline-flex items-center rounded-full border border-emerald-200 bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 whitespace-nowrap'
+            : 'inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 whitespace-nowrap'
         }
       >
         {status === 'ok' ? '✓ Conectado' : '⚠ Requiere configuración'}
