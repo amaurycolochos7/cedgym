@@ -16,9 +16,24 @@ type ScanErrorData = {
   retry_after_sec?: number;
   user_id?: string;
   user_name?: string;
+  plan?: string;
+  daily_limit?: number;
+  visits_today?: number;
+  last_checkin_at?: string;
+};
+type VisitInfo = {
+  is_reentry: boolean;
+  number: number;
+  daily_limit: number | null;
+  mins_since_last: number | null;
 };
 type ScanResult =
-  | { ok: true; member: any; message?: string }
+  | {
+      ok: true;
+      member: any;
+      visit?: VisitInfo;
+      message?: string;
+    }
   | { ok: false; error: ScanErrorData };
 
 export default function StaffScanPage() {
@@ -303,9 +318,19 @@ export default function StaffScanPage() {
                 <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600 sm:h-16 sm:w-16" />
               )}
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 sm:text-[11px]">
-                  Verifica que la cara coincide
-                </p>
+                {/* Banner del tipo de entrada — re-entry vs nueva visita.
+                    Re-entry es cuando el socio ya entró en los últimos
+                    90 min y vuelve (olvidó algo, salió por agua, etc.). */}
+                {result.visit?.is_reentry ? (
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-blue-700 sm:text-[11px]">
+                    Re-entrada · entró hace{' '}
+                    {result.visit.mins_since_last ?? 0} min
+                  </p>
+                ) : (
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 sm:text-[11px]">
+                    Verifica que la cara coincide
+                  </p>
+                )}
                 <div className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">
                   {result.member?.name}
                 </div>
@@ -313,86 +338,126 @@ export default function StaffScanPage() {
                   {planDisplayName(result.member?.plan)} · Vence{' '}
                   {result.member?.expires_at?.slice(0, 10)}
                 </div>
-                <div className="mt-1 text-[11px] text-slate-500 sm:text-xs">
-                  Racha: {result.member?.current_streak_days ?? 0} días
-                </div>
+                {/* Contador de visitas del día. Para Básico muestra
+                    "Visita 1/1 hoy" — al recepcionista le sirve para
+                    saber si el socio ya consumió su acceso del día. */}
+                {result.visit && (
+                  <div className="mt-1 text-[11px] text-slate-500 sm:text-xs">
+                    {result.visit.daily_limit
+                      ? `Visita ${result.visit.number}/${result.visit.daily_limit} hoy`
+                      : `Visita ${result.visit.number} hoy · plan ilimitado`}
+                  </div>
+                )}
               </div>
             </div>
           )}
           {result && !result.ok && (
             <div className="space-y-3">
-              {result.error.code === 'SELFIE_MISSING' ? (
+              {result.error.code === 'SELFIE_MISSING' ||
+              result.error.code === 'DAILY_LIMIT_REACHED' ? (
                 <AlertTriangle className="mx-auto h-16 w-16 text-amber-600" />
               ) : (
                 <XCircle className="mx-auto h-16 w-16 text-rose-600" />
               )}
               <div className="text-center">
                 <div className="text-lg font-semibold text-slate-900">
-                  {result.error.code === 'SELFIE_MISSING'
-                    ? 'Selfie pendiente'
-                    : result.error.code === 'OUT_OF_HOURS'
-                      ? 'Fuera de horario'
-                      : result.error.code === 'INACTIVE'
-                        ? 'Membresía vencida'
-                        : result.error.code === 'NO_MEMBERSHIP'
-                          ? 'Sin membresía'
-                          : result.error.code === 'EXPIRED_QR'
-                            ? 'QR expirado'
-                            : result.error.code === 'DUPLICATE'
-                              ? 'Ya entró hace poco'
-                              : result.error.code}
+                  {errorTitle(result.error.code)}
                 </div>
                 <div className="mt-1 text-sm text-slate-700">
                   {result.error.message}
                 </div>
-                {result.error.code === 'SELFIE_MISSING' && result.error.user_name && (
-                  <div className="mt-3 rounded-xl bg-white p-3 text-xs text-slate-600 ring-1 ring-amber-200">
-                    <p className="font-semibold text-slate-900">
-                      {result.error.user_name}
-                    </p>
-                    <p className="mt-1">
-                      Pídele que abra el link de bienvenida que recibió por
-                      WhatsApp y suba su selfie. Después de eso, podrá entrar
-                      escaneando este mismo QR.
-                    </p>
-                  </div>
-                )}
-                {result.error.code === 'DUPLICATE' && result.error.user_name && (
+                {result.error.code === 'SELFIE_MISSING' &&
+                  result.error.user_name && (
+                    <div className="mt-3 rounded-xl bg-white p-3 text-xs text-slate-600 ring-1 ring-amber-200">
+                      <p className="font-semibold text-slate-900">
+                        {result.error.user_name}
+                      </p>
+                      <p className="mt-1">
+                        Pídele que abra el link de bienvenida que recibió
+                        por WhatsApp y suba su selfie. Después de eso,
+                        podrá entrar escaneando este mismo QR.
+                      </p>
+                    </div>
+                  )}
+                {/* DAILY_LIMIT_REACHED — el socio ya consumió su visita
+                    del día (Básico = 1/día). Mostramos el dato claro
+                    para que recepción confirme y, si lo amerita,
+                    autorice un reingreso manual. */}
+                {result.error.code === 'DAILY_LIMIT_REACHED' &&
+                  result.error.user_name && (
+                    <div className="mt-3 rounded-xl bg-white p-3 text-xs text-slate-600 ring-1 ring-amber-200">
+                      <p className="font-semibold text-slate-900">
+                        {result.error.user_name}
+                      </p>
+                      <p className="mt-1">
+                        Plan{' '}
+                        {result.error.plan === 'STARTER'
+                          ? 'Básico'
+                          : result.error.plan}{' '}
+                        permite{' '}
+                        <strong>
+                          {result.error.daily_limit ?? 1}{' '}
+                          {(result.error.daily_limit ?? 1) === 1
+                            ? 'visita'
+                            : 'visitas'}
+                        </strong>{' '}
+                        al día.{' '}
+                        {result.error.last_checkin_at && (
+                          <>
+                            Entró hoy a las{' '}
+                            {new Date(
+                              result.error.last_checkin_at,
+                            ).toLocaleTimeString('es-MX', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            .
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                {result.error.code === 'DUPLICATE_FAST' && (
                   <div className="mt-2 text-xs text-slate-500">
-                    {result.error.user_name}
-                    {typeof result.error.retry_after_sec === 'number' &&
-                      ` — espera ${Math.ceil(result.error.retry_after_sec / 60)} min`}
+                    Detectamos un scan repetido. Espera unos segundos
+                    e intenta de nuevo.
                   </div>
                 )}
               </div>
-              {/* Override: permitir reingreso cuando es legítimo. */}
-              {result.error.code === 'DUPLICATE' && result.error.user_id && (
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const reason = window.prompt(
-                        'Motivo del reingreso (opcional): p.ej. "salió al auto"',
-                        '',
-                      );
-                      // Null = cancelled prompt → abortar. "" = aceptó vacío.
-                      if (reason === null) return;
-                      override.mutate({
-                        userId: result.error.user_id!,
-                        reason: reason.trim() || undefined,
-                      });
-                    }}
-                    disabled={override.isPending}
-                    className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    {override.isPending ? 'Autorizando…' : 'Permitir reingreso'}
-                  </button>
-                  <p className="text-center text-[11px] text-slate-500">
-                    Queda registrado en auditoría con tu usuario.
-                  </p>
-                </div>
-              )}
+              {/* Override: permitir reingreso autorizado.
+                  - DAILY_LIMIT_REACHED: el socio Básico llegó al límite
+                    pero recepción quiere autorizar (gerencia OK).
+                  - DUPLICATE_FAST: NO se autoriza override (es un
+                    accidente de UI, esperar 30 seg basta). */}
+              {result.error.code === 'DAILY_LIMIT_REACHED' &&
+                result.error.user_id && (
+                  <div className="space-y-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const reason = window.prompt(
+                          'Motivo del reingreso (autorización gerencia, etc.):',
+                          '',
+                        );
+                        if (reason === null) return;
+                        override.mutate({
+                          userId: result.error.user_id!,
+                          reason: reason.trim() || undefined,
+                        });
+                      }}
+                      disabled={override.isPending}
+                      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      {override.isPending
+                        ? 'Autorizando…'
+                        : 'Autorizar reingreso'}
+                    </button>
+                    <p className="text-center text-[11px] text-slate-500">
+                      Queda registrado en auditoría con tu usuario.
+                    </p>
+                  </div>
+                )}
             </div>
           )}
         </div>
@@ -435,6 +500,23 @@ export default function StaffScanPage() {
       </div>
     </div>
   );
+}
+
+// Mapeo de error code → título corto en español para el panel de
+// resultado. Mantiene la UI consistente cuando el backend devuelve
+// codes nuevos: agregar caso aquí en lugar de cadenas de ternarios.
+function errorTitle(code: string): string {
+  const titles: Record<string, string> = {
+    SELFIE_MISSING: 'Selfie pendiente',
+    INACTIVE: 'Membresía vencida',
+    NO_MEMBERSHIP: 'Sin membresía',
+    EXPIRED_QR: 'QR expirado',
+    DUPLICATE_FAST: 'Scan repetido',
+    DAILY_LIMIT_REACHED: 'Visita del día consumida',
+    USER_INACTIVE: 'Cuenta suspendida',
+    USER_NOT_FOUND: 'Usuario no encontrado',
+  };
+  return titles[code] ?? code;
 }
 
 function beep(ok: boolean) {

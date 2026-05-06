@@ -42,7 +42,10 @@ type MemberRow = {
 function daysBetween(target?: string) {
   if (!target) return null;
   const diffMs = new Date(target).getTime() - Date.now();
-  return Math.ceil(diffMs / 86_400_000);
+  // Floor para alinearse con backend (daysRemaining usa dayjs.diff('day')
+  // que también flooriza). Antes ceil daba 31 mientras el portal del socio
+  // mostraba 30 — confundía a los socios.
+  return Math.floor(diffMs / 86_400_000);
 }
 
 function MembershipBadge({ expiresAt, status }: { expiresAt?: string; status?: string }) {

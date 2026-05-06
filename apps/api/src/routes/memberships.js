@@ -207,6 +207,12 @@ export default async function membershipsRoutes(fastify) {
     );
 
     // ─── GET /memberships/me ──────────────────────────────────────
+    // Devuelve la membresía + días restantes + info de visitas de hoy
+    // (cuántas viene usando, cuántas le quedan, si está dentro de la
+    // ventana de re-entry). El portal usa todo esto para mostrar:
+    //   - "Hoy: 1/1 visita" (Básico ya entró)
+    //   - "Re-entrada disponible 28 min" (entró pero puede volver)
+    //   - "Hoy: 2 visitas" (Pro/Élite, sin límite)
     fastify.get(
         '/memberships/me',
         { preHandler: [fastify.authenticate] },
@@ -216,11 +222,61 @@ export default async function membershipsRoutes(fastify) {
                 where: { user_id: userId },
             });
             if (!membership) {
-                return { membership: null, days_remaining: 0 };
+                return { membership: null, days_remaining: 0, today: null };
             }
+
+            // Visitas de hoy. Hardcoded a la política nueva (1=Básico,
+            // ilimitadas Pro/Élite, ventana de re-entry 90 min). Si en
+            // el futuro varía, leemos el catálogo o un setting.
+            const startOfDay = dayjs().startOf('day').toDate();
+            const todayCheckins = await prisma.checkIn.findMany({
+                where: {
+                    user_id: userId,
+                    scanned_at: { gte: startOfDay },
+                },
+                orderBy: { scanned_at: 'asc' },
+                select: { scanned_at: true },
+            });
+
+            const REENTRY_WINDOW_MIN = 90;
+            const DAILY_LIMITS = { STARTER: 1, PRO: null, ELITE: null };
+            const dailyLimit = DAILY_LIMITS[membership.plan] ?? null;
+
+            // Conteo de visitas reales (separadas por > REENTRY_WINDOW_MIN).
+            let visitsUsed = 0;
+            if (todayCheckins.length > 0) {
+                visitsUsed = 1;
+                for (let i = 1; i < todayCheckins.length; i += 1) {
+                    const minsBetween = dayjs(
+                        todayCheckins[i].scanned_at,
+                    ).diff(todayCheckins[i - 1].scanned_at, 'minute');
+                    if (minsBetween >= REENTRY_WINDOW_MIN) visitsUsed += 1;
+                }
+            }
+
+            const lastCheckin =
+                todayCheckins[todayCheckins.length - 1] || null;
+            const minsSinceLast = lastCheckin
+                ? dayjs().diff(lastCheckin.scanned_at, 'minute')
+                : null;
+            const reentryActive =
+                lastCheckin !== null &&
+                minsSinceLast !== null &&
+                minsSinceLast < REENTRY_WINDOW_MIN;
+            const reentryMinutesLeft = reentryActive
+                ? Math.max(0, REENTRY_WINDOW_MIN - minsSinceLast)
+                : 0;
+
             return {
                 membership,
                 days_remaining: daysRemaining(membership.expires_at),
+                today: {
+                    visits_used: visitsUsed,
+                    daily_limit: dailyLimit, // null = ilimitado
+                    reentry_active: reentryActive,
+                    reentry_minutes_left: reentryMinutesLeft,
+                    last_checkin_at: lastCheckin?.scanned_at ?? null,
+                },
             };
         }
     );

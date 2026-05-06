@@ -30,66 +30,51 @@ import {
     QR_TTL_SECONDS,
 } from '../lib/qr.js';
 
-// ─── Plan access windows (Fase 9) ──────────────────────────────
-// Keys: 0=Sun .. 6=Sat (JS `getDay()` convention).
-// Each entry is an array of [startHour, endHour) — hour-precision is enough.
-const PLAN_WINDOWS = {
-    STARTER: {
-        // L-V (1..5): 06-10 + 19-22
-        1: [[6, 10], [19, 22]],
-        2: [[6, 10], [19, 22]],
-        3: [[6, 10], [19, 22]],
-        4: [[6, 10], [19, 22]],
-        5: [[6, 10], [19, 22]],
-    },
-    PRO: {
-        1: [[6, 22]],
-        2: [[6, 22]],
-        3: [[6, 22]],
-        4: [[6, 22]],
-        5: [[6, 22]],
-        6: [[7, 14]], // sábado
-    },
-    ELITE: {
-        // 24/7 — any hour of any day.
-        0: [[0, 24]],
-        1: [[0, 24]],
-        2: [[0, 24]],
-        3: [[0, 24]],
-        4: [[0, 24]],
-        5: [[0, 24]],
-        6: [[0, 24]],
-    },
+// ─── Política de visitas por plan (2026-05) ────────────────────
+//
+// Reemplazo de la tabla anterior PLAN_WINDOWS basada en horarios
+// AM/PM. La nueva política es de "visitas por día":
+//
+//   STARTER → 1 visita al día, sin restricción de hora del gym.
+//   PRO     → ilimitadas.
+//   ELITE   → ilimitadas.
+//
+// Re-entry: el socio puede salir y volver dentro de
+// REENTRY_WINDOW_MIN minutos después de su scan más reciente
+// SIN que cuente como nueva visita. Útil para "olvidé el casillero",
+// "fui por agua al carro", etc. Aplica a todos los planes.
+//
+// Anti-double-scan: ANTI_DOUBLE_SCAN_SEC es el cooldown corto que
+// bloquea silenciosamente double-taps accidentales (la cámara
+// detecta el QR varias veces por segundo).
+//
+// Si recepción quiere forzar un reingreso fuera del límite diario
+// (por ejemplo, atleta con plan Básico que regresa de tarde y la
+// gerencia autoriza), el endpoint /checkins/manual con override:true
+// salta esta política.
+const DAILY_VISIT_LIMITS = {
+    STARTER: 1,
+    PRO: Infinity,
+    ELITE: Infinity,
 };
+const REENTRY_WINDOW_MIN = 90;
+const ANTI_DOUBLE_SCAN_SEC = 30;
 
-function isWithinPlanWindow(plan, date = new Date()) {
-    const windows = PLAN_WINDOWS[plan];
-    if (!windows) return true; // unknown plan → don't block
-    const dow = date.getDay();
-    const slots = windows[dow];
-    if (!slots || slots.length === 0) return false;
-    const hour = date.getHours();
-    return slots.some(([start, end]) => hour >= start && hour < end);
-}
-
-function nextWindowHint(plan, date = new Date()) {
-    const windows = PLAN_WINDOWS[plan];
-    if (!windows) return '';
-    // Look ahead up to 7 days for the next open slot.
-    for (let offset = 0; offset < 7; offset += 1) {
-        const d = new Date(date);
-        d.setDate(d.getDate() + offset);
-        const slots = windows[d.getDay()];
-        if (!slots) continue;
-        for (const [start, end] of slots) {
-            if (offset === 0 && date.getHours() >= end) continue;
-            const hh = String(start).padStart(2, '0');
-            const hhEnd = String(end).padStart(2, '0');
-            const label = offset === 0 ? 'hoy' : dayjs(d).format('ddd DD/MM');
-            return `${label} ${hh}:00–${hhEnd}:00`;
-        }
+// Cuenta cuántas "visitas" hubo hoy a partir de los CheckIn rows.
+// Una visita = un scan + cualquier scan dentro de los siguientes
+// REENTRY_WINDOW_MIN minutos. Asume `checkins` ordenado ascendente
+// por scanned_at.
+function countDailyVisits(checkins, windowMin = REENTRY_WINDOW_MIN) {
+    if (!checkins || checkins.length === 0) return 0;
+    let visits = 1;
+    for (let i = 1; i < checkins.length; i += 1) {
+        const minsBetween = dayjs(checkins[i].scanned_at).diff(
+            checkins[i - 1].scanned_at,
+            'minute',
+        );
+        if (minsBetween >= windowMin) visits += 1;
     }
-    return '';
+    return visits;
 }
 
 // ─── Schemas ──────────────────────────────────────────────────
@@ -295,31 +280,22 @@ export default async function checkinsRoutes(fastify) {
                 });
             }
 
-            // 3. Plan-based access window
-            if (!isWithinPlanWindow(membership.plan, now)) {
-                return reply.status(403).send({
-                    error: {
-                        code: 'OUT_OF_HOURS',
-                        message: `Tu plan ${membership.plan} no permite acceso en este horario`,
-                        next_window: nextWindowHint(membership.plan, now),
-                    },
-                    statusCode: 403,
-                });
-            }
-
-            // 4. Anti-double-scan (<10 min). Incluimos datos del socio en
-            //    la respuesta DUPLICATE para que la UI de recepción
-            //    pueda mostrar "Pedro González ya ingresó hace 4 min —
-            //    [Permitir reingreso]" sin un segundo round-trip.
+            // 3. Anti-double-scan (cooldown ultra-corto). La cámara detecta
+            //    el mismo QR ~10 fps mientras está delante; sin esto cada
+            //    scan exitoso dispararía 5+ peticiones. Lock de 30s en Redis.
             const lockKey = `checkin:lock:${userId}`;
-            const acquired = await redis.set(lockKey, '1', 'EX', 10 * 60, 'NX');
+            const acquired = await redis.set(
+                lockKey,
+                '1',
+                'EX',
+                ANTI_DOUBLE_SCAN_SEC,
+                'NX',
+            );
             if (acquired !== 'OK') {
-                const ttl = await redis.ttl(lockKey);
                 return reply.status(409).send({
                     error: {
-                        code: 'DUPLICATE',
-                        message: 'Ya hay un check-in reciente',
-                        retry_after_sec: ttl,
+                        code: 'DUPLICATE_FAST',
+                        message: 'Scan repetido — espera unos segundos.',
                         user_id: user.id,
                         user_name: user.full_name || user.name,
                     },
@@ -327,7 +303,55 @@ export default async function checkinsRoutes(fastify) {
                 });
             }
 
-            // 5. Persist check-in
+            // 4. Política de visitas/día + re-entry. Trae los check-ins de
+            //    hoy en orden ascendente para detectar re-entry y contar
+            //    visitas reales (= scans separados >REENTRY_WINDOW_MIN).
+            const startOfDay = dayjs(now).startOf('day').toDate();
+            const todayCheckins = await prisma.checkIn.findMany({
+                where: {
+                    user_id: user.id,
+                    scanned_at: { gte: startOfDay },
+                },
+                orderBy: { scanned_at: 'asc' },
+            });
+
+            const dailyLimit = DAILY_VISIT_LIMITS[membership.plan] ?? Infinity;
+            const lastCheckin = todayCheckins[todayCheckins.length - 1] || null;
+            const minsSinceLast = lastCheckin
+                ? dayjs(now).diff(lastCheckin.scanned_at, 'minute')
+                : Infinity;
+            const isReentry =
+                lastCheckin !== null && minsSinceLast < REENTRY_WINDOW_MIN;
+            const visitsBefore = countDailyVisits(todayCheckins);
+
+            // Solo bloqueamos si NO es re-entry (está más allá de la
+            // ventana) y ya alcanzó/excedió el límite diario del plan.
+            if (!isReentry && visitsBefore >= dailyLimit) {
+                // Liberamos el lock que acabamos de tomar para que un
+                // override manual de recepción no choque con TTL viejo.
+                try {
+                    await redis.del(lockKey);
+                } catch {
+                    /* noop */
+                }
+                return reply.status(403).send({
+                    error: {
+                        code: 'DAILY_LIMIT_REACHED',
+                        message: `Tu plan ${membership.plan === 'STARTER' ? 'Básico' : membership.plan} solo permite ${dailyLimit} ${dailyLimit === 1 ? 'visita' : 'visitas'} al día. Vuelve mañana.`,
+                        plan: membership.plan,
+                        daily_limit: dailyLimit,
+                        visits_today: visitsBefore,
+                        last_checkin_at: lastCheckin.scanned_at,
+                        user_id: user.id,
+                        user_name: user.full_name || user.name,
+                    },
+                    statusCode: 403,
+                });
+            }
+
+            // 5. Persist check-in (re-entry incluida — las contamos como
+            //    rows pero la lógica de "visitas reales" usa la ventana
+            //    de re-entry para no inflar el contador).
             const checkIn = await prisma.checkIn.create({
                 data: {
                     workspace_id: workspaceId || user.workspace_id,
@@ -335,6 +359,7 @@ export default async function checkinsRoutes(fastify) {
                     method: 'QR',
                 },
             });
+            const visitNumber = isReentry ? visitsBefore : visitsBefore + 1;
 
             // 6. Gamification
             let streakDays = 0;
@@ -356,6 +381,16 @@ export default async function checkinsRoutes(fastify) {
             return {
                 success: true,
                 check_in_id: checkIn.id,
+                // Info de la visita para que la UI de recepción muestre
+                // si fue re-entry, primer entrada, o si está cerca del
+                // límite del plan ("2/Ilim hoy" / "1/1 hoy").
+                visit: {
+                    is_reentry: isReentry,
+                    number: visitNumber,
+                    daily_limit:
+                        dailyLimit === Infinity ? null : dailyLimit,
+                    mins_since_last: lastCheckin ? minsSinceLast : null,
+                },
                 member: {
                     id: user.id,
                     name: user.full_name || user.name,

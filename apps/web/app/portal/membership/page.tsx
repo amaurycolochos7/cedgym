@@ -93,6 +93,10 @@ export default function PortalMembershipPage() {
         total_days: meResp.total_days ?? 30,
       }
     : null;
+  // Visitas de hoy + estado de re-entry (lo devuelve /memberships/me).
+  // null cuando no hay membresía activa o el endpoint todavía no
+  // responde — el componente VisitTodayCard maneja ambos casos.
+  const today = meResp?.today ?? null;
 
   const { data: history } = useQuery({
     queryKey: ['memberships', 'history'],
@@ -267,6 +271,12 @@ export default function PortalMembershipPage() {
             />
           </div>
 
+          {/* Visitas de hoy — para Básico muestra "1/1 usada", para
+              Pro/Élite muestra "X visitas hoy". Si está en ventana de
+              re-entry, lo indica para que el socio sepa que puede
+              volver al gym sin que cuente como nueva visita. */}
+          {today && <VisitTodayCard today={today} plan={membership.plan} />}
+
           {/* Beneficios incluidos en el plan actual + CTA upgrade
               cuando aplica (STARTER → "ver Pro/Élite"). Las features
               vienen del catálogo público de /memberships/plans. */}
@@ -338,6 +348,115 @@ export default function PortalMembershipPage() {
           undefined
         }
       />
+    </div>
+  );
+}
+
+/**
+ * VisitTodayCard — banner del estado de visitas del día. Resume:
+ *  - Cuántas visitas usó / cuántas tiene permitidas (1 para Básico,
+ *    ilimitadas Pro/Élite).
+ *  - Si está dentro de la ventana de re-entry (90 min desde último
+ *    scan), lo dice claramente para que el socio sepa que puede
+ *    volver al gym sin "gastar" otra visita.
+ */
+function VisitTodayCard({
+  today,
+  plan,
+}: {
+  today: {
+    visits_used: number;
+    daily_limit: number | null;
+    reentry_active: boolean;
+    reentry_minutes_left: number;
+    last_checkin_at: string | null;
+  };
+  plan: string;
+}) {
+  const used = today.visits_used;
+  const limit = today.daily_limit;
+  const reentry = today.reentry_active;
+  const minsLeft = today.reentry_minutes_left;
+
+  // Sin entradas hoy todavía.
+  if (used === 0) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+          <Calendar className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-slate-900">
+            Aún no has entrado hoy
+          </div>
+          <div className="text-xs text-slate-500">
+            {limit
+              ? `Tu plan permite ${limit} ${limit === 1 ? 'visita' : 'visitas'} al día.`
+              : 'Tu plan permite visitas ilimitadas.'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Está en ventana de re-entry — el más relevante para el socio que
+  // sale a la tienda y no sabe si su QR sigue funcionando.
+  if (reentry) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+          <Calendar className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-blue-900">
+            Puedes volver al gym sin contar nueva visita
+          </div>
+          <div className="text-xs text-blue-800/80">
+            Tienes <strong>{minsLeft} min</strong> para regresar y no
+            consume otra entrada del día.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Ya consumió límite (Básico). Mostramos en ámbar para que se note.
+  if (limit !== null && used >= limit) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+          <AlertTriangle className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-amber-900">
+            Ya usaste tu visita de hoy
+          </div>
+          <div className="text-xs text-amber-800/80">
+            Tu plan{' '}
+            {plan === 'STARTER' ? 'Básico' : plan} incluye {limit}{' '}
+            {limit === 1 ? 'visita' : 'visitas'} al día. Vuelve mañana.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pro/Élite con visitas hechas hoy, fuera de ventana de re-entry.
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+        <Check className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-emerald-900">
+          {used} {used === 1 ? 'visita' : 'visitas'} hoy
+        </div>
+        <div className="text-xs text-emerald-800/80">
+          {limit
+            ? `Te quedan ${Math.max(0, limit - used)} en el día.`
+            : 'Tu plan permite visitas ilimitadas — entra cuantas veces quieras.'}
+        </div>
+      </div>
     </div>
   );
 }
