@@ -979,7 +979,7 @@ function StepRestrictions({
 
       <div className="flex items-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50 p-3 text-xs text-blue-900">
         <Dumbbell size={14} className="text-blue-600" />
-        Al guardar, generaremos tu primera rutina con IA basada en este perfil.
+        Al guardar, generaremos tu primera rutina personalizada basada en este perfil.
       </div>
     </div>
   );

@@ -11,9 +11,9 @@ import {
   Calendar,
   Camera,
   AlertTriangle,
+  ArrowRight,
   Check,
   Lock,
-  Sparkles,
 } from 'lucide-react';
 import { SelfieCapture } from '@/components/portal/selfie-capture';
 import { PlansModal } from '@/components/portal/plans-modal';
@@ -283,34 +283,15 @@ export default function PortalMembershipPage() {
           )}
 
           <div className="bg-white shadow-sm ring-1 ring-slate-200 rounded-2xl p-6">
-            <h3 className="text-lg font-semibold mb-4 text-slate-900">Historial de pagos</h3>
+            <h3 className="text-lg font-semibold mb-4 text-slate-900">
+              Historial de pagos
+            </h3>
             {history?.items?.length ? (
-              <div className="space-y-2">
+              <ul className="divide-y divide-slate-200">
                 {history.items.map((p: any) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between py-2 border-b border-slate-200 last:border-0"
-                  >
-                    <div>
-                      <div className="font-medium text-slate-900 tabular-nums">${p.amount.toLocaleString('es-MX')} MXN</div>
-                      <div className="text-xs text-slate-500">
-                        {p.created_at?.slice(0, 10)} · {p.description ?? 'Membresía'}
-                      </div>
-                    </div>
-                    <span
-                      className={
-                        p.status === 'APPROVED'
-                          ? 'text-emerald-600 text-sm font-medium'
-                          : p.status === 'PENDING'
-                          ? 'text-amber-600 text-sm font-medium'
-                          : 'text-slate-500 text-sm font-medium'
-                      }
-                    >
-                      {paymentStatusLabel(p.status)}
-                    </span>
-                  </div>
+                  <PaymentRow key={p.id} payment={p} />
                 ))}
-              </div>
+              </ul>
             ) : (
               <p className="text-slate-500 text-sm">Sin pagos aún.</p>
             )}
@@ -358,6 +339,85 @@ export default function PortalMembershipPage() {
       />
     </div>
   );
+}
+
+/**
+ * PaymentRow — fila de un pago de membresía. Muestra monto, fecha,
+ * método (Efectivo / Terminal / Tarjeta) y estado. El método sale
+ * de payment.method que el endpoint proyecta desde
+ * metadata.payment_method (recepción) o metadata.stripe_payment_method
+ * (online). Si viene null, mostramos solo la descripción.
+ */
+function PaymentRow({ payment: p }: { payment: any }) {
+  const dateStr = p.paid_at
+    ? new Date(p.paid_at).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : p.created_at
+      ? new Date(p.created_at).toLocaleDateString('es-MX', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })
+      : '—';
+
+  const methodLabel = labelForMethod(p.method);
+  const isApproved = p.status === 'APPROVED';
+  const isPending = p.status === 'PENDING';
+
+  return (
+    <li className="flex items-start justify-between gap-3 py-3">
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold text-slate-900 tabular-nums">
+          ${(p.amount ?? 0).toLocaleString('es-MX')} MXN
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
+          <span>{dateStr}</span>
+          {methodLabel && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-700">
+                {methodLabel}
+              </span>
+            </>
+          )}
+        </div>
+        {p.description && (
+          <div className="mt-1 truncate text-[11px] text-slate-500">
+            {p.description}
+          </div>
+        )}
+      </div>
+      <span
+        className={
+          isApproved
+            ? 'shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700'
+            : isPending
+              ? 'shrink-0 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700'
+              : 'shrink-0 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600'
+        }
+      >
+        {paymentStatusLabel(p.status)}
+      </span>
+    </li>
+  );
+}
+
+// Etiqueta legible del método de pago. Acepta los valores que
+// guardamos en metadata: CASH/CARD_TERMINAL/MP_LINK (recepción) o
+// strings descriptivos de Stripe ("Visa ····4242", etc.).
+function labelForMethod(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const v = String(raw).trim();
+  if (!v) return null;
+  if (v === 'CASH') return 'Efectivo';
+  if (v === 'CARD_TERMINAL') return 'Terminal';
+  if (v === 'MP_LINK') return 'Mercado Pago';
+  if (v === 'COMPLIMENTARY' || v === 'COURTESY') return 'Cortesía';
+  // Stripe-style ("Visa ····4242") — tal cual, ya viene legible.
+  return v;
 }
 
 /**
@@ -417,8 +477,8 @@ function PlanBenefits({
             onClick={onSeeOtherPlans}
             className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
           >
-            <Sparkles className="w-3.5 h-3.5" />
             Ver otros planes
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -435,7 +495,7 @@ function PlanBenefits({
       {currentPlan === 'STARTER' && (
         <p className="mt-4 text-xs text-slate-500">
           Beneficios como <strong>congelar tu membresía</strong>,{' '}
-          <strong>rutinas IA ilimitadas</strong> y plan de comidas están
+          <strong>rutinas ilimitadas</strong> y plan de comidas están
           incluidos en Pro. Mejora tu plan cuando lo necesites.
         </p>
       )}

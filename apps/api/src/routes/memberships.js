@@ -234,17 +234,39 @@ export default async function membershipsRoutes(fastify) {
     // endpoint is no longer required for the steady-state flow.
 
     // ─── GET /memberships/history ─────────────────────────────────
+    // Devuelve { items, total } — cada item con method extraído de
+    // metadata.payment_method (CASH/CARD_TERMINAL/MP_LINK) o de
+    // metadata.stripe_payment_method (visa·4242 etc.) según el flow.
+    // El frontend del portal espera `items` (no `payments`); el rename
+    // anterior de payments → items rompía la lista del socio.
     fastify.get(
         '/memberships/history',
         { preHandler: [fastify.authenticate] },
         async (req) => {
             const userId = req.user.sub || req.user.id;
-            const payments = await prisma.payment.findMany({
+            const rows = await prisma.payment.findMany({
                 where: { user_id: userId, type: 'MEMBERSHIP' },
                 orderBy: { created_at: 'desc' },
                 take: 100,
             });
-            return { payments };
+            const items = rows.map((p) => ({
+                id: p.id,
+                amount: p.amount,
+                type: p.type,
+                status: p.status,
+                description: p.description,
+                reference: p.reference,
+                paid_at: p.paid_at,
+                created_at: p.created_at,
+                // Recepción cash/terminal: metadata.payment_method.
+                // Online (Stripe): metadata.stripe_payment_method
+                // (ej. "Visa ····4242"). null si no se registró.
+                method:
+                    p?.metadata?.payment_method ??
+                    p?.metadata?.stripe_payment_method ??
+                    null,
+            }));
+            return { items, total: items.length };
         }
     );
 

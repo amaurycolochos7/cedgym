@@ -786,7 +786,7 @@ function StepWelcome({
 }) {
   const list = benefits.length
     ? benefits
-    : ['1 plan alimenticio personalizado con IA disponible', 'Lista de compras incluida'];
+    : ['1 plan alimenticio personalizado disponible', 'Lista de compras incluida'];
 
   return (
     <div className="flex flex-col items-center text-center">

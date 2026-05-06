@@ -655,7 +655,7 @@ function ExerciseFormDialog({
             {editing ? 'Editar ejercicio' : 'Nuevo ejercicio'}
           </DialogTitle>
           <DialogDescription className="text-slate-600">
-            Los ejercicios se comparten con el generador de rutinas IA.
+            Los ejercicios se usan en el generador automático de rutinas.
           </DialogDescription>
         </DialogHeader>
 

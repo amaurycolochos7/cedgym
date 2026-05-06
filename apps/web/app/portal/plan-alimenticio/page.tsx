@@ -622,7 +622,7 @@ function NoPlanView({
               className="w-full bg-white border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition"
             />
             <p className="mt-1.5 text-xs text-slate-500">
-              Sepáralas con comas. La IA las evitará en todo el plan.
+              Sepáralas con comas. Las evitaremos en todo el plan.
             </p>
           </div>
         </FormSection>

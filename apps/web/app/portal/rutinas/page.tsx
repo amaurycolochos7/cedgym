@@ -349,7 +349,7 @@ function GenerateRoutineCard({
           <div className="mt-6 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-sm text-amber-900">
-              Completa tu perfil fitness primero para que la IA pueda adaptar la
+              Completa tu perfil fitness primero para que podamos adaptar la
               rutina a tu nivel y objetivo.{' '}
               <Link
                 href="/portal/perfil"
