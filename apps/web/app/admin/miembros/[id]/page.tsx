@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   ChevronsLeftRight,
   KeyRound,
+  MoreVertical,
   Pause,
   Play,
   Send,
@@ -64,6 +65,7 @@ export default function AdminMemberDetailPage() {
   const [waOpen, setWaOpen] = React.useState(false);
   const [waBody, setWaBody] = React.useState('');
   const [assignOpen, setAssignOpen] = React.useState(false);
+  const [actionsOpen, setActionsOpen] = React.useState(false);
 
   const membership = (m as any)?.membership ?? null;
 
@@ -104,6 +106,95 @@ export default function AdminMemberDetailPage() {
             <span>{m?.phone}</span>
             {m?.email && <span>· {m.email}</span>}
           </div>
+        </div>
+        <div className="relative md:hidden">
+          <button
+            type="button"
+            onClick={() => setActionsOpen(true)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            aria-label="Acciones"
+            aria-haspopup="menu"
+            aria-expanded={actionsOpen}
+          >
+            <MoreVertical className="h-5 w-5" />
+          </button>
+          {actionsOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-20"
+                onClick={() => setActionsOpen(false)}
+                aria-hidden="true"
+              />
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
+              >
+                {m?.status?.toUpperCase() === 'ACTIVE' ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      setSuspend(true);
+                    }}
+                    className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <Pause className="h-4 w-4" />
+                    Suspender
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setActionsOpen(false);
+                      setReactivate(true);
+                    }}
+                    className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  >
+                    <Play className="h-4 w-4" />
+                    Reactivar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionsOpen(false);
+                    setResetPw(true);
+                  }}
+                  className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  Reset password
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionsOpen(false);
+                    setWaOpen(true);
+                  }}
+                  className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <Send className="h-4 w-4" />
+                  WhatsApp
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionsOpen(false);
+                    setDel(true);
+                  }}
+                  className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-rose-600 hover:bg-slate-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar
+                </button>
+              </div>
+            </>
+          )}
         </div>
         <div className="hidden flex-wrap items-center gap-2 md:flex">
           {m?.status?.toUpperCase() === 'ACTIVE' ? (
@@ -153,7 +244,7 @@ export default function AdminMemberDetailPage() {
       </div>
 
       <Tabs defaultValue="general">
-        <TabsList className="flex flex-wrap">
+        <TabsList className="-mx-4 flex flex-nowrap overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="membership">Membresía</TabsTrigger>
           <TabsTrigger value="checkins">Check-ins</TabsTrigger>

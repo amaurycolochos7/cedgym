@@ -44,9 +44,9 @@ export default function AdminDashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard
           icon={Users}
           label="Socios activos"
@@ -56,7 +56,7 @@ export default function AdminDashboardPage() {
         />
         <KpiCard
           icon={DollarSign}
-          label="Ingresos MTD"
+          label="Ingresos del mes"
           value={
             kpis.data?.revenue_mtd != null
               ? MXN.format(kpis.data.revenue_mtd)
@@ -74,24 +74,24 @@ export default function AdminDashboardPage() {
         />
         <KpiCard
           icon={UserPlus}
-          label="Altas MTD"
+          label="Altas del mes"
           value={kpis.data?.signups_mtd ?? '—'}
           delta={kpis.data?.signups_mtd_delta}
           href="/admin/miembros?sort=created_desc"
         />
         <KpiCard
           icon={CalendarClock}
-          label="Vencen en 7d"
+          label="Vencen esta semana"
           value={kpis.data?.expiring_7d ?? '—'}
-          hint="Requiere follow-up"
+          hint="Requieren seguimiento"
           href="/admin/memberships?expiring=7d"
         />
       </div>
 
       {/* Revenue + retention */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 xl:col-span-2">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6 xl:col-span-2">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 Ingresos
@@ -100,7 +100,7 @@ export default function AdminDashboardPage() {
                 Ingresos cobrados por día/semana/mes
               </p>
             </div>
-            <div className="inline-flex gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="inline-flex gap-1 self-start rounded-lg bg-slate-100 p-1 sm:self-auto">
               {(['day', 'week', 'month'] as const).map((r) => (
                 <button
                   key={r}
@@ -117,15 +117,17 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           </div>
-          <ChartLine
-            data={revenue.data ?? []}
-            xKey="bucket"
-            yKey="amount_mxn"
-            formatter={(v) => MXN.format(typeof v === 'number' && !Number.isNaN(v) ? v : 0)}
-          />
+          <div className="min-h-[200px]">
+            <ChartLine
+              data={revenue.data ?? []}
+              xKey="bucket"
+              yKey="amount_mxn"
+              formatter={(v) => MXN.format(typeof v === 'number' && !Number.isNaN(v) ? v : 0)}
+            />
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6">
           <div className="mb-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
               Retención
@@ -134,17 +136,19 @@ export default function AdminDashboardPage() {
               % de renovaciones por mes
             </p>
           </div>
-          <ChartBar
-            data={retention.data ?? []}
-            xKey="month"
-            yKey="renewals_pct"
-            formatter={(v) => `${typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(0) : '0'}%`}
-          />
+          <div className="min-h-[200px]">
+            <ChartBar
+              data={retention.data ?? []}
+              xKey="month"
+              yKey="renewals_pct"
+              formatter={(v) => `${typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(0) : '0'}%`}
+            />
+          </div>
         </div>
       </div>
 
       {/* Heatmap */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6">
         <div className="mb-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
             Check-ins por día y hora
@@ -153,12 +157,14 @@ export default function AdminDashboardPage() {
             Entradas al gym en los últimos 30 días
           </p>
         </div>
-        <Heatmap cells={heat.data ?? []} />
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+          <Heatmap cells={heat.data ?? []} />
+        </div>
       </div>
 
       {/* Churn */}
       <div className="grid grid-cols-1 gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 lg:p-6">
           <div className="mb-3 flex items-start justify-between">
             <div>
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">

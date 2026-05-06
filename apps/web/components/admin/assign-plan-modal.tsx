@@ -58,9 +58,9 @@ interface AssignPlanModalProps {
 const INPUT_CLS =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
 const BTN_PRIMARY =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
+  'inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
 const BTN_GHOST =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
+  'inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-white border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:pointer-events-none';
 
 const MXN = new Intl.NumberFormat('es-MX', {
   style: 'currency',
@@ -217,7 +217,7 @@ export function AssignPlanModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl bg-white border-slate-200 text-slate-900 max-h-[92vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl bg-white border-slate-200 text-slate-900 max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-slate-900">
             Asignar plan a {member.name}
@@ -390,7 +390,7 @@ export function AssignPlanModal({
           </label>
         </section>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}

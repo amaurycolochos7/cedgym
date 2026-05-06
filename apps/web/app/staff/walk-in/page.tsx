@@ -99,14 +99,14 @@ export default function StaffWalkInPage() {
     [plans, form.plan],
   );
   const planPrice = selectedPlan?.monthly_price_mxn ?? selectedPlan?.monthly ?? 0;
-  // Inscription is charged on first PRO/ELITE registration. STARTER never
-  // pays it. The walk-in flow is always a NEW user, so we always include
-  // it for PRO/ELITE here (the backend re-validates and ignores it for
-  // existing users). Kept in lockstep with INSCRIPTION_PRICE_MXN in
-  // apps/api/src/lib/memberships.js.
-  const INSCRIPTION_MXN = 109;
+  // Inscripción única ($100) — política 2026-05: ahora SOLO se cobra
+  // en STARTER al socio nuevo. PRO/ELITE ya la traen incluida en el
+  // precio. Walk-in siempre es socio nuevo, así que la sumamos
+  // directo cuando el plan elegido es Básico. Sync con
+  // INSCRIPTION_PRICE_MXN en apps/api/src/lib/memberships.js.
+  const INSCRIPTION_MXN = 100;
   const inscriptionPreview =
-    form.plan === 'STARTER' ? 0 : INSCRIPTION_MXN;
+    form.plan === 'STARTER' ? INSCRIPTION_MXN : 0;
 
   // Promo validation, debounced. We hit /promocodes/validate after the
   // receptionist stops typing for 400 ms so each keystroke isn't a round

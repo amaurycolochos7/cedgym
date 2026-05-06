@@ -162,14 +162,15 @@ export const VALID_CYCLES = ['MONTHLY'];
 // Plan rank for "≥ PRO" comparisons (freeze auto-approval etc.).
 export const PLAN_RANK = { STARTER: 1, PRO: 2, ELITE: 3 };
 
-// One-time inscription fee charged on the first PRO/ELITE subscription
-// per user. STARTER is exempt. Once paid (User.inscription_paid_at !=
-// null) it is never charged again, even on plan changes or re-subscribe
-// after a cancellation. Bundled into the same MP transaction as the
-// plan, so the customer sees a single charge of (plan + 109) on first
-// payment and (plan) thereafter.
-export const INSCRIPTION_PRICE_MXN = 109;
-export const PLANS_WITH_INSCRIPTION = new Set(['PRO', 'ELITE']);
+// One-time inscription fee charged on the first STARTER subscription
+// per user. PRO/ELITE no la cobran porque su precio ya la absorbe.
+// Once paid (User.inscription_paid_at != null) it is never charged
+// again, even on plan changes, renewals, or re-subscribe after a
+// cancellation. Stripe la mete como add_invoice_items en la primera
+// factura, así que el socio ve un cargo único de (plan + 100) la
+// primera vez y (plan) cada mes después automáticamente.
+export const INSCRIPTION_PRICE_MXN = 100;
+export const PLANS_WITH_INSCRIPTION = new Set(['STARTER']);
 
 export function planRequiresInscription(planCode) {
     return PLANS_WITH_INSCRIPTION.has(planCode);

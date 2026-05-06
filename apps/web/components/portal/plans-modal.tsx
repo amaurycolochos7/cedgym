@@ -186,6 +186,7 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
   // PROFILE_INCOMPLETE si falta cualquiera; este gate evita el
   // round-trip y guía al socio a /portal/perfil.
   const profileReady = hasSelfie && hasFullName && hasBirthDate;
+  const hasInscriptionPaid = !!user?.inscription_paid_at;
 
   const selectedPlanDTO = useMemo(
     () => plansData?.plans.find((p) => p.id === selectedPlan) ?? null,
@@ -196,6 +197,18 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
     () => selectedPlanDTO?.monthly_price_mxn ?? 0,
     [selectedPlanDTO],
   );
+
+  // Inscripción de $100 (sync con apps/api/src/lib/memberships.js).
+  // Solo aplica al primer cobro de un socio nuevo en STARTER. Si el
+  // socio ya pagó inscripción antes, o si elige PRO/ELITE (precio
+  // ya incluye inscripción), va en 0. Stripe usa add_invoice_items
+  // para meterla solo en la primera factura — los meses siguientes
+  // se cobra el plan limpio automáticamente.
+  const INSCRIPTION_MXN = 100;
+  const inscriptionAmount =
+    selectedPlanDTO?.id === 'STARTER' && !hasInscriptionPaid
+      ? INSCRIPTION_MXN
+      : 0;
 
   if (!open) return null;
 
@@ -292,6 +305,7 @@ export function PlansModal({ open, onClose, highlightPlan }: PlansModalProps) {
               plan={selectedPlanDTO}
               cycle={cycle}
               amount={selectedAmount}
+              inscriptionAmount={inscriptionAmount}
               promoCode={promoCode}
               setPromoCode={setPromoCode}
               payerEmail={user?.email}
@@ -549,6 +563,7 @@ function PlanCardModal({
 function StepPay({
   plan,
   amount,
+  inscriptionAmount,
   promoCode,
   setPromoCode,
   onSuccess,
@@ -557,6 +572,8 @@ function StepPay({
   plan: PlanDTO;
   cycle: Cycle;
   amount: number;
+  /** $100 si es STARTER + socio nuevo, 0 en cualquier otro caso. */
+  inscriptionAmount: number;
   promoCode: string;
   setPromoCode: (v: string) => void;
   payerEmail?: string;
@@ -590,7 +607,17 @@ function StepPay({
   const effectiveAmount = promoPreview?.valid
     ? promoPreview.final_amount
     : amount;
-  const is100Off = promoPreview?.valid && promoPreview.final_amount === 0;
+  // is100Off solo aplica al monto recurrente — la inscripción no se
+  // descuenta con el promo de plan, así que un cupón 100% off cubre
+  // únicamente el plan, no la inscripción de $100. Consideramos
+  // "$0 hoy" solo si tampoco hay inscripción pendiente.
+  const is100Off =
+    promoPreview?.valid &&
+    promoPreview.final_amount === 0 &&
+    inscriptionAmount === 0;
+  // Lo que cobra Stripe en la PRIMERA factura: plan (con/sin promo)
+  // + inscripción única. A partir del mes 2 solo el plan.
+  const firstChargeAmount = effectiveAmount + inscriptionAmount;
 
   const applyPromo = async () => {
     const code = promoDraft.trim().toUpperCase();
@@ -689,6 +716,7 @@ function StepPay({
           planName={plan.name}
           amount={amount}
           effectiveAmount={effectiveAmount}
+          inscriptionAmount={inscriptionAmount}
           promoPreview={promoPreview}
           promoCode={promoCode}
         />
@@ -735,6 +763,7 @@ function StepPay({
         planName={plan.name}
         amount={amount}
         effectiveAmount={effectiveAmount}
+        inscriptionAmount={inscriptionAmount}
         promoPreview={promoPreview}
         promoCode={promoCode}
       />
@@ -814,7 +843,7 @@ function StepPay({
           ? 'Preparando…'
           : is100Off
           ? '✓ Activar membresía sin costo'
-          : `Continuar al pago · $${effectiveAmount.toLocaleString('es-MX')}`}
+          : `Continuar al pago · $${firstChargeAmount.toLocaleString('es-MX')}`}
       </button>
 
       {!is100Off && (
@@ -850,12 +879,14 @@ function SummaryPill({
   planName,
   amount,
   effectiveAmount,
+  inscriptionAmount = 0,
   promoPreview,
   promoCode,
 }: {
   planName: string;
   amount: number;
   effectiveAmount: number;
+  inscriptionAmount?: number;
   promoPreview: {
     valid: boolean;
     reason?: string | null;
@@ -864,6 +895,65 @@ function SummaryPill({
   } | null;
   promoCode: string;
 }) {
+  const hasInscription = inscriptionAmount > 0;
+  const todayTotal = effectiveAmount + inscriptionAmount;
+
+  // Layout extendido: cuando hay inscripción única ($100 socios
+  // nuevos en STARTER) mostramos desglose plan + inscripción + total
+  // de hoy + indicador del próximo cobro recurrente. Si no, layout
+  // compacto original.
+  if (hasInscription) {
+    return (
+      <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-4 text-white">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="font-display text-xl font-bold">{planName}</div>
+          {promoPreview?.valid && promoPreview.discount_mxn > 0 && (
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+              {promoCode} · −${promoPreview.discount_mxn.toLocaleString('es-MX')}
+            </span>
+          )}
+        </div>
+        <div className="mt-3 space-y-1 text-sm tabular-nums">
+          <div className="flex items-baseline justify-between text-white/90">
+            <span>Plan mensual</span>
+            <span className={promoPreview?.valid && promoPreview.discount_mxn > 0 ? 'line-through opacity-70' : ''}>
+              ${amount.toLocaleString('es-MX')}
+            </span>
+          </div>
+          {promoPreview?.valid && promoPreview.discount_mxn > 0 && (
+            <div className="flex items-baseline justify-between text-white/90">
+              <span>Plan con descuento</span>
+              <span>${effectiveAmount.toLocaleString('es-MX')}</span>
+            </div>
+          )}
+          <div className="flex items-baseline justify-between text-white/90">
+            <span>
+              Inscripción única{' '}
+              <span className="text-[10px] uppercase tracking-wider opacity-80">solo socios nuevos</span>
+            </span>
+            <span>${inscriptionAmount.toLocaleString('es-MX')}</span>
+          </div>
+        </div>
+        <div className="mt-3 flex items-end justify-between gap-3 border-t border-white/25 pt-3">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">
+              Hoy pagas
+            </div>
+            <div className="font-display text-2xl font-bold tabular-nums">
+              ${todayTotal.toLocaleString('es-MX')} <span className="text-xs">MXN</span>
+            </div>
+          </div>
+          <div className="text-right text-[11px] text-white/85">
+            <div className="font-semibold uppercase tracking-wider opacity-80">Próximo cobro</div>
+            <div className="font-bold tabular-nums">
+              ${effectiveAmount.toLocaleString('es-MX')}/mes
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 p-4 text-white">
       <div>

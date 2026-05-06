@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, normalizeError } from '@/lib/api';
+import { api, normalizeError, portalApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ApiError } from '@/lib/schemas';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
@@ -198,6 +198,30 @@ export default function PortalPerfilPage() {
     }
     saveProfile.mutate();
   };
+
+  // Descarga LFPDPPP de los datos personales. Antes esto era
+  // window.location.href = `${baseURL}/users/me/export` — el browser
+  // navegaba sin el JWT (axios inyecta el header Authorization, una
+  // navegación cruda no), así que la API respondía 401 y al socio no
+  // le pasaba nada. Ahora pedimos el blob por axios y disparamos la
+  // descarga inyectando un <a download> efímero.
+  const exportData = useMutation({
+    mutationFn: () => portalApi.exportData(),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cedgym-mis-datos-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // Liberar el object URL al siguiente tick — Chrome aborta la
+      // descarga si lo revocas antes de que el browser inicie el save.
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      toast.success('Tus datos se descargaron en JSON.');
+    },
+    onError: () => toast.error('No se pudieron exportar tus datos. Intenta de nuevo.'),
+  });
 
   // Drives the "Completar →" buttons in the requirements checklist. Just
   // scrolling is useless because the personal-data form starts collapsed —
@@ -452,9 +476,11 @@ export default function PortalPerfilPage() {
               <button
                 type="button"
                 className={BTN_GHOST}
-                onClick={() => (window.location.href = `${api.defaults.baseURL}/users/me/export`)}
+                disabled={exportData.isPending}
+                onClick={() => exportData.mutate()}
               >
-                <Download className="w-4 h-4" /> Exportar mis datos
+                <Download className="w-4 h-4" />{' '}
+                {exportData.isPending ? 'Generando…' : 'Exportar mis datos'}
               </button>
               <button
                 type="button"

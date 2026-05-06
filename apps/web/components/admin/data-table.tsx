@@ -71,7 +71,8 @@ export function DataTable<T>({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      {/* Desktop / tablet: classic table */}
+      <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
         <div className="w-full overflow-x-auto">
           <table className="w-full caption-bottom text-left text-sm text-slate-900">
             <thead className="bg-slate-50">
@@ -146,6 +147,106 @@ export function DataTable<T>({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile: card view */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {rows.length ? (
+          rows.map((row) => {
+            const cells = row.getVisibleCells();
+            const [titleCell, ...restCells] = cells;
+            const fieldCells: typeof restCells = [];
+            const actionCells: typeof restCells = [];
+
+            for (const cell of restCells) {
+              const def = cell.column.columnDef;
+              const headerDef = def.header;
+              const isEmptyHeader =
+                headerDef === undefined ||
+                headerDef === null ||
+                (typeof headerDef === 'string' && headerDef.trim() === '');
+              const looksLikeActions =
+                cell.column.id === 'actions' || isEmptyHeader;
+              if (looksLikeActions) {
+                actionCells.push(cell);
+              } else {
+                fieldCells.push(cell);
+              }
+            }
+
+            const Wrapper: React.ElementType = onRowClick ? 'button' : 'div';
+            const wrapperProps = onRowClick
+              ? {
+                  type: 'button' as const,
+                  onClick: () => onRowClick(row.original),
+                }
+              : {};
+
+            return (
+              <Wrapper
+                key={row.id}
+                {...wrapperProps}
+                className={cn(
+                  'flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-white p-4 text-left transition',
+                  onRowClick && 'cursor-pointer hover:bg-slate-50 active:bg-slate-100',
+                )}
+              >
+                {titleCell && (
+                  <div className="text-base font-semibold text-slate-900">
+                    {flexRender(
+                      titleCell.column.columnDef.cell,
+                      titleCell.getContext(),
+                    )}
+                  </div>
+                )}
+
+                {fieldCells.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    {fieldCells.map((cell) => (
+                      <div
+                        key={cell.id}
+                        className="flex items-start justify-between gap-3"
+                      >
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                          {flexRender(
+                            cell.column.columnDef.header,
+                            cell.getContext() as never,
+                          )}
+                        </span>
+                        <span className="text-right text-sm text-slate-900">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {actionCells.length > 0 && (
+                  <div
+                    className="flex w-full flex-wrap items-center gap-2 border-t border-slate-100 pt-2.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {actionCells.map((cell) => (
+                      <div key={cell.id} className="flex-1">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Wrapper>
+            );
+          })
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-white py-10 text-center text-sm text-slate-500">
+            {empty ?? 'Sin resultados'}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
