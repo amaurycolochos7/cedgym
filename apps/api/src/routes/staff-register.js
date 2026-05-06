@@ -685,6 +685,26 @@ export default async function staffRegisterRoutes(fastify) {
                 priceMxn: amount,
             });
 
+            // Política 2026-05: si recepción cobró cash en mostrador,
+            // el socio queda implícitamente "grandfathered" para la
+            // inscripción única de $100. Si después intenta comprar
+            // online por Stripe, el sistema lo detecta como ya pagado
+            // y le cobra solo el plan ($630) en lugar de $730.
+            // Idempotente: solo se estampa si está en null.
+            if (!user.inscription_paid_at) {
+                try {
+                    await prisma.user.update({
+                        where: { id: user.id, inscription_paid_at: null },
+                        data: { inscription_paid_at: new Date() },
+                    });
+                } catch (e) {
+                    req.log.warn(
+                        { err: e?.message, userId: user.id },
+                        '[staff-register] auto-stamp inscription_paid_at failed'
+                    );
+                }
+            }
+
             await fireEvent(isRenewal ? 'membership.renewed' : 'member.verified', {
                 workspaceId,
                 userId: user.id,
