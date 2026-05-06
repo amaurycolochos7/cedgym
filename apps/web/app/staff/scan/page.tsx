@@ -201,18 +201,30 @@ export default function StaffScanPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="font-display text-xl font-bold tracking-tight text-slate-900 sm:text-2xl md:text-3xl">
+    <div className="mx-auto flex max-w-7xl flex-col gap-4">
+      {/* Header compacto: el topbar ya muestra el título "Scan QR".
+          Aquí solo va el contador del turno como hint contextual. */}
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="font-display text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
           Escanear QR
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Escanea el QR del atleta. {history.length} check-ins este turno.
-        </p>
+        <span className="text-xs text-slate-500">
+          <span className="tabular-nums font-semibold text-slate-700">
+            {history.length}
+          </span>{' '}
+          check-ins este turno
+        </span>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      {/* Layout responsivo:
+          - mobile: cámara → resultado → historial (1 col)
+          - md (≥768): cámara | resultado, historial debajo
+          - lg (≥1024): cámara | resultado | historial (3 col, todo en
+            una pantalla sin scroll)
+          La cámara está capada con max-w para que no estire demasiado
+          en pantallas grandes. */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
           {/*
             IMPORTANTE: #qr-reader NO debe tener hijos manejados por React.
             html5-qrcode inyecta sus propios nodos (video/canvas) ahí dentro y
@@ -220,7 +232,7 @@ export default function StaffScanPage() {
             falla con "Failed to execute 'removeChild' on 'Node'". Por eso el
             placeholder va en un overlay hermano.
           */}
-          <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-900 text-slate-500">
+          <div className="relative mx-auto aspect-square w-full max-w-[420px] overflow-hidden rounded-xl bg-slate-900 text-slate-500">
             <div id="qr-reader" className="absolute inset-0" />
             {!active && (
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
@@ -235,7 +247,7 @@ export default function StaffScanPage() {
               </div>
             )}
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex justify-center gap-2">
             {!active ? (
               <button
                 type="button"
@@ -261,20 +273,26 @@ export default function StaffScanPage() {
           className={
             result
               ? result.ok
-                ? 'rounded-2xl border border-emerald-200 bg-emerald-50 p-6'
-                : 'rounded-2xl border border-rose-200 bg-rose-50 p-6'
-              : 'rounded-2xl border border-slate-200 bg-white p-6'
+                ? 'rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5'
+                : 'rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:p-5'
+              : 'rounded-2xl border border-slate-200 bg-white p-4 sm:p-5'
           }
         >
           {!result && (
-            <div className="py-16 text-center text-slate-500">
-              Esperando escaneo…
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center text-slate-500 sm:py-10">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
+                <Camera className="h-6 w-6 text-slate-400" />
+              </div>
+              <p className="text-sm">Esperando escaneo…</p>
+              <p className="text-xs text-slate-400">
+                Apunta el QR del socio al lector
+              </p>
             </div>
           )}
           {result?.ok && (
-            <div className="space-y-3 text-center">
+            <div className="space-y-2 text-center">
               {result.member?.selfie_url ? (
-                <div className="mx-auto h-32 w-32 overflow-hidden rounded-2xl ring-4 ring-emerald-200">
+                <div className="mx-auto h-28 w-28 overflow-hidden rounded-2xl ring-4 ring-emerald-200 sm:h-32 sm:w-32">
                   <img
                     src={result.member.selfie_url}
                     alt={result.member?.name}
@@ -282,20 +300,20 @@ export default function StaffScanPage() {
                   />
                 </div>
               ) : (
-                <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-600" />
+                <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600 sm:h-16 sm:w-16" />
               )}
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-700">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 sm:text-[11px]">
                   Verifica que la cara coincide
                 </p>
-                <div className="mt-1 text-2xl font-bold text-slate-900">
+                <div className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">
                   {result.member?.name}
                 </div>
-                <div className="mt-1 text-sm text-slate-700">
+                <div className="mt-1 text-xs text-slate-700 sm:text-sm">
                   {planDisplayName(result.member?.plan)} · Vence{' '}
                   {result.member?.expires_at?.slice(0, 10)}
                 </div>
-                <div className="mt-2 text-xs text-slate-500">
+                <div className="mt-1 text-[11px] text-slate-500 sm:text-xs">
                   Racha: {result.member?.current_streak_days ?? 0} días
                 </div>
               </div>
@@ -378,27 +396,42 @@ export default function StaffScanPage() {
             </div>
           )}
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h3 className="mb-3 font-semibold text-slate-900">Historial del turno</h3>
-        {history.length === 0 ? (
-          <p className="text-sm text-slate-500">Aún no hay check-ins.</p>
-        ) : (
-          <div className="max-h-60 space-y-1 overflow-y-auto text-sm">
-            {history.map((h, i) => (
-              <div
-                key={i}
-                className="flex justify-between border-b border-slate-200 py-1 last:border-0"
-              >
-                <span className="text-slate-900">{h.member?.name}</span>
-                <span className="text-slate-500">
-                  {new Date(h.at).toLocaleTimeString('es-MX')}
-                </span>
-              </div>
-            ))}
+        {/* Historial — span full row en md (debajo del split cámara/resultado),
+            sidebar a la derecha en lg+. Scroll interno para no expandir
+            la altura de la página cuando hay muchos check-ins. */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 md:col-span-2 lg:col-span-1">
+          <div className="mb-2 flex items-baseline justify-between">
+            <h3 className="text-sm font-semibold text-slate-900">
+              Historial del turno
+            </h3>
+            <span className="text-[11px] text-slate-500">
+              {history.length}
+            </span>
           </div>
-        )}
+          {history.length === 0 ? (
+            <p className="text-xs text-slate-500">Aún no hay check-ins.</p>
+          ) : (
+            <div className="max-h-[260px] space-y-0.5 overflow-y-auto pr-1 text-sm">
+              {history.map((h, i) => (
+                <div
+                  key={i}
+                  className="flex justify-between border-b border-slate-100 py-1.5 last:border-0"
+                >
+                  <span className="truncate text-slate-900">
+                    {h.member?.name}
+                  </span>
+                  <span className="shrink-0 text-xs text-slate-500 tabular-nums">
+                    {new Date(h.at).toLocaleTimeString('es-MX', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
