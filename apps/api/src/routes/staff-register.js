@@ -132,7 +132,7 @@ function generateTempPassword() {
     return out;
 }
 
-async function sendWalkinWelcome(fastify, { phone, name, welcomeLink, planName }) {
+async function sendWalkinWelcome(fastify, { phone, name, welcomeLink, planName, receipt }) {
     const url = process.env.WHATSAPP_BOT_URL;
     const key = process.env.WHATSAPP_BOT_KEY;
     if (!url || !key) return { ok: false, error: 'bot_not_configured' };
@@ -150,9 +150,21 @@ async function sendWalkinWelcome(fastify, { phone, name, welcomeLink, planName }
         ? `Tu plan *${planName}* ya está activo.`
         : `Tu membresía ya está activa.`;
 
+    // Recibo embebido: en walk-in unimos bienvenida + recibo en un
+    // solo mensaje (antes mandábamos dos: este + payment.approved).
+    // El usuario pidió unificar para no spamear al socio nuevo.
+    const receiptBlock = receipt
+        ? `\n*Recibo de pago*\n` +
+          (receipt.amount != null ? `• Monto: $${Number(receipt.amount).toLocaleString('es-MX')} MXN\n` : '') +
+          (receipt.method ? `• Método: ${receipt.method}\n` : '') +
+          (receipt.expiresAt ? `• Vigencia hasta: ${receipt.expiresAt}\n` : '') +
+          `\n`
+        : '';
+
     const message =
         `${salutation}\n\n` +
-        `${planLine}\n\n` +
+        `${planLine}\n` +
+        receiptBlock +
         `Configura tu acceso (1 minuto):\n` +
         `👉 ${welcomeLink}\n\n` +
         `En el link vas a:\n` +
@@ -491,48 +503,48 @@ export default async function staffRegisterRoutes(fastify) {
                 billingCycle: billing_cycle,
             });
 
-            // Misma plantilla "Pago confirmado" que llega en flujo
-            // online — necesario para que los socios cash reciban el
-            // recibo digital con monto, fecha, plan y vencimiento.
-            // metodo_pago en español para que la copy salga limpia.
-            await fireEvent('payment.approved', {
-                workspaceId,
-                paymentId: payment.id,
-                userId: user.id,
-                membership_id: membership.id,
-                type: 'MEMBERSHIP',
-                amount: totalAmount,
-                plan,
-                stripe: {
-                    payment_method:
-                        payment_method === 'CASH'
-                            ? 'Efectivo'
-                            : payment_method === 'CARD_TERMINAL'
-                              ? 'Tarjeta en recepción'
-                              : payment_method,
-                    payment_intent_id: payment.id,
-                    paid_at: Date.now(),
-                    receipt_url: '',
-                },
-            }).catch((e) =>
-                req.log.warn(
-                    { err: e?.message, paymentId: payment.id },
-                    '[staff-register] payment.approved event (cash) failed'
-                )
-            );
+            // En walk-in NO disparamos payment.approved como evento
+            // separado. En lugar de mandar dos WhatsApps (bienvenida
+            // + recibo), embebemos el recibo dentro del mismo
+            // mensaje de bienvenida (ver sendWalkinWelcome abajo).
+            // Para online sí se sigue disparando porque el usuario
+            // ya tiene cuenta y no recibe bienvenida.
 
             // Welcome link — single-use signed token, valid 7 days. The
             // socio uses this to set their password + upload selfie.
             const welcomeToken = signWelcomeToken(fastify, user.id);
             const welcomeLink = `${webappPublicUrl()}/welcome?t=${encodeURIComponent(welcomeToken)}`;
             const planMeta = getPlanByCode(plan);
+            const expiresFmt = (() => {
+                try {
+                    const d = membership?.expires_at ? new Date(membership.expires_at) : null;
+                    if (!d || Number.isNaN(d.getTime())) return null;
+                    return d.toLocaleDateString('es-MX', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                    });
+                } catch {
+                    return null;
+                }
+            })();
 
-            // Fire-and-forget welcome.
+            // Fire-and-forget welcome con recibo embebido.
             sendWalkinWelcome(fastify, {
                 phone,
                 name,
                 welcomeLink,
                 planName: planMeta?.name || plan,
+                receipt: {
+                    amount: totalAmount,
+                    method:
+                        payment_method === 'CASH'
+                            ? 'Efectivo'
+                            : payment_method === 'CARD_TERMINAL'
+                              ? 'Tarjeta en recepción'
+                              : payment_method,
+                    expiresAt: expiresFmt,
+                },
             }).catch(() => {});
 
             return {
@@ -735,43 +747,31 @@ export default async function staffRegisterRoutes(fastify) {
                 }
             }
 
+            // En cash NO disparamos payment.approved — para que el
+            // socio reciba un solo mensaje. La plantilla
+            // membership.renewed ya incluye monto + plan +
+            // vencimiento (renderer arma `monto_pagado` desde
+            // context.amount). Para flujos online sí se dispara
+            // payment.approved porque el recibo Stripe es el
+            // comprobante formal.
+            const cashMethodLabel =
+                payment_method === 'CASH'
+                    ? 'Efectivo'
+                    : payment_method === 'CARD_TERMINAL'
+                      ? 'Tarjeta en recepción'
+                      : payment_method;
             await fireEvent(isRenewal ? 'membership.renewed' : 'member.verified', {
                 workspaceId,
                 userId: user.id,
                 membershipId: membership.id,
                 plan,
                 billingCycle: billing_cycle,
-            });
-
-            // payment.approved en cash — misma plantilla que online
-            // (recibo digital con monto + fecha + plan + vencimiento).
-            // Sin esto, los socios que renuevan en recepción no
-            // reciben confirmación por WhatsApp.
-            await fireEvent('payment.approved', {
-                workspaceId,
-                paymentId: payment.id,
-                userId: user.id,
-                membership_id: membership.id,
-                type: 'MEMBERSHIP',
                 amount,
-                plan,
                 stripe: {
-                    payment_method:
-                        payment_method === 'CASH'
-                            ? 'Efectivo'
-                            : payment_method === 'CARD_TERMINAL'
-                              ? 'Tarjeta en recepción'
-                              : payment_method,
-                    payment_intent_id: payment.id,
+                    payment_method: cashMethodLabel,
                     paid_at: Date.now(),
-                    receipt_url: '',
                 },
-            }).catch((e) =>
-                req.log.warn(
-                    { err: e?.message, paymentId: payment.id },
-                    '[staff-register] payment.approved event (cash renewal) failed'
-                )
-            );
+            });
 
             return {
                 user_id: user.id,

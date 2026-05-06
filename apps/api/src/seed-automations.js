@@ -81,14 +81,18 @@ const TEMPLATES = [
     // ─── Renovación confirmada ──────────────────────────────
     // Llega tras una renovación exitosa, sea por recepción cash
     // (/staff/extend-membership) o por suscripción Stripe (cuando
-    // el webhook activa la 2da factura en adelante). Diferente del
-    // "Pago confirmado" porque enfoca la ENERGÍA en el "te
-    // seguimos esperando", no en el detalle del cobro.
+    // el webhook activa la 2da factura en adelante).
+    //
+    // En cash es el ÚNICO mensaje que recibe el socio (no se
+    // dispara payment.approved en paralelo) — por eso embebemos
+    // el recibo (monto + método). En online sí llega además el
+    // recibo formal de Stripe vía payment.approved con el link
+    // al receipt PDF.
     {
         code: 'membership.renewed',
         name: 'Renovación confirmada',
         channel: 'WHATSAPP',
-        body: `💪 Listo {nombre}, tu membresía *{plan}* CED·GYM está activa hasta *{fecha_venc}*.\n\n¡Te seguimos esperando en el gym!`,
+        body: `💪 Listo {nombre}, tu membresía *{plan}* CED·GYM está activa hasta *{fecha_venc}*.\n\n*Recibo*\n• Monto: {monto_pagado}\n• Método: {metodo_pago}\n\n¡Te seguimos esperando en el gym!`,
     },
 
     // ─── Cumpleaños — sin descuento, firmado por Jeffrey ────
