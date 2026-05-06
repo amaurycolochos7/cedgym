@@ -132,10 +132,17 @@ function generateTempPassword() {
     return out;
 }
 
-async function sendWalkinWelcome(fastify, { phone, name, welcomeLink, planName, receipt }) {
+async function sendWalkinWelcome(fastify, { workspaceId, phone, name, welcomeLink, planName, receipt }) {
     const url = process.env.WHATSAPP_BOT_URL;
     const key = process.env.WHATSAPP_BOT_KEY;
     if (!url || !key) return { ok: false, error: 'bot_not_configured' };
+    if (!workspaceId) {
+        // Sin workspaceId el bot no puede resolver qué sesión usar
+        // (1 bot por workspace) y devuelve 503. Bug histórico que
+        // hacía que el WhatsApp de bienvenida nunca llegara.
+        fastify.log.warn('[staff-register] sendWalkinWelcome called without workspaceId');
+        return { ok: false, error: 'missing_workspace_id' };
+    }
 
     const firstName = (name || '').split(' ')[0] || '';
     const gender = detectGender(firstName);
@@ -181,7 +188,7 @@ async function sendWalkinWelcome(fastify, { phone, name, welcomeLink, planName, 
                 'x-api-key': key,
                 'content-type': 'application/json',
             },
-            body: JSON.stringify({ phone, message, template: 'member.welcome_walkin' }),
+            body: JSON.stringify({ workspaceId, phone, message, template: 'member.welcome_walkin' }),
         });
         if (!res.ok) {
             const text = await res.text().catch(() => '');
@@ -528,6 +535,7 @@ export default async function staffRegisterRoutes(fastify) {
 
             // Fire-and-forget welcome con recibo embebido.
             sendWalkinWelcome(fastify, {
+                workspaceId,
                 phone,
                 name,
                 welcomeLink,
@@ -607,6 +615,7 @@ export default async function staffRegisterRoutes(fastify) {
         const planMeta = getPlanByCode(plan);
 
         sendWalkinWelcome(fastify, {
+            workspaceId,
             phone,
             name,
             welcomeLink,
