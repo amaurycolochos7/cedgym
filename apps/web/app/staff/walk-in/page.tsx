@@ -190,237 +190,234 @@ export default function StaffWalkInPage() {
     'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600';
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
-      <header className="mb-6">
-        <h1 className="flex items-center gap-3 font-display text-3xl font-bold tracking-tight text-slate-900">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/25">
-            <UserPlus className="h-5 w-5" />
-          </span>
-          Inscribir socio
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Llena los datos básicos, cobra y listo. El socio recibirá un WhatsApp
-          con el link para crear su contraseña y subir su selfie.
-        </p>
+    <div className="mx-auto max-w-6xl">
+      {/* Header compacto: solo título + tagline corto, sin descripción larga.
+          El layout queda 2-col en lg+ para que TODO quepa en una pantalla
+          de 1080p sin scroll. En mobile sigue siendo single-column. */}
+      <header className="mb-4 flex items-center gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/25">
+          <UserPlus className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="font-display text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+            Inscribir socio
+          </h1>
+          <p className="text-xs text-slate-600 sm:text-sm">
+            Llena los datos, cobra y listo — recibe un WhatsApp con el link.
+          </p>
+        </div>
       </header>
 
-      <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        {/* ─── Datos del socio ────────────────────────────── */}
-        <section className="space-y-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
-            Datos del socio
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className={labelCls}>Nombre completo *</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className={inputCls}
-                placeholder="Diego López"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>WhatsApp *</label>
-              <input
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className={inputCls}
-                placeholder="+52 614 123 4567"
-                inputMode="tel"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Fecha de nacimiento *</label>
-              <input
-                type="date"
-                value={form.birthDate}
-                onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                className={inputCls}
-                max={new Date().toISOString().slice(0, 10)}
-              />
-            </div>
-          </div>
-          <p className="text-[11px] text-slate-500">
-            Email no es necesario — el WhatsApp es su login y donde recibe
-            todo (link de bienvenida, recibos, recordatorios). La fecha de
-            nacimiento es obligatoria; la foto de perfil la sube el socio en
-            el portal con el link que recibe por WhatsApp.
-          </p>
-        </section>
-
-        {/* ─── Plan ────────────────────────────────────────── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
-            Plan
-          </h2>
-          <div className="grid grid-cols-3 gap-2">
-            {plans.map((p) => {
-              const active = form.plan === p.id;
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setForm({ ...form, plan: p.id })}
-                  className={`rounded-xl border-2 p-3 text-left transition ${
-                    active
-                      ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-100'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="font-display text-base font-bold text-slate-900">
-                    {p.name}
-                  </div>
-                  <div className="mt-1 text-lg font-bold tabular-nums text-blue-600">
-                    {mxn(p.monthly_price_mxn ?? p.monthly ?? 0)}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-500">
-                    Mensual
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ─── Método de pago ──────────────────────────────── */}
-        <section className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
-            ¿Cómo pagó?
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {PAYMENT_METHODS.map((m) => {
-              const active = form.method === m.code;
-              const Icon = m.Icon;
-              return (
-                <button
-                  key={m.code}
-                  type="button"
-                  onClick={() =>
-                    setForm({ ...form, method: m.code as PaymentMethod })
+      <div className="grid gap-4 lg:grid-cols-2 lg:gap-5">
+        {/* ─── Columna izquierda: datos + plan ────────────── */}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <section className="space-y-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              Datos del socio
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className={labelCls}>Nombre completo *</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className={inputCls}
+                  placeholder="Diego López"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>WhatsApp *</label>
+                <input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className={inputCls}
+                  placeholder="+52 614 123 4567"
+                  inputMode="tel"
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Fecha de nacimiento *</label>
+                <input
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(e) =>
+                    setForm({ ...form, birthDate: e.target.value })
                   }
-                  className={`flex items-center gap-3 rounded-xl border-2 p-4 text-left transition ${
-                    active
-                      ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-100'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-                      active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                  className={inputCls}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              Plan
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {plans.map((p) => {
+                const active = form.plan === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, plan: p.id })}
+                    className={`rounded-xl border-2 p-2.5 text-left transition sm:p-3 ${
+                      active
+                        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-bold text-slate-900">{m.label}</div>
-                    <div className="text-xs text-slate-500">{m.hint}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[11px] text-slate-500">
-            El cobro se registra como ya pagado. Cualquiera de los dos
-            métodos activa la membresía al instante.
-          </p>
-        </section>
-
-        {/* ─── Cupón de descuento ──────────────────────────── */}
-        <section className="space-y-2">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
-            Cupón (opcional)
-          </h2>
-          <div className="relative">
-            <input
-              type="text"
-              value={form.promoCode}
-              onChange={(e) =>
-                setForm({ ...form, promoCode: e.target.value.toUpperCase() })
-              }
-              placeholder="Ej. AMIGOS50"
-              className={`${inputCls} pr-10 ${
-                trimmedCode.length === 0
-                  ? ''
-                  : promoChecking
-                    ? 'border-slate-300'
-                    : promoValid
-                      ? 'border-emerald-400 ring-emerald-100'
-                      : 'border-rose-400 ring-rose-100'
-              }`}
-              autoCapitalize="characters"
-            />
-            {trimmedCode.length > 0 && (
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                {promoChecking ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-                ) : promoValid ? (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-rose-500" />
-                )}
-              </span>
-            )}
-          </div>
-          {trimmedCode.length === 0 ? (
-            <p className="text-[11px] text-slate-500">
-              Si el socio trae un código, escríbelo aquí. El descuento se
-              aplica solo al plan (la inscripción no se descuenta).
-            </p>
-          ) : promoChecking ? (
-            <p className="text-[11px] text-slate-500">Validando…</p>
-          ) : promoValid ? (
-            <p className="text-[11px] font-semibold text-emerald-700">
-              ✓ Cupón válido — descuenta {mxn(promoDiscount)} del plan
-            </p>
-          ) : (
-            <p className="text-[11px] font-semibold text-rose-600">
-              ✗ {promoReasonLabel(promoReason)}
-            </p>
-          )}
-        </section>
-
-        {/* ─── Total + CTA ─────────────────────────────────── */}
-        <section className="border-t border-slate-200 pt-5">
-          <div className="mb-3 space-y-1 text-sm">
-            <div className="flex justify-between text-slate-600">
-              <span>Plan {selectedPlan?.name ?? '—'}</span>
-              <span className="tabular-nums">{mxn(planPrice)}</span>
+                    <div className="font-display text-sm font-bold text-slate-900 sm:text-base">
+                      {p.name}
+                    </div>
+                    <div className="mt-0.5 text-base font-bold tabular-nums text-blue-600 sm:text-lg">
+                      {mxn(p.monthly_price_mxn ?? p.monthly ?? 0)}
+                    </div>
+                    <div className="text-[9px] uppercase tracking-wider text-slate-500 sm:text-[10px]">
+                      Mensual
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            {promoValid && promoDiscount > 0 && (
-              <div className="flex justify-between text-emerald-700">
-                <span>
-                  Cupón {trimmedCode}
+          </section>
+        </div>
+
+        {/* ─── Columna derecha: pago + cupón + total/CTA ────── */}
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <section className="space-y-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              ¿Cómo pagó?
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              {PAYMENT_METHODS.map((m) => {
+                const active = form.method === m.code;
+                const Icon = m.Icon;
+                return (
+                  <button
+                    key={m.code}
+                    type="button"
+                    onClick={() =>
+                      setForm({ ...form, method: m.code as PaymentMethod })
+                    }
+                    className={`flex items-center gap-2.5 rounded-xl border-2 p-2.5 text-left transition sm:p-3 ${
+                      active
+                        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                        active
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-slate-900">
+                        {m.label}
+                      </div>
+                      <div className="truncate text-[11px] text-slate-500">
+                        {m.hint}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="space-y-1.5">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+              Cupón (opcional)
+            </h2>
+            <div className="relative">
+              <input
+                type="text"
+                value={form.promoCode}
+                onChange={(e) =>
+                  setForm({ ...form, promoCode: e.target.value.toUpperCase() })
+                }
+                placeholder="Ej. AMIGOS50"
+                className={`${inputCls} pr-10 ${
+                  trimmedCode.length === 0
+                    ? ''
+                    : promoChecking
+                      ? 'border-slate-300'
+                      : promoValid
+                        ? 'border-emerald-400 ring-emerald-100'
+                        : 'border-rose-400 ring-rose-100'
+                }`}
+                autoCapitalize="characters"
+              />
+              {trimmedCode.length > 0 && (
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  {promoChecking ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                  ) : promoValid ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-rose-500" />
+                  )}
                 </span>
-                <span className="tabular-nums">−{mxn(promoDiscount)}</span>
-              </div>
-            )}
-            {inscriptionPreview > 0 && (
-              <div className="flex justify-between text-slate-600">
-                <span>Inscripción única</span>
-                <span className="tabular-nums">{mxn(inscriptionPreview)}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-slate-500">
-                Total a cobrar
-              </div>
-              <div className="font-display text-4xl font-bold tabular-nums text-blue-600">
-                {mxn(totalPreview)}
-              </div>
+              )}
             </div>
-            <button
-              type="button"
-              disabled={!canSubmit}
-              onClick={() => register.mutate()}
-              className="inline-flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-gradient-to-br from-blue-600 to-sky-500 px-8 py-3 font-display text-base font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {register.isPending ? 'Inscribiendo…' : 'Cobrar e inscribir'}
-            </button>
-          </div>
-        </section>
+            {trimmedCode.length > 0 &&
+              (promoChecking ? (
+                <p className="text-[11px] text-slate-500">Validando…</p>
+              ) : promoValid ? (
+                <p className="text-[11px] font-semibold text-emerald-700">
+                  ✓ Cupón válido — descuenta {mxn(promoDiscount)} del plan
+                </p>
+              ) : (
+                <p className="text-[11px] font-semibold text-rose-600">
+                  ✗ {promoReasonLabel(promoReason)}
+                </p>
+              ))}
+          </section>
+
+          <section className="border-t border-slate-200 pt-3">
+            <div className="mb-2 space-y-0.5 text-xs sm:text-sm">
+              <div className="flex justify-between text-slate-600">
+                <span>Plan {selectedPlan?.name ?? '—'}</span>
+                <span className="tabular-nums">{mxn(planPrice)}</span>
+              </div>
+              {promoValid && promoDiscount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <span>Cupón {trimmedCode}</span>
+                  <span className="tabular-nums">−{mxn(promoDiscount)}</span>
+                </div>
+              )}
+              {inscriptionPreview > 0 && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Inscripción única</span>
+                  <span className="tabular-nums">{mxn(inscriptionPreview)}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500">
+                  Total a cobrar
+                </div>
+                <div className="font-display text-2xl font-bold tabular-nums text-blue-600 sm:text-3xl">
+                  {mxn(totalPreview)}
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={!canSubmit}
+                onClick={() => register.mutate()}
+                className="inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 px-4 py-3 font-display text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:from-blue-700 hover:to-sky-600 disabled:cursor-not-allowed disabled:opacity-60 sm:px-6 sm:text-base"
+              >
+                {register.isPending ? 'Inscribiendo…' : 'Cobrar e inscribir'}
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
 
       {/* ─── Success modal ──────────────────────────────────── */}

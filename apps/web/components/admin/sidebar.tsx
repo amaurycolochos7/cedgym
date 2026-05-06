@@ -7,11 +7,14 @@ import {
   LayoutDashboard,
   Users,
   UserCog,
+  UserPlus,
   CreditCard,
   GraduationCap,
   Dumbbell,
   Receipt,
   ShoppingBag,
+  ShoppingCart,
+  QrCode,
   Boxes,
   MessageSquare,
   Tag,
@@ -52,9 +55,10 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 const STAFF_NAV: NavItem[] = [
-  { label: 'Escanear', href: '/staff/scan', icon: LayoutDashboard },
+  { label: 'Scan QR', href: '/staff/scan', icon: QrCode },
   { label: 'Socios', href: '/staff/members', icon: Users },
-  { label: 'Punto de venta', href: '/staff/pos', icon: ShoppingBag },
+  { label: 'Inscribir socio', href: '/staff/walk-in', icon: UserPlus },
+  { label: 'Cobrar', href: '/staff/pos', icon: ShoppingCart },
 ];
 
 interface SidebarProps {

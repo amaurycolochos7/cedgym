@@ -103,11 +103,11 @@ export default function AdminMemberDetailPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <button
           type="button"
           onClick={() => router.back()}
-          className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          className="shrink-0 rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
           aria-label="Volver"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -116,17 +116,19 @@ export default function AdminMemberDetailPage() {
           selfieUrl={(m as any)?.selfie_url ?? null}
           name={(m as any)?.full_name || m?.name || ''}
         />
-        <div className="flex-1">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-xl font-bold tracking-tight text-slate-900 break-words sm:text-2xl md:text-3xl">
             {m?.name ?? '…'}
           </h1>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
             {m?.status && <StatusBadge status={m.status} />}
-            <span>{m?.phone}</span>
-            {m?.email && <span>· {m.email}</span>}
+            {m?.phone && <span className="tabular-nums">{m.phone}</span>}
+            {m?.email && (
+              <span className="break-all">· {m.email}</span>
+            )}
           </div>
         </div>
-        <div className="relative md:hidden">
+        <div className="relative shrink-0 md:hidden">
           <button
             type="button"
             onClick={() => setActionsOpen(true)}
@@ -263,15 +265,20 @@ export default function AdminMemberDetailPage() {
       </div>
 
       <Tabs defaultValue="general">
-        <TabsList className="-mx-4 flex flex-nowrap overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="membership">Membresía</TabsTrigger>
-          <TabsTrigger value="checkins">Check-ins</TabsTrigger>
-          <TabsTrigger value="payments">Pagos</TabsTrigger>
-          <TabsTrigger value="routines">Rutinas</TabsTrigger>
-          <TabsTrigger value="meal-plans">Plan alimenticio</TabsTrigger>
-          <TabsTrigger value="audit">Audit log</TabsTrigger>
-        </TabsList>
+        {/* Mobile: el wrapper hace scroll horizontal y el fade derecho
+            indica que hay más tabs. sm+: wrap normal sin scroll. */}
+        <div className="relative -mx-3 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:overflow-visible sm:px-0">
+          <TabsList className="flex w-max flex-nowrap sm:w-auto sm:flex-wrap">
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="membership">Membresía</TabsTrigger>
+            <TabsTrigger value="checkins">Check-ins</TabsTrigger>
+            <TabsTrigger value="payments">Pagos</TabsTrigger>
+            <TabsTrigger value="routines">Rutinas</TabsTrigger>
+            <TabsTrigger value="meal-plans">Plan alimenticio</TabsTrigger>
+            <TabsTrigger value="audit">Audit log</TabsTrigger>
+          </TabsList>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-slate-50 to-transparent sm:hidden" />
+        </div>
 
         <TabsContent value="general">
           <div className="space-y-4">

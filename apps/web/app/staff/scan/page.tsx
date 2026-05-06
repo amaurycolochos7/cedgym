@@ -201,9 +201,11 @@ export default function StaffScanPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Escanear QR</h1>
+        <h1 className="font-display text-xl font-bold tracking-tight text-slate-900 sm:text-2xl md:text-3xl">
+          Escanear QR
+        </h1>
         <p className="mt-1 text-sm text-slate-600">
           Escanea el QR del atleta. {history.length} check-ins este turno.
         </p>

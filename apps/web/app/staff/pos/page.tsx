@@ -310,10 +310,15 @@ export default function StaffPOSPage() {
   ];
 
   // ─────────────────────────────────────────────────────────────
+  // En mobile el layout es single-column (catálogo arriba, carrito abajo)
+  // y la altura es natural — el usuario hace scroll. En md+ activamos
+  // el split 2-col con altura fija para que catálogo y carrito tengan
+  // scroll independiente. La fórmula resta el topbar (4rem) + padding
+  // del main (1.5rem md, 1rem sm).
   return (
-    <div className="grid h-[calc(100vh-4rem)] gap-6 md:grid-cols-[1fr_380px]">
+    <div className="grid gap-4 md:h-[calc(100dvh-7rem)] md:grid-cols-[1fr_380px] md:gap-6">
       {/* ─── Left: catalog with tabs ─── */}
-      <div className="overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 md:overflow-y-auto">
         <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
           {tabs.map((t) => (
             <button
@@ -407,7 +412,7 @@ export default function StaffPOSPage() {
       </div>
 
       {/* ─── Right: cart sidebar ─── */}
-      <aside className="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-5">
+      <aside className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 md:min-h-0">
         {/* Member search */}
         <div className="mb-4">
           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600">
@@ -479,7 +484,9 @@ export default function StaffPOSPage() {
         <h2 className="mb-3 flex items-center gap-2 font-semibold text-slate-900">
           <ShoppingCart className="h-4 w-4" /> Carrito ({cart.length})
         </h2>
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+        {/* Mobile: cap a 50vh para que se vea el total al final sin requerir
+            scroll a fondo de página. md+: flex-1 ocupa altura disponible. */}
+        <div className="max-h-[50vh] space-y-2 overflow-y-auto md:max-h-none md:min-h-0 md:flex-1">
           {cart.length === 0 && (
             <p className="text-sm text-slate-500">Vacío</p>
           )}

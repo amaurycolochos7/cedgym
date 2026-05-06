@@ -311,7 +311,7 @@ export default function AdminPromocodesPage() {
 
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-slate-50 text-slate-700">
               <tr className="text-left">
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">

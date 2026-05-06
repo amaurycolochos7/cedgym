@@ -121,7 +121,7 @@ export default function AdminStaffPage() {
       {/* Staff table */}
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-slate-50 text-slate-700">
               <tr className="text-left">
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider">

@@ -224,7 +224,7 @@ export default function AdminProductsPage() {
       </div>
 
       <Tabs defaultValue="pending">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="pending">
             Pendientes {pending.data?.total ? `(${pending.data.total})` : ''}
           </TabsTrigger>
