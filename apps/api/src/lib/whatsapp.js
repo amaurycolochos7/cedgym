@@ -68,7 +68,7 @@ export function renderWelcomeMessage({ name, gymName = 'CED·GYM', appUrl }) {
         ``,
         `*Beneficios*`,
         `✅ Acceso con QR en recepción`,
-        `✅ Rutinas y plan alimenticio personalizados con IA`,
+        `✅ Rutinas y plan alimenticio personalizados a tu medida`,
         `✅ Seguimiento de tu progreso en la app`,
         ``,
         `¿Tienes dudas? Responde este chat y te ayudamos.`,
