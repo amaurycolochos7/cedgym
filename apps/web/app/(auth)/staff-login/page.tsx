@@ -76,13 +76,23 @@ export default function StaffLoginPage() {
 
   const onSubmit = (values: LoginInput) => {
     setApiError(null);
-    // Aquí no normalizamos a +52 porque esperamos correo. Si por
-    // accidente el staff teclea su teléfono, el backend lo acepta
-    // igual (mismo endpoint que /login).
-    mutation.mutate({
-      identifier: values.identifier.trim().toLowerCase(),
-      password: values.password,
-    });
+    // Staff acepta correo o teléfono. Detectamos por el contenido:
+    //   - si tiene @ → es correo, lo bajamos a minúsculas
+    //   - si son puros dígitos (10 o más) → es teléfono, prefijamos +52
+    //   - cualquier otra cosa → tal cual, que el backend decida
+    const raw = values.identifier.trim();
+    let identifier = raw;
+    if (raw.includes('@')) {
+      identifier = raw.toLowerCase();
+    } else {
+      const digitsOnly = raw.replace(/\D/g, '');
+      if (digitsOnly.length === 10) {
+        identifier = `+52${digitsOnly}`;
+      } else if (digitsOnly.length >= 11) {
+        identifier = `+${digitsOnly}`;
+      }
+    }
+    mutation.mutate({ identifier, password: values.password });
   };
 
   return (
@@ -95,7 +105,7 @@ export default function StaffLoginPage() {
           Acceso staff
         </h1>
         <p className="text-sm text-slate-600">
-          Para administradores y recepción. Ingresa con tu correo y contraseña.
+          Para administradores y recepción. Ingresa con tu correo o teléfono.
         </p>
       </div>
 
@@ -114,13 +124,15 @@ export default function StaffLoginPage() {
             htmlFor="identifier"
             className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600"
           >
-            Correo
+            Correo o teléfono
           </label>
           <input
             id="identifier"
-            type="email"
+            type="text"
             inputMode="email"
-            autoComplete="email"
+            autoComplete="username"
+            autoCapitalize="off"
+            spellCheck={false}
             placeholder="tu@cedgym.mx"
             className="min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
             {...register('identifier')}

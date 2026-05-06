@@ -43,6 +43,17 @@ export default function LoginPage() {
     defaultValues: { identifier: '', password: '' },
   });
 
+  // Spread register normally pero interceptamos onChange para
+  // forzar que el campo de teléfono solo acepte dígitos. En mobile
+  // ya tenemos type="tel" + inputMode="tel" para abrir el teclado
+  // numérico, pero si el usuario llega desde un teclado físico
+  // queremos rechazar letras también.
+  const identifierField = register('identifier');
+  const onIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 15);
+    identifierField.onChange(e);
+  };
+
   const mutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (resp) => {
@@ -59,13 +70,17 @@ export default function LoginPage() {
 
   const onSubmit = (values: LoginInput) => {
     setApiError(null);
-    // Normalize identifier: if it looks like a phone, prefix +52.
-    const ident = values.identifier.trim();
-    const digitsOnly = ident.replace(/\D/g, '');
+    // /login es exclusivo de socios — siempre tratamos el
+    // identifier como teléfono. Quitamos cualquier no-dígito por
+    // seguridad y prefijamos +52 si viene un local de 10 dígitos.
+    // Si meten 12 (con lada 52) lo dejamos tal cual.
+    const digitsOnly = values.identifier.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      setApiError('Ingresa los 10 dígitos de tu WhatsApp.');
+      return;
+    }
     const normalized =
-      digitsOnly.length === 10 && !ident.includes('@')
-        ? `+52${digitsOnly}`
-        : ident;
+      digitsOnly.length === 10 ? `+52${digitsOnly}` : `+${digitsOnly}`;
     mutation.mutate({ identifier: normalized, password: values.password });
   };
 
@@ -100,11 +115,14 @@ export default function LoginPage() {
           <input
             id="identifier"
             type="tel"
-            inputMode="tel"
+            inputMode="numeric"
             autoComplete="tel"
+            pattern="[0-9]*"
+            maxLength={15}
             placeholder="614 123 4567"
             className="min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-            {...register('identifier')}
+            {...identifierField}
+            onChange={onIdentifierChange}
           />
           {formState.errors.identifier?.message && (
             <p className="mt-1.5 text-xs text-rose-600" role="alert">
