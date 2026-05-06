@@ -158,7 +158,10 @@ export default function StaffScanPage() {
               inFlightRef.current = false;
             },
           });
-          setTimeout(() => setResult(null), 4000);
+          // Recepción necesita tiempo para verificar que la cara del
+          // socio coincide con la selfie + leer el plan/visitas. 4 seg
+          // era muy rápido; 12 seg da margen sin estorbar al siguiente.
+          setTimeout(() => setResult(null), 12000);
         },
         () => {}
       );
