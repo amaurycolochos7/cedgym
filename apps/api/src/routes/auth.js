@@ -1228,13 +1228,21 @@ export default async function authRoutes(fastify) {
                 .status(404)
                 .send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
         }
+        // has_password = "el socio ya configuró su cuenta" — usamos
+        // last_login_at en lugar de password_hash porque staff-register
+        // crea la cuenta con un password_hash temporal (bcrypt de un
+        // string aleatorio que el socio nunca conoce, solo para
+        // satisfacer la columna NOT NULL del schema). Si chequeamos
+        // password_hash, el welcome saltaría el paso 1 (crear
+        // contraseña) y el socio quedaría sin sesión válida al
+        // intentar subir su selfie.
         return reply.send({
             user: {
                 id: user.id,
                 name: user.name,
                 full_name: user.full_name,
                 phone: user.phone,
-                has_password: Boolean(user.password_hash),
+                has_password: Boolean(user.last_login_at),
                 has_selfie: Boolean(user.selfie_url),
             },
             membership: user.membership
