@@ -491,6 +491,36 @@ export default async function staffRegisterRoutes(fastify) {
                 billingCycle: billing_cycle,
             });
 
+            // Misma plantilla "Pago confirmado" que llega en flujo
+            // online — necesario para que los socios cash reciban el
+            // recibo digital con monto, fecha, plan y vencimiento.
+            // metodo_pago en español para que la copy salga limpia.
+            await fireEvent('payment.approved', {
+                workspaceId,
+                paymentId: payment.id,
+                userId: user.id,
+                membership_id: membership.id,
+                type: 'MEMBERSHIP',
+                amount: totalAmount,
+                plan,
+                stripe: {
+                    payment_method:
+                        payment_method === 'CASH'
+                            ? 'Efectivo'
+                            : payment_method === 'CARD_TERMINAL'
+                              ? 'Tarjeta en recepción'
+                              : payment_method,
+                    payment_intent_id: payment.id,
+                    paid_at: Date.now(),
+                    receipt_url: '',
+                },
+            }).catch((e) =>
+                req.log.warn(
+                    { err: e?.message, paymentId: payment.id },
+                    '[staff-register] payment.approved event (cash) failed'
+                )
+            );
+
             // Welcome link — single-use signed token, valid 7 days. The
             // socio uses this to set their password + upload selfie.
             const welcomeToken = signWelcomeToken(fastify, user.id);
@@ -712,6 +742,36 @@ export default async function staffRegisterRoutes(fastify) {
                 plan,
                 billingCycle: billing_cycle,
             });
+
+            // payment.approved en cash — misma plantilla que online
+            // (recibo digital con monto + fecha + plan + vencimiento).
+            // Sin esto, los socios que renuevan en recepción no
+            // reciben confirmación por WhatsApp.
+            await fireEvent('payment.approved', {
+                workspaceId,
+                paymentId: payment.id,
+                userId: user.id,
+                membership_id: membership.id,
+                type: 'MEMBERSHIP',
+                amount,
+                plan,
+                stripe: {
+                    payment_method:
+                        payment_method === 'CASH'
+                            ? 'Efectivo'
+                            : payment_method === 'CARD_TERMINAL'
+                              ? 'Tarjeta en recepción'
+                              : payment_method,
+                    payment_intent_id: payment.id,
+                    paid_at: Date.now(),
+                    receipt_url: '',
+                },
+            }).catch((e) =>
+                req.log.warn(
+                    { err: e?.message, paymentId: payment.id },
+                    '[staff-register] payment.approved event (cash renewal) failed'
+                )
+            );
 
             return {
                 user_id: user.id,

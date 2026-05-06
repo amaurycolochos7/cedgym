@@ -78,6 +78,19 @@ const TEMPLATES = [
         body: `👋 ¡Bienvenido a *{gym}*, {nombre}!\n\nYa puedes acceder al gym con tu QR dinámico:\n{qr_url}\n\nTu portal: {link_portal}`,
     },
 
+    // ─── Renovación confirmada ──────────────────────────────
+    // Llega tras una renovación exitosa, sea por recepción cash
+    // (/staff/extend-membership) o por suscripción Stripe (cuando
+    // el webhook activa la 2da factura en adelante). Diferente del
+    // "Pago confirmado" porque enfoca la ENERGÍA en el "te
+    // seguimos esperando", no en el detalle del cobro.
+    {
+        code: 'membership.renewed',
+        name: 'Renovación confirmada',
+        channel: 'WHATSAPP',
+        body: `💪 Listo {nombre}, tu membresía *{plan}* CED·GYM está activa hasta *{fecha_venc}*.\n\n¡Te seguimos esperando en el gym!`,
+    },
+
     // ─── Cumpleaños — sin descuento, firmado por Jeffrey ────
     {
         code: 'member.birthday',
@@ -247,6 +260,15 @@ const AUTOMATIONS = [
         delay_minutes: 5,
         action: 'whatsapp.send_template',
         template_code: 'member.created',
+        enabled: true,
+    },
+    {
+        name: 'Renovación confirmada',
+        trigger: 'membership.renewed',
+        filter: null,
+        delay_minutes: 0,
+        action: 'whatsapp.send_template',
+        template_code: 'membership.renewed',
         enabled: true,
     },
     {
