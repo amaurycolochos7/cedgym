@@ -6,14 +6,33 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { loginSchema, type LoginInput } from '@/lib/schemas';
 import { authApi, normalizeError } from '@/lib/api';
 import { useAuth, postLoginPathForRole } from '@/lib/auth';
 import type { ApiError } from '@/lib/schemas';
 
-export default function LoginPage() {
+/**
+ * Login dedicado para staff (SUPERADMIN, ADMIN, RECEPTIONIST).
+ *
+ * Lo separamos del /login de socios para que cada uno tenga el
+ * teclado nativo correcto en mobile:
+ *   - Socios → /login         → input type="tel" (numérico)
+ *   - Staff  → /staff-login   → input type="email" (alfa)
+ *
+ * El backend (POST /auth/login) acepta tanto teléfono como correo en
+ * el campo `identifier`, así que no hay que tocar el endpoint —
+ * solo cambia la copy + el tipo de input.
+ *
+ * Después del login, postLoginPathForRole redirige según el rol:
+ *   SUPERADMIN/ADMIN  → /admin/dashboard
+ *   RECEPTIONIST      → /staff/scan
+ *   ATHLETE           → /portal/dashboard (caso edge: si un socio
+ *                        entra aquí con su correo, igual lo manda
+ *                        al portal correcto).
+ */
+export default function StaffLoginPage() {
   const router = useRouter();
   const params = useSearchParams();
   const redirect = params.get('redirect');
@@ -29,9 +48,7 @@ export default function LoginPage() {
       : null,
   );
 
-  // If we land here already authenticated (e.g. opened /login in a new tab
-  // while a session is active), bounce straight to the role's landing.
-  // Skip when expired/idle so the corresponding message can render.
+  // Si caemos aquí con sesión activa, ir directo al landing del rol.
   useEffect(() => {
     if (loading || expired || idle) return;
     if (!user) return;
@@ -59,24 +76,26 @@ export default function LoginPage() {
 
   const onSubmit = (values: LoginInput) => {
     setApiError(null);
-    // Normalize identifier: if it looks like a phone, prefix +52.
-    const ident = values.identifier.trim();
-    const digitsOnly = ident.replace(/\D/g, '');
-    const normalized =
-      digitsOnly.length === 10 && !ident.includes('@')
-        ? `+52${digitsOnly}`
-        : ident;
-    mutation.mutate({ identifier: normalized, password: values.password });
+    // Aquí no normalizamos a +52 porque esperamos correo. Si por
+    // accidente el staff teclea su teléfono, el backend lo acepta
+    // igual (mismo endpoint que /login).
+    mutation.mutate({
+      identifier: values.identifier.trim().toLowerCase(),
+      password: values.password,
+    });
   };
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 text-center">
+        <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+          <ShieldCheck className="h-5 w-5" />
+        </div>
         <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          Bienvenido de vuelta
+          Acceso staff
         </h1>
         <p className="text-sm text-slate-600">
-          Ingresa con tu número de WhatsApp y contraseña.
+          Para administradores y recepción. Ingresa con tu correo y contraseña.
         </p>
       </div>
 
@@ -95,14 +114,14 @@ export default function LoginPage() {
             htmlFor="identifier"
             className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-600"
           >
-            WhatsApp
+            Correo
           </label>
           <input
             id="identifier"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="614 123 4567"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="tu@cedgym.mx"
             className="min-h-[48px] w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
             {...register('identifier')}
           />
@@ -164,24 +183,10 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <p className="text-center text-sm text-slate-600">
-        ¿No tienes cuenta?{' '}
-        <Link
-          href={
-            redirect && redirect !== '/dashboard'
-              ? `/register?redirect=${encodeURIComponent(redirect)}`
-              : '/register'
-          }
-          className="font-semibold text-blue-600 transition hover:text-blue-700"
-        >
-          Regístrate
-        </Link>
-      </p>
-
       <p className="text-center text-[11px] text-slate-400">
-        ¿Eres staff o administrador?{' '}
+        ¿Eres socio del gym?{' '}
         <Link
-          href="/staff-login"
+          href="/login"
           className="font-semibold text-slate-500 hover:text-slate-700"
         >
           Inicia sesión aquí →
