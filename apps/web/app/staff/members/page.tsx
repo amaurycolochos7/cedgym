@@ -8,10 +8,12 @@ import {
   ShoppingCart,
   RefreshCw,
   GraduationCap,
+  PhoneCall,
   X,
   CheckCircle2,
   AlertTriangle,
 } from 'lucide-react';
+import { CorrectPhoneDialog } from '@/components/staff/correct-phone-dialog';
 import { api } from '@/lib/api';
 import { planDisplayName, membershipStatusLabel } from '@/lib/utils';
 import {
@@ -102,6 +104,7 @@ export default function StaffMembersPage() {
   // Modal state
   const [renewFor, setRenewFor] = useState<MemberRow | null>(null);
   const [enrollFor, setEnrollFor] = useState<MemberRow | null>(null);
+  const [correctPhoneFor, setCorrectPhoneFor] = useState<MemberRow | null>(null);
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
@@ -179,6 +182,14 @@ export default function StaffMembersPage() {
                 >
                   <GraduationCap className="h-4 w-4" /> Curso
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setCorrectPhoneFor(m)}
+                  className="inline-flex items-center justify-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                  title="Corregir teléfono si fue capturado mal"
+                >
+                  <PhoneCall className="h-4 w-4" /> Tel
+                </button>
               </div>
             </div>
           ))
@@ -205,6 +216,18 @@ export default function StaffMembersPage() {
           }}
         />
       )}
+
+      <CorrectPhoneDialog
+        open={correctPhoneFor !== null}
+        onOpenChange={(open) => !open && setCorrectPhoneFor(null)}
+        userId={correctPhoneFor?.id ?? ''}
+        currentPhone={correctPhoneFor?.phone ?? ''}
+        memberName={correctPhoneFor?.full_name || correctPhoneFor?.name || ''}
+        onCorrected={() => {
+          setCorrectPhoneFor(null);
+          qc.invalidateQueries({ queryKey: ['staff', 'members'] });
+        }}
+      />
     </div>
   );
 }

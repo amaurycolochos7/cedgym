@@ -12,6 +12,7 @@ import {
   KeyRound,
   MoreVertical,
   Pause,
+  PhoneCall,
   Play,
   Send,
   Trash2,
@@ -35,6 +36,7 @@ import {
 import { StatusBadge } from '@/components/admin/status-badge';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { AssignPlanModal } from '@/components/admin/assign-plan-modal';
+import { CorrectPhoneDialog } from '@/components/staff/correct-phone-dialog';
 import { adminApi } from '@/lib/admin-api';
 import { api } from '@/lib/api';
 import {
@@ -69,6 +71,7 @@ export default function AdminMemberDetailPage() {
   const [assignOpen, setAssignOpen] = React.useState(false);
   const [actionsOpen, setActionsOpen] = React.useState(false);
   const [markInscOpen, setMarkInscOpen] = React.useState(false);
+  const [correctPhoneOpen, setCorrectPhoneOpen] = React.useState(false);
 
   const membership = (m as any)?.membership ?? null;
   const inscriptionPaidAt: string | null =
@@ -206,6 +209,18 @@ export default function AdminMemberDetailPage() {
                   role="menuitem"
                   onClick={() => {
                     setActionsOpen(false);
+                    setCorrectPhoneOpen(true);
+                  }}
+                  className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <PhoneCall className="h-4 w-4" />
+                  Corregir teléfono
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionsOpen(false);
                     setDel(true);
                   }}
                   className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-rose-600 hover:bg-slate-50"
@@ -252,6 +267,14 @@ export default function AdminMemberDetailPage() {
           >
             <Send className="h-3.5 w-3.5" />
             WhatsApp
+          </button>
+          <button
+            type="button"
+            onClick={() => setCorrectPhoneOpen(true)}
+            className={BTN_SECONDARY}
+          >
+            <PhoneCall className="h-3.5 w-3.5" />
+            Corregir teléfono
           </button>
           <button
             type="button"
@@ -544,6 +567,15 @@ export default function AdminMemberDetailPage() {
           onAssigned={() => invalidate()}
         />
       )}
+
+      <CorrectPhoneDialog
+        open={correctPhoneOpen}
+        onOpenChange={setCorrectPhoneOpen}
+        userId={id}
+        currentPhone={(m?.phone as string) ?? ''}
+        memberName={((m?.full_name || m?.name) as string) || ''}
+        onCorrected={invalidate}
+      />
     </div>
   );
 }

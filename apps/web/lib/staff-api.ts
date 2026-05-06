@@ -179,4 +179,18 @@ export const staffPosApi = {
     api
       .post<EnrollCourseResponse>('/staff/enroll-course', body)
       .then((r) => r.data),
+
+  // Recepción se equivocó al escribir el teléfono al inscribir.
+  // Bumpea welcome_token_v (invalida el link mandado al número
+  // equivocado), regenera password+selfie+token, y manda WhatsApp
+  // nuevo al número corregido.
+  correctPhone: (userId: string, phone: string) =>
+    api
+      .post<{
+        ok: boolean;
+        user_id: string;
+        phone: string;
+        welcome_link: string;
+      }>(`/staff/members/${userId}/correct-phone`, { phone })
+      .then((r) => r.data),
 };

@@ -516,7 +516,7 @@ export default async function staffRegisterRoutes(fastify) {
 
             // Welcome link — single-use signed token, valid 7 days. The
             // socio uses this to set their password + upload selfie.
-            const welcomeToken = signWelcomeToken(fastify, user.id);
+            const welcomeToken = signWelcomeToken(fastify, user.id, user.welcome_token_v ?? 0);
             const welcomeLink = `${webappPublicUrl()}/welcome?t=${encodeURIComponent(welcomeToken)}`;
             const planMeta = getPlanByCode(plan);
             const expiresFmt = (() => {
@@ -948,5 +948,128 @@ export default async function staffRegisterRoutes(fastify) {
             sandbox_init_point: mpPref.sandbox_init_point,
             amount_mxn: course.price_mxn,
         };
+    });
+
+    // ─── POST /staff/members/:id/correct-phone ───────────────────
+    // Recepción se equivocó al escribir el teléfono al inscribir
+    // un socio. Este endpoint:
+    //   1. Actualiza user.phone al número correcto
+    //   2. Bumpea welcome_token_v → todos los links anteriores
+    //      (incluido el que se mandó al número equivocado) quedan
+    //      inválidos: si el destinatario equivocado intenta usarlo
+    //      le sale "Link inválido o expirado".
+    //   3. Limpia last_login_at + selfie_url + regenera password_hash
+    //      temporal por si el destinatario equivocado alcanzó a
+    //      redimir el link y crear contraseña/selfie. El socio
+    //      legítimo arranca con cuenta limpia desde el paso 1.
+    //   4. Manda un WhatsApp nuevo al teléfono corregido con el
+    //      link fresco.
+    //
+    // Idempotente en el sentido de que el mismo número se acepta
+    // (no-op para phone, pero re-emite el link). Si el teléfono
+    // nuevo ya está en uso por otro user, devuelve PHONE_TAKEN 409.
+    const correctPhoneBody = z.object({
+        phone: z.string().trim().min(8).max(20),
+    });
+
+    fastify.post('/staff/members/:id/correct-phone', guard, async (req, reply) => {
+        const userId = String(req.params?.id || '').trim();
+        if (!userId) throw err('BAD_PARAM', 'Falta el id del socio', 400);
+
+        const parsed = correctPhoneBody.safeParse(req.body);
+        if (!parsed.success) throw err('BAD_BODY', parsed.error.message, 400);
+
+        const newPhone = normalizePhone(parsed.data.phone);
+        if (!/^\+\d{10,15}$/.test(newPhone)) {
+            throw err('PHONE_INVALID', 'Teléfono inválido', 400);
+        }
+
+        const workspaceId = assertWorkspaceAccess(req);
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) throw err('USER_NOT_FOUND', 'Socio no encontrado', 404);
+        if (workspaceId && user.workspace_id !== workspaceId) {
+            throw err('USER_NOT_FOUND', 'Socio no encontrado', 404);
+        }
+
+        // Si el teléfono ya está tomado por OTRO usuario, abortamos
+        // (el constraint unique tiraría de cualquier forma, pero
+        // damos un error legible).
+        if (newPhone !== user.phone) {
+            const taken = await prisma.user.findFirst({
+                where: { phone: newPhone, NOT: { id: user.id } },
+                select: { id: true },
+            });
+            if (taken) {
+                throw err(
+                    'PHONE_TAKEN',
+                    'Ese teléfono ya está registrado para otro socio.',
+                    409
+                );
+            }
+        }
+
+        const updated = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                phone: newPhone,
+                welcome_token_v: { increment: 1 },
+                // Limpiamos cualquier rastro de "cuenta configurada"
+                // por si el destinatario equivocado alcanzó a redimir
+                // el link viejo. El socio legítimo empieza desde cero.
+                last_login_at: null,
+                selfie_url: null,
+                password_hash: await bcrypt.hash(generateTempPassword(), 12),
+                phone_verified_at: new Date(),
+            },
+        });
+
+        // Audit
+        try {
+            await prisma.auditLog?.create?.({
+                data: {
+                    workspace_id: updated.workspace_id,
+                    actor_id: req.user.sub || req.user.id,
+                    action: 'member.phone_corrected',
+                    target_type: 'user',
+                    target_id: updated.id,
+                    metadata: {
+                        old_phone: user.phone,
+                        new_phone: updated.phone,
+                    },
+                },
+            });
+        } catch (e) {
+            req.log.warn({ err: e?.message }, '[staff-register] audit failed');
+        }
+
+        // Issue fresh welcome token y mandar WhatsApp al nuevo número.
+        const welcomeToken = signWelcomeToken(
+            fastify,
+            updated.id,
+            updated.welcome_token_v,
+        );
+        const welcomeLink = `${webappPublicUrl()}/welcome?t=${encodeURIComponent(welcomeToken)}`;
+
+        // Traemos la membresía aparte (no estaba en el update) para
+        // enriquecer el WhatsApp con el nombre del plan.
+        const membership = await prisma.membership.findUnique({
+            where: { user_id: updated.id },
+        });
+        const planName = membership ? getPlanByCode(membership.plan)?.name : null;
+
+        sendWalkinWelcome(fastify, {
+            workspaceId: updated.workspace_id,
+            phone: updated.phone,
+            name: updated.full_name || updated.name,
+            welcomeLink,
+            planName,
+        }).catch(() => {});
+
+        return reply.send({
+            ok: true,
+            user_id: updated.id,
+            phone: updated.phone,
+            welcome_link: welcomeLink,
+        });
     });
 }

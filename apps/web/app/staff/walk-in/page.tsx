@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Loader2,
   AlertCircle,
+  PhoneCall,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
@@ -19,6 +20,7 @@ import {
   type PlanCode,
   type RegisterMemberResponse,
 } from '@/lib/staff-api';
+import { CorrectPhoneDialog } from '@/components/staff/correct-phone-dialog';
 
 // Matches the public /memberships/plans contract — getPublicPlanCatalog
 // projects `id` (not `code`), and exposes `monthly_price_mxn` as the
@@ -144,6 +146,7 @@ export default function StaffWalkInPage() {
   const totalPreview = Math.max(0, planPrice - promoDiscount) + inscriptionPreview;
 
   const [result, setResult] = useState<RegisterMemberResponse | null>(null);
+  const [correctPhoneOpen, setCorrectPhoneOpen] = useState(false);
 
   const register = useMutation({
     mutationFn: () =>
@@ -496,6 +499,15 @@ export default function StaffWalkInPage() {
 
             <button
               type="button"
+              onClick={() => setCorrectPhoneOpen(true)}
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 py-2.5 text-sm font-semibold text-amber-800 hover:bg-amber-100"
+            >
+              <PhoneCall className="h-4 w-4" />
+              ¿Teléfono equivocado? Corregir
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setResult(null);
                 setForm({
@@ -513,6 +525,16 @@ export default function StaffWalkInPage() {
               Inscribir a otro socio
             </button>
           </div>
+
+          {/* Diálogo de corrección de teléfono. Reusable: el mismo
+              componente vive en admin/miembros/[id] y staff/members. */}
+          <CorrectPhoneDialog
+            open={correctPhoneOpen}
+            onOpenChange={setCorrectPhoneOpen}
+            userId={result.user_id}
+            currentPhone={form.phone}
+            memberName={form.name}
+          />
         </div>
       )}
     </div>

@@ -1212,8 +1212,9 @@ export default async function authRoutes(fastify) {
                 .send(errPayload('NO_TOKEN', 'Falta el token', 400));
         }
         let userId;
+        let tokenVersion;
         try {
-            userId = verifyWelcomeToken(fastify, token);
+            ({ userId, version: tokenVersion } = verifyWelcomeToken(fastify, token));
         } catch {
             return reply
                 .status(401)
@@ -1227,6 +1228,14 @@ export default async function authRoutes(fastify) {
             return reply
                 .status(404)
                 .send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
+        }
+        // Si recepción corrigió el teléfono después de mandar el link,
+        // el token viejo apuntaba al número equivocado y debe quedar
+        // invalidado. welcome_token_v se bumpea en correct-phone.
+        if (tokenVersion !== (user.welcome_token_v ?? 0)) {
+            return reply
+                .status(401)
+                .send(errPayload('TOKEN_INVALID', 'Link inválido o expirado', 401));
         }
         // has_password = "el socio ya configuró su cuenta" — usamos
         // last_login_at en lugar de password_hash porque staff-register
@@ -1276,8 +1285,9 @@ export default async function authRoutes(fastify) {
         const { token, password } = parsed.data;
 
         let userId;
+        let tokenVersion;
         try {
-            userId = verifyWelcomeToken(fastify, token);
+            ({ userId, version: tokenVersion } = verifyWelcomeToken(fastify, token));
         } catch {
             return reply
                 .status(401)
@@ -1289,6 +1299,11 @@ export default async function authRoutes(fastify) {
             return reply
                 .status(404)
                 .send(errPayload('USER_NOT_FOUND', 'Usuario no encontrado', 404));
+        }
+        if (tokenVersion !== (user.welcome_token_v ?? 0)) {
+            return reply
+                .status(401)
+                .send(errPayload('TOKEN_INVALID', 'Link inválido o expirado', 401));
         }
 
         const password_hash = await bcrypt.hash(password, BCRYPT_COST);

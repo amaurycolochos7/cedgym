@@ -80,18 +80,26 @@ export const REFRESH_COOKIE_NAME = 'cedgym_rt';
 // ─────────────────────────────────────────────────────────────
 // Welcome tokens — single-use, 7-day signed link a recién-inscrito
 // recibe por WhatsApp para crear su contraseña + subir selfie.
+//
+// Llevan un campo `v` (welcome_token_v) que el verifier compara
+// contra User.welcome_token_v. Cuando recepción corrige el
+// teléfono después de un alta, bumpeamos el contador en el user
+// y todos los tokens previos quedan inválidos (los que fueron al
+// número equivocado dejan de funcionar).
 // ─────────────────────────────────────────────────────────────
 const WELCOME_TTL_SEC = 7 * DAY;
 
-export function signWelcomeToken(fastify, userId) {
+export function signWelcomeToken(fastify, userId, version = 0) {
     return fastify.jwt.sign(
-        { sub: userId, type: 'welcome' },
+        { sub: userId, type: 'welcome', v: version },
         { expiresIn: WELCOME_TTL_SEC }
     );
 }
 
-// Verifica un welcome token y devuelve el userId, o lanza err con
-// `code: WELCOME_TOKEN_INVALID` si está mal/expirado.
+// Verifica un welcome token y devuelve { userId, version }, o
+// lanza err con `code: WELCOME_TOKEN_INVALID` si está mal/expirado.
+// El caller debe comparar version === user.welcome_token_v antes
+// de aceptar el token.
 export function verifyWelcomeToken(fastify, token) {
     const decoded = fastify.jwt.verify(token); // throws on bad sig / expiry
     if (decoded?.type !== 'welcome' || !decoded?.sub) {
@@ -100,5 +108,5 @@ export function verifyWelcomeToken(fastify, token) {
         e.statusCode = 401;
         throw e;
     }
-    return decoded.sub;
+    return { userId: decoded.sub, version: decoded.v ?? 0 };
 }
