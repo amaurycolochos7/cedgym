@@ -12,6 +12,7 @@ import {
   Play,
   Send,
   Trash2,
+  X,
 } from 'lucide-react';
 import {
   Tabs,
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/tabs';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -37,6 +39,7 @@ import {
   membershipStatusLabel,
   paymentStatusLabel,
 } from '@/lib/utils';
+import { GAMIFICATION_UI_ENABLED } from '@/lib/feature-flags';
 
 const BTN_PRIMARY =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-700 disabled:opacity-60 disabled:pointer-events-none';
@@ -88,6 +91,10 @@ export default function AdminMemberDetailPage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
+        <MemberAvatar
+          selfieUrl={(m as any)?.selfie_url ?? null}
+          name={(m as any)?.full_name || m?.name || ''}
+        />
         <div className="flex-1">
           <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             {m?.name ?? '…'}
@@ -164,6 +171,10 @@ export default function AdminMemberDetailPage() {
                 ['Nombre', m?.full_name || m?.name || '—'],
                 ['Teléfono', m?.phone ?? '—'],
                 ['Email', (m?.email as string) ?? '—'],
+                [
+                  'Fecha de nacimiento',
+                  formatBirthDate((m as any)?.birth_date),
+                ],
                 ['Creado', formatDate(m?.created_at as string | undefined)],
                 [
                   'Total check-ins',
@@ -173,7 +184,11 @@ export default function AdminMemberDetailPage() {
                   'Último check-in',
                   formatDate((m as any)?.stats?.last_checkin_at),
                 ],
-                ['XP', String((m as any)?.stats?.xp ?? 0)],
+                ...(GAMIFICATION_UI_ENABLED
+                  ? ([['XP', String((m as any)?.stats?.xp ?? 0)]] as Array<
+                      [string, string]
+                    >)
+                  : []),
               ]}
             />
           </Section>
@@ -402,6 +417,111 @@ function formatDate(iso?: string | null): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+}
+
+// Birth date: only the date part + age in years. Time is meaningless
+// for a DOB (the column stores midnight UTC) and showing "12:00 AM"
+// next to "5 may 2003" looks broken to admins.
+function formatBirthDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const formatted = d.toLocaleDateString('es-MX', { dateStyle: 'long' });
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const monthDiff = now.getMonth() - d.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < d.getDate())) {
+    age -= 1;
+  }
+  return age >= 0 && age < 130 ? `${formatted} (${age} años)` : formatted;
+}
+
+// Round avatar shown next to the member's name in the detail header.
+// Falls back to coloured initials when the user hasn't uploaded a
+// selfie, so the slot never feels empty in the admin view. When a
+// selfie exists the avatar is clickable and opens a responsive
+// lightbox at up to 80vh — useful for the receptionist to confirm
+// identity without leaving the member detail page.
+function MemberAvatar({
+  selfieUrl,
+  name,
+}: {
+  selfieUrl: string | null;
+  name: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || '?';
+
+  if (!selfieUrl) {
+    return (
+      <div
+        aria-hidden="true"
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-50 text-base font-bold text-blue-700 ring-2 ring-blue-500/20 sm:h-16 sm:w-16 sm:text-lg"
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={name ? `Ver foto de ${name} en grande` : 'Ver foto del socio en grande'}
+        className="group relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-2 ring-blue-500/30 transition hover:ring-blue-500/60 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/40 sm:h-16 sm:w-16"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={selfieUrl}
+          alt={name ? `Foto de ${name}` : 'Foto del socio'}
+          className="h-full w-full object-cover transition group-hover:scale-105"
+        />
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          hideCloseButton
+          className="max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-xl border-0 bg-slate-950 p-0 sm:rounded-3xl overflow-hidden"
+        >
+          <DialogTitle className="sr-only">
+            {name ? `Foto de ${name}` : 'Foto del socio'}
+          </DialogTitle>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={selfieUrl}
+            alt={name ? `Foto de ${name}` : 'Foto del socio'}
+            className="block h-auto max-h-[85vh] w-full object-contain"
+          />
+          {/* Top gradient + close button — float over the image so the
+              photo gets the full frame. */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent" />
+          <DialogClose
+            className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur transition hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            aria-label="Cerrar"
+          >
+            <X className="h-4 w-4" />
+          </DialogClose>
+          {/* Bottom gradient + caption with the member's name. */}
+          {name && (
+            <>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 px-5 pb-4 text-white">
+                <div className="font-display text-base font-bold tracking-tight sm:text-lg">
+                  {name}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 const MXN = new Intl.NumberFormat('es-MX', {
