@@ -1,24 +1,48 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, Crown } from 'lucide-react';
+import { Trophy, Crown, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
+import { GAMIFICATION_UI_ENABLED } from '@/lib/feature-flags';
 
 export default function PortalLogrosPage() {
+  // Hooks come before the feature-flag branch so we never violate the
+  // Rules of Hooks. When the flag is off the queries are disabled —
+  // no extra network noise for the user.
   const { data: progress } = useQuery({
     queryKey: ['gamification', 'me'],
     queryFn: async () => (await api.get('/gamification/me')).data,
+    enabled: GAMIFICATION_UI_ENABLED,
   });
 
   const { data: badges } = useQuery({
     queryKey: ['gamification', 'badges'],
     queryFn: async () => (await api.get('/gamification/badges')).data,
+    enabled: GAMIFICATION_UI_ENABLED,
   });
 
   const { data: lb } = useQuery({
     queryKey: ['gamification', 'leaderboard'],
     queryFn: async () => (await api.get('/gamification/leaderboard')).data,
+    enabled: GAMIFICATION_UI_ENABLED,
   });
+
+  if (!GAMIFICATION_UI_ENABLED) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center">
+        <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <Sparkles className="h-7 w-7" />
+        </div>
+        <h1 className="mt-4 font-display text-2xl font-bold text-slate-900">
+          Logros · próximamente
+        </h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Estamos afinando el sistema de niveles, badges y leaderboard. Muy
+          pronto vas a poder seguir tu progreso por aquí.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

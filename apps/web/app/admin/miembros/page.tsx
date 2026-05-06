@@ -18,6 +18,7 @@ import { DataTable } from '@/components/admin/data-table';
 import { StatusBadge } from '@/components/admin/status-badge';
 import { AssignPlanModal } from '@/components/admin/assign-plan-modal';
 import { adminApi, type AdminMember } from '@/lib/admin-api';
+import { GAMIFICATION_UI_ENABLED } from '@/lib/feature-flags';
 import { format } from 'date-fns';
 
 const INPUT_CLS =
@@ -102,15 +103,19 @@ export default function AdminMiembrosPage() {
             ? format(new Date(row.original.last_checkin_at), 'dd MMM HH:mm')
             : '—',
       },
-      {
-        header: 'XP',
-        accessorKey: 'xp',
-        cell: ({ row }) => (
-          <span className="font-semibold text-blue-600">
-            {row.original.xp ?? 0}
-          </span>
-        ),
-      },
+      ...(GAMIFICATION_UI_ENABLED
+        ? ([
+            {
+              header: 'XP',
+              accessorKey: 'xp',
+              cell: ({ row }) => (
+                <span className="font-semibold text-blue-600">
+                  {row.original.xp ?? 0}
+                </span>
+              ),
+            },
+          ] as ColumnDef<AdminMember>[])
+        : []),
       {
         id: 'actions',
         header: () => <span className="sr-only">Acciones</span>,
