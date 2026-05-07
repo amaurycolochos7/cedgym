@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Dumbbell, User, LogOut, Apple,
 } from 'lucide-react';
@@ -25,6 +25,7 @@ const NAV = [
  */
 export function PortalSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout, user } = useAuth();
 
   return (
@@ -43,7 +44,10 @@ export function PortalSidebar() {
           </div>
         </Link>
         <button
-          onClick={() => logout?.()}
+          onClick={() => {
+            logout?.();
+            router.replace('/login');
+          }}
           className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg text-xs font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600 transition"
           aria-label="Cerrar sesión"
         >
