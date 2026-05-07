@@ -178,15 +178,16 @@ export default function PortalRutinasPage() {
     retry: false,
   });
 
-  // Pull `me` to check fitness_profile presence (blocks Generate CTA) and
-  // pre-fill the objective selector with what the user already chose in their
-  // wizard (so WEIGHT_LOSS actually reaches the AI instead of defaulting to
-  // GENERAL_FITNESS on the backend).
+  // Pull `me` para chequear que el perfil esté listo (bloquea CTA si no)
+  // y pre-rellenar los overrides con lo que el socio ya configuró en su
+  // wizard. Leemos routine_profile (nuevo) con fallback al fitness_profile
+  // legacy para cuentas que aún no migraron.
   const meQ = useQuery<{
     user: {
       name?: string | null;
       full_name?: string | null;
-      fitness_profile?: { objective?: string } | null;
+      fitness_profile?: Record<string, unknown> | null;
+      routine_profile?: Record<string, unknown> | null;
     };
   }>({
     queryKey: ['auth', 'me'],
@@ -217,9 +218,15 @@ export default function PortalRutinasPage() {
   }
 
   const routine = routineQ.data?.routine ?? null;
-  const fitnessProfile = meQ.data?.user?.fitness_profile ?? null;
-  const hasFitnessProfile = Boolean(fitnessProfile);
-  const profileObjective = (fitnessProfile?.objective ?? '') as Objective | '';
+  // Perfil de rutina (nuevo) con fallback al legacy. La presencia de
+  // CUALQUIERA marca el perfil como completo para efectos de habilitar
+  // la CTA — el backend hará el merge cuando se genere.
+  const routineProfile =
+    (meQ.data?.user?.routine_profile as Record<string, unknown> | null) ?? null;
+  const fitnessProfile =
+    (meQ.data?.user?.fitness_profile as Record<string, unknown> | null) ?? null;
+  const effectiveProfile = routineProfile ?? fitnessProfile ?? null;
+  const hasFitnessProfile = Boolean(effectiveProfile);
 
   // Greet the member by first name. Split on any whitespace so
   // "María José Pérez" resolves to "María" without the last name
@@ -237,7 +244,7 @@ export default function PortalRutinasPage() {
     return (
       <GenerateRoutineCard
         hasFitnessProfile={hasFitnessProfile}
-        defaultObjective={profileObjective}
+        profile={effectiveProfile}
         quota={quota}
         onGenerated={onGenOrRegen}
       />
@@ -259,35 +266,37 @@ export default function PortalRutinasPage() {
 // Case 1: no active routine → generate form
 // ═════════════════════════════════════════════════════════════════════════
 
-interface GenerateFormState {
-  location: Location;
-  objective: Objective;
-  days_per_week: number;
-  session_duration_min: number;
+// Body que mandamos al backend. Todos opcionales — el backend
+// resuelve cualquier campo faltante con el routine_profile del socio.
+// Solo mandamos los que el socio explícitamente cambió en el panel
+// "ajustar para esta vez", para que se sienta como override claro.
+interface GenerateOverride {
+  location?: Location;
+  objective?: Objective;
+  days_per_week?: number;
+  session_duration_min?: number;
 }
-
-const DEFAULT_FORM: GenerateFormState = {
-  location: 'GYM',
-  objective: 'GENERAL_FITNESS',
-  days_per_week: 4,
-  session_duration_min: 60,
-};
 
 function GenerateRoutineCard({
   hasFitnessProfile,
-  defaultObjective,
+  profile,
   quota,
   onGenerated,
 }: {
   hasFitnessProfile: boolean;
-  defaultObjective?: Objective | '';
+  profile: Record<string, unknown> | null;
   quota: AiQuota | null;
   onGenerated: () => void;
 }) {
-  const [form, setForm] = useState<GenerateFormState>(() => ({
-    ...DEFAULT_FORM,
-    objective: (defaultObjective || 'GENERAL_FITNESS') as Objective,
-  }));
+  // Si el socio expande "ajustar para esta vez", pre-rellenamos con
+  // los valores del perfil y dejamos que tape solo lo que quiera.
+  const profileLocation = (profile?.location as Location | undefined) ?? 'GYM';
+  const profileObjective = (profile?.objective as Objective | undefined) ?? 'GENERAL_FITNESS';
+  const profileDays = (profile?.days_per_week as number | undefined) ?? 4;
+  const profileDuration = (profile?.session_duration_min as number | undefined) ?? 60;
+
+  const [showOverrides, setShowOverrides] = useState(false);
+  const [override, setOverride] = useState<GenerateOverride>({});
 
   const mut = useMutation({
     // 180s mirrors the Fastify requestTimeout in apps/api/src/index.js.
@@ -297,7 +306,7 @@ function GenerateRoutineCard({
     // limit aborted axios while the backend was still working, which
     // surfaced as "No pudimos conectar con el servidor" in the toast.
     // Same fix that meal-plans got in d441e50.
-    mutationFn: async (body: GenerateFormState) =>
+    mutationFn: async (body: GenerateOverride) =>
       (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data,
     onSuccess: () => {
       toast.success('Tu rutina está lista.');
@@ -305,12 +314,11 @@ function GenerateRoutineCard({
     },
     onError: (e) => {
       const n = normalizeError(e);
-      // Quota/plan gating errors surface the backend message directly so
-      // the user sees exact days-until-renewal or plan-upgrade copy.
       if (
         n.code === 'QUOTA_EXCEEDED' ||
         n.code === 'MEMBERSHIP_REQUIRED' ||
-        n.code === 'FEATURE_NOT_IN_PLAN'
+        n.code === 'FEATURE_NOT_IN_PLAN' ||
+        n.code === 'PROFILE_INCOMPLETE'
       ) {
         toast.error(n.message || 'No puedes generar una rutina ahora mismo.');
       } else if (n.status === 429) {
@@ -325,6 +333,14 @@ function GenerateRoutineCard({
 
   const quotaBlocks = !!quota && !quota.routine.allowed;
   const disabled = !hasFitnessProfile || mut.isPending || quotaBlocks;
+
+  // Effective values (lo que se va a enviar): perfil + overrides puestos.
+  const effective = {
+    location: override.location ?? profileLocation,
+    objective: override.objective ?? profileObjective,
+    days_per_week: override.days_per_week ?? profileDays,
+    session_duration_min: override.session_duration_min ?? profileDuration,
+  };
 
   return (
     <div className="space-y-6">
@@ -361,84 +377,42 @@ function GenerateRoutineCard({
           </div>
         )}
 
-        {/* ── Form ─────────────────────────────────────────────────── */}
-        <div className="mt-8 space-y-6">
-          <FieldBlock label="Objetivo">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-              {OBJECTIVE_OPTIONS.map((o) => {
-                const active = form.objective === o.value;
-                return (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, objective: o.value }))}
-                    className={[
-                      'flex items-center gap-2 rounded-xl ring-1 p-3 text-left transition-colors',
-                      active
-                        ? 'ring-blue-500 bg-blue-50 shadow-sm'
-                        : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
-                    ].join(' ')}
-                  >
-                    <span className="text-xl leading-none">{o.emoji}</span>
-                    <span className={['text-sm font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
-                      {o.label}
-                    </span>
-                  </button>
-                );
-              })}
+        {/* ── Resumen del perfil + CTA principal ─────────────────────────
+            La filosofía: el socio ya configuró todo en su perfil de rutina.
+            Aquí solo mostramos un resumen y un botón grande "Generar".
+            Si quiere cambiar algo solo para esta generación, expande el
+            panel de overrides — pre-rellenado con su perfil. ────────────*/}
+        <div className="mt-8 space-y-5">
+          {hasFitnessProfile && (
+            <div className="rounded-2xl bg-slate-50 ring-1 ring-slate-200 p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+                    Tu plan actual
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Lo armamos con el perfil que llenaste.{' '}
+                    <Link href="/portal/perfil" className="text-blue-600 hover:underline font-medium">
+                      Editar perfil
+                    </Link>
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                <SummaryPill label="Objetivo" value={GOAL_LABELS[effective.objective] ?? effective.objective} />
+                <SummaryPill label="Dónde" value={LOCATION_LABELS[effective.location] ?? effective.location} />
+                <SummaryPill label="Días/sem" value={`${effective.days_per_week}`} />
+                <SummaryPill label="Duración" value={`${effective.session_duration_min} min`} />
+              </div>
             </div>
-          </FieldBlock>
-
-          <FieldBlock label="¿Dónde entrenas?">
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {(['GYM', 'HOME', 'BOTH'] as Location[]).map((loc) => (
-                <RadioCard
-                  key={loc}
-                  active={form.location === loc}
-                  onClick={() => setForm((f) => ({ ...f, location: loc }))}
-                  label={
-                    loc === 'GYM' ? 'Gym' : loc === 'HOME' ? 'Casa' : 'Ambos'
-                  }
-                  hint={
-                    loc === 'GYM'
-                      ? 'Máquinas + pesos'
-                      : loc === 'HOME'
-                      ? 'Mínimo equipo'
-                      : 'Alterna'
-                  }
-                />
-              ))}
-            </div>
-          </FieldBlock>
-
-          <FieldBlock label="Días por semana">
-            <Segmented
-              options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
-              value={form.days_per_week}
-              onChange={(v) => setForm((f) => ({ ...f, days_per_week: v as number }))}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Duración por sesión">
-            <Segmented
-              options={[
-                { value: 45, label: '45 min' },
-                { value: 60, label: '60 min' },
-                { value: 90, label: '90 min' },
-              ]}
-              value={form.session_duration_min}
-              onChange={(v) =>
-                setForm((f) => ({ ...f, session_duration_min: v as number }))
-              }
-            />
-          </FieldBlock>
+          )}
 
           <QuotaStatus quota={quota} />
 
           <button
             type="button"
             disabled={disabled}
-            onClick={() => mut.mutate(form)}
+            onClick={() => mut.mutate(override)}
             className={[
               'group relative w-full inline-flex items-center justify-center px-5 py-3 rounded-xl text-white font-semibold text-sm transition-all',
               disabled
@@ -455,6 +429,102 @@ function GenerateRoutineCard({
               <span className="tracking-tight">Generar mi rutina</span>
             )}
           </button>
+
+          {hasFitnessProfile && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowOverrides((s) => !s)}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-700 inline-flex items-center gap-1"
+              >
+                {showOverrides ? 'Ocultar ajustes' : 'Ajustar solo para esta vez'}
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${showOverrides ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </div>
+          )}
+
+          {showOverrides && hasFitnessProfile && (
+            <div className="space-y-5 pt-2 border-t border-slate-200">
+              <p className="text-[11px] text-slate-400">
+                Estos cambios solo aplican a esta generación. Tu perfil queda intacto.
+              </p>
+
+              <FieldBlock label="Objetivo">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                  {OBJECTIVE_OPTIONS.map((o) => {
+                    const active = effective.objective === o.value;
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => setOverride((ov) => ({ ...ov, objective: o.value }))}
+                        className={[
+                          'flex items-center gap-2 rounded-xl ring-1 p-3 text-left transition-colors',
+                          active
+                            ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                            : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
+                        ].join(' ')}
+                      >
+                        <span className="text-xl leading-none">{o.emoji}</span>
+                        <span className={['text-sm font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
+                          {o.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </FieldBlock>
+
+              <FieldBlock label="¿Dónde entrenas esta vez?">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  {(['GYM', 'HOME', 'BOTH'] as Location[]).map((loc) => (
+                    <RadioCard
+                      key={loc}
+                      active={effective.location === loc}
+                      onClick={() => setOverride((ov) => ({ ...ov, location: loc }))}
+                      label={loc === 'GYM' ? 'Gym' : loc === 'HOME' ? 'Casa' : 'Ambos'}
+                      hint={
+                        loc === 'GYM' ? 'Máquinas + pesos' : loc === 'HOME' ? 'Mínimo equipo' : 'Alterna'
+                      }
+                    />
+                  ))}
+                </div>
+              </FieldBlock>
+
+              <FieldBlock label="Días por semana">
+                <Segmented
+                  options={[2, 3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
+                  value={effective.days_per_week}
+                  onChange={(v) => setOverride((ov) => ({ ...ov, days_per_week: v as number }))}
+                />
+              </FieldBlock>
+
+              <FieldBlock label="Duración por sesión">
+                <Segmented
+                  options={[
+                    { value: 30, label: '30 min' },
+                    { value: 45, label: '45 min' },
+                    { value: 60, label: '60 min' },
+                    { value: 75, label: '75 min' },
+                    { value: 90, label: '90 min' },
+                    { value: 120, label: '120 min' },
+                  ]}
+                  value={effective.session_duration_min}
+                  onChange={(v) => setOverride((ov) => ({ ...ov, session_duration_min: v as number }))}
+                />
+              </FieldBlock>
+
+              <button
+                type="button"
+                onClick={() => setOverride({})}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600 underline"
+              >
+                Restablecer a mi perfil
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>
@@ -1192,7 +1262,11 @@ function RegenerateModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const [form, setForm] = useState<GenerateFormState>({
+  // En el modal SÍ tenemos los 4 campos llenos siempre — son los
+  // valores de la rutina activa, listos para que el socio los ajuste
+  // si quiere algo distinto. El body que mandamos coincide con la
+  // forma de override que entiende el backend.
+  const [form, setForm] = useState<Required<GenerateOverride>>({
     location: (currentRoutine.location as Location) ?? 'GYM',
     objective: (currentRoutine.goal as Objective) ?? 'GENERAL_FITNESS',
     days_per_week: currentRoutine.days_per_week ?? 4,
@@ -1202,7 +1276,7 @@ function RegenerateModal({
   const mut = useMutation({
     // See the GenerateForm comment above — same 180s ceiling, same
     // reason (template-path retry can run two OpenAI calls).
-    mutationFn: async (body: GenerateFormState) =>
+    mutationFn: async (body: GenerateOverride) =>
       (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data,
     onSuccess: () => {
       toast.success('Nueva rutina generada.');
@@ -1358,6 +1432,16 @@ function FieldBlock({ label, children }: { label: string; children: React.ReactN
     <div>
       <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">{label}</div>
       {children}
+    </div>
+  );
+}
+
+// Píldora compacta para el resumen del perfil arriba del CTA principal.
+function SummaryPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col bg-white rounded-xl ring-1 ring-slate-200 px-3 py-2">
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{label}</span>
+      <span className="text-sm font-semibold text-slate-900 truncate">{value}</span>
     </div>
   );
 }

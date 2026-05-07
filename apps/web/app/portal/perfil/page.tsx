@@ -94,6 +94,21 @@ export default function PortalPerfilPage() {
 
   const [tab, setTab] = useState<Tab>('cuenta');
 
+  // Deep-link a la sección fitness desde el banner ámbar
+  // (?upgrade=1) o desde cualquier CTA que quiera abrir el wizard
+  // directamente. NO lo metemos en useState() inicial porque ahí
+  // el server-side render devolvería 'cuenta' y al hidratar Next
+  // no re-ejecuta el inicializador, así que el cliente nunca
+  // veía el query string. useEffect sí corre solo en cliente
+  // después del mount.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('upgrade') === '1' || sp.get('tab') === 'fitness') {
+      setTab('fitness');
+    }
+  }, []);
+
   // Datos personales — collapsed-then-edit pattern. Name + email save
   // directly via PATCH /auth/me; phone changes go through the OTP modal.
   const [editingProfile, setEditingProfile] = useState(false);
@@ -497,9 +512,58 @@ export default function PortalPerfilPage() {
       {tab === 'fitness' && (
         <div>
           <FitnessProfileWizard
-            initial={
-              (me?.user?.fitness_profile as Record<string, unknown> | undefined) ?? null
-            }
+            initial={(() => {
+              // Combinamos los dos perfiles separados (preferencia) +
+              // legacy fitness_profile como fallback. Spread order: el
+              // perfil de nutrición sobrescribe los campos compartidos
+              // de routine_profile (age/gender/etc. los pisa el más
+              // reciente) y el legacy queda al fondo.
+              const u = me?.user as
+                | {
+                    fitness_profile?: Record<string, unknown>;
+                    routine_profile?: Record<string, unknown>;
+                    nutrition_profile?: Record<string, unknown>;
+                  }
+                | undefined;
+              const merged: Record<string, unknown> = {
+                ...(u?.fitness_profile ?? {}),
+                ...(u?.routine_profile ?? {}),
+                ...(u?.nutrition_profile ?? {}),
+              };
+              // Renombrar campos del nutrition para no chocar con
+              // los del routine en el draft del wizard:
+              if (
+                u?.nutrition_profile &&
+                typeof u.nutrition_profile === 'object'
+              ) {
+                const np = u.nutrition_profile as Record<string, unknown>;
+                if (np.objective !== undefined) {
+                  merged.nutrition_objective = np.objective;
+                  // mantenemos `objective` desde routine_profile
+                  if (
+                    u.routine_profile &&
+                    typeof u.routine_profile === 'object'
+                  ) {
+                    const rp = u.routine_profile as Record<string, unknown>;
+                    if (rp.objective !== undefined) merged.objective = rp.objective;
+                  }
+                }
+                if (np.motivation !== undefined) {
+                  merged.nutrition_motivation = np.motivation;
+                  if (
+                    u.routine_profile &&
+                    typeof u.routine_profile === 'object'
+                  ) {
+                    const rp = u.routine_profile as Record<string, unknown>;
+                    if (rp.motivation !== undefined) merged.motivation = rp.motivation;
+                  }
+                }
+                if (np.dietary_restrictions !== undefined) {
+                  merged.dietary = np.dietary_restrictions;
+                }
+              }
+              return Object.keys(merged).length ? merged : null;
+            })()}
           />
         </div>
       )}

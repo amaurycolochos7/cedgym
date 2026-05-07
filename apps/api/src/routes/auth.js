@@ -477,7 +477,17 @@ export default async function authRoutes(fastify) {
     // succeeded — past that point we trust the user is the real owner.
     fastify.post(
         '/login',
-        { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+        {
+            config: {
+                rateLimit: {
+                    // En dev permitimos 100/15min para no tronar el flujo
+                    // mientras se prueba; en prod queda en 5/15min como
+                    // anti-fuerza-bruta.
+                    max: process.env.NODE_ENV === 'development' ? 100 : 5,
+                    timeWindow: '15 minutes',
+                },
+            },
+        },
         async (request, reply) => {
             const parsed = loginSchema.safeParse(request.body);
             if (!parsed.success) {

@@ -15,9 +15,10 @@
     {
       "day_of_week": 0,
       "title": "Cuádriceps",
-      "notes": "Cardio cada 3er día 20 min. Calienta en bici antes de pisar peso.",
+      "notes": "Calienta cadera y rodilla con bici suave + movilidad antes de cargar.",
       "exercises": [
-        { "exercise_name": "Bicicleta", "sets": 1, "reps": "20 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Bicicleta", "sets": 1, "reps": "10 min", "rest_sec": 30, "notes": "calentamiento de tobillo y rodilla, ritmo cómodo" },
+        { "exercise_name": "Movilidad de cadera y sentadilla con peso corporal", "sets": 2, "reps": "15", "rest_sec": 30, "notes": "abre cadera, despierta el cuádriceps" },
         { "exercise_name": "Desplante búlgaro", "sets": 4, "reps": "12", "rest_sec": 75, "notes": "12 con cada pierna" },
         { "exercise_name": "Extensiones de cuádriceps", "sets": 4, "reps": "10 pesadas / 10 livianas", "rest_sec": 60, "notes": "sube controlado y aprieta arriba 1 segundo" },
         { "exercise_name": "Saltos desplantes", "sets": 4, "reps": "20", "rest_sec": 60, "notes": "cae suave, rodilla alineada" },
@@ -33,7 +34,8 @@
       "title": "Brazo",
       "notes": "Sube lento y aprieta arriba.",
       "exercises": [
-        { "exercise_name": "Bicicleta", "sets": 1, "reps": "10 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Rotaciones de muñeca y codo", "sets": 2, "reps": "15 cada lado", "rest_sec": 20, "notes": "movilidad antes de cargar" },
+        { "exercise_name": "Curl bíceps con peso ligero", "sets": 2, "reps": "15", "rest_sec": 30, "notes": "activa el bíceps con poco peso" },
         { "exercise_name": "Curl 21", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "7 abajo / 7 arriba / 7 completos" },
         { "exercise_name": "Curl martillo en 21", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "palmas miran adentro, no muevas hombros" },
         { "exercise_name": "Predicador 3 posiciones", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "brazos apoyados, no despegues" },
@@ -81,7 +83,8 @@
       "title": "Pierna y Pecho",
       "notes": "Cierre de semana — sentadilla pesada y pecho.",
       "exercises": [
-        { "exercise_name": "Bicicleta", "sets": 1, "reps": "20 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Bicicleta", "sets": 1, "reps": "10 min", "rest_sec": 30, "notes": "calentamiento de tobillo y rodilla" },
+        { "exercise_name": "Activación de hombro con banda", "sets": 2, "reps": "15", "rest_sec": 20, "notes": "rotaciones externas, prepara el press" },
         { "exercise_name": "Sentadilla con barra", "sets": 6, "reps": "10,8,6,3,2,1", "rest_sec": 150, "notes": "una falla al final con peso ligero" },
         { "exercise_name": "Prensa piernas (abierta y cerrada)", "sets": 4, "reps": "10", "rest_sec": 90, "notes": "alterna abierta y cerrada" },
         { "exercise_name": "Abductores", "sets": 3, "reps": "8", "rest_sec": 60, "notes": "aprieta el glúteo medio" },

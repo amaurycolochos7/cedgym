@@ -195,6 +195,29 @@ TONO: mexicano, cercano, práctico. Nada de inglés innecesario ni nombres rebus
 Respondes SOLO con JSON válido siguiendo el esquema exacto. Nada antes, nada después.`;
 }
 
+const COOKER_LABELS = {
+    SELF: 'cocina él/ella mismo(a)',
+    FAMILY: 'cocina alguien más en su casa',
+    EATS_OUT: 'come fuera o pide a domicilio la mayor parte del tiempo',
+};
+const COOKING_TIME_LABELS = {
+    LOW: 'poco tiempo (<15 min por comida) — prioriza recetas simples y batch cooking',
+    MEDIUM: 'tiempo medio (15-30 min por comida)',
+    HIGH: 'mucho tiempo (>30 min OK) — puedes proponer recetas elaboradas',
+};
+const FOOD_RELATIONSHIP_LABELS = {
+    CONTROLLED: 'controlado — pesa porciones, le gusta la disciplina',
+    ANXIOUS: 'ansioso — a veces come de más por estrés. Propón comidas saciantes y con fibra/proteína',
+    SOCIAL: 'social — come muchas veces fuera por trabajo o amigos. Incluye opciones para pedir',
+    EMOTIONAL: 'emocional — usa la comida para regular ánimo. Snacks saciantes y planeados ayudan',
+    BORED: 'le aburre cocinar — prioriza preparaciones rápidas, una sola olla, recalentables',
+};
+const ALCOHOL_LABELS = {
+    NONE: 'no toma alcohol',
+    SOCIAL: 'toma alcohol social (1-2 veces por semana) — déjale espacio calórico el viernes/sábado',
+    REGULAR: 'consume alcohol regularmente — sé honesto en las recomendaciones',
+};
+
 function buildUserPrompt({
     objective,
     calories_target,
@@ -207,9 +230,38 @@ function buildUserPrompt({
     meals_per_day,
     budget,
     firstName,
+    // Campos extendidos del nuevo perfil de nutrición (todos opcionales)
+    cooker,
+    cooking_time,
+    supplements,
+    water_liters,
+    coffee,
+    alcohol,
+    free_meals,
+    food_relationship,
+    motivation,
+    past_experience,
 }) {
     const listOrNone = (arr) => (arr && arr.length ? arr.join(', ') : 'ninguna');
     const firstNameStr = firstName && firstName.trim() ? firstName.trim() : '(sin nombre)';
+
+    // Bloque "intención" — solo aparecen las líneas con valor.
+    const intentLines = [];
+    if (motivation) intentLines.push(`- En sus palabras: "${motivation}"`);
+    if (past_experience) intentLines.push(`- Experiencia previa con dietas: "${past_experience}"`);
+    if (food_relationship) intentLines.push(`- Relación con la comida: ${FOOD_RELATIONSHIP_LABELS[food_relationship] || food_relationship}`);
+    if (cooker) intentLines.push(`- Quién cocina: ${COOKER_LABELS[cooker] || cooker}`);
+    if (cooking_time) intentLines.push(`- Tiempo disponible para cocinar: ${COOKING_TIME_LABELS[cooking_time] || cooking_time}`);
+    if (Array.isArray(supplements) && supplements.length) intentLines.push(`- Suplementación que toma: ${supplements.join(', ')} (no la ignores — agrégala en los momentos correctos del día)`);
+    if (typeof water_liters === 'number') intentLines.push(`- Hidratación habitual: ${water_liters} L/día (recordamos siempre 3 L/día)`);
+    if (coffee === true) intentLines.push(`- Toma café — incluye uno por la mañana donde corresponda`);
+    if (coffee === false) intentLines.push(`- NO toma café — no incluyas café en las comidas`);
+    if (alcohol) intentLines.push(`- Alcohol: ${ALCOHOL_LABELS[alcohol] || alcohol}`);
+    if (typeof free_meals === 'number') intentLines.push(`- Tolera ${free_meals} comida(s) libre(s) por semana — puedes destinarlas al fin de semana`);
+    const intentBlock = intentLines.length
+        ? `\n\nCONTEXTO DEL SOCIO (úsalo para que el plan se sienta hecho a la medida):\n${intentLines.join('\n')}`
+        : '';
+
     return `Genera un plan alimenticio semanal (7 días × ${meals_per_day} comidas) para este socio mexicano.
 
 NOMBRE DEL SOCIO: ${firstNameStr}
@@ -218,9 +270,9 @@ CALORÍAS DIARIAS: ${calories_target} kcal
 MACROS: ${protein_g}g proteína / ${carbs_g}g carbos / ${fats_g}g grasas
 RESTRICCIONES: ${listOrNone(restrictions)}
 ALERGIAS: ${listOrNone(allergies)}
-NO LE GUSTA: ${listOrNone(disliked_foods)}
+NO LE GUSTA (NUNCA incluyas estos ingredientes): ${listOrNone(disliked_foods)}
 PRESUPUESTO: ${budget} (LOW=pollo/arroz/frijoles/huevo/atún; MEDIUM=agregar salmón ocasional, quinoa, frutos rojos; HIGH=libre)
-COMIDAS POR DÍA: ${meals_per_day}
+COMIDAS POR DÍA: ${meals_per_day}${intentBlock}
 
 REGLAS:
 - Varía las comidas entre días (no repetir más de 2 veces)
@@ -362,6 +414,7 @@ export default async function aiMealPlansRoutes(fastify) {
                 workspace_id: true,
                 gender: true,
                 fitness_profile: true,
+                nutrition_profile: true,
                 name: true,
                 full_name: true,
             },
@@ -369,19 +422,43 @@ export default async function aiMealPlansRoutes(fastify) {
         if (!user) throw err('USER_NOT_FOUND', 'Usuario no encontrado', 404);
         const firstName = (user.full_name || user.name || '').trim().split(/\s+/)[0] || '';
 
-        const objective = parsed.data.objective || 'MAINTENANCE';
-        const meals_per_day = parsed.data.meals_per_day || 5;
-        const budget = parsed.data.budget || 'MEDIUM';
-        const country = parsed.data.country || 'MX';
-        const restrictions = parsed.data.restrictions || [];
-        const allergies = parsed.data.allergies || [];
-        const disliked_foods = parsed.data.disliked_foods || [];
+        // Precedencia: body > nutrition_profile > legacy fitness_profile.
+        // El nuevo perfil de nutrición tiene campos que el body no
+        // recibía antes (cooker, cooking_time, supplements, motivación).
+        const np = (user.nutrition_profile && typeof user.nutrition_profile === 'object') ? user.nutrition_profile : {};
+        const fp = (user.fitness_profile && typeof user.fitness_profile === 'object') ? user.fitness_profile : {};
+
+        const objective       = parsed.data.objective       ?? np.objective       ?? fp.objective       ?? 'MAINTENANCE';
+        const meals_per_day   = parsed.data.meals_per_day   ?? np.meals_per_day   ?? 5;
+        const budget          = parsed.data.budget          ?? np.budget          ?? 'MEDIUM';
+        const country         = parsed.data.country         ?? np.country         ?? 'MX';
+        const restrictions    = parsed.data.restrictions    ?? np.dietary_restrictions ?? fp.dietary_restrictions ?? [];
+        const allergies       = parsed.data.allergies       ?? np.allergies       ?? fp.allergies       ?? [];
+        const disliked_foods  = parsed.data.disliked_foods  ?? np.disliked_foods  ?? fp.disliked_foods  ?? [];
+
+        // Campos extendidos del perfil de nutrición — alimentan el
+        // prompt sin parámetros nuevos en el body. Si nutrition_profile
+        // no existe, todo queda null/array vacío y el prompt omite las
+        // líneas correspondientes (sin afectar comportamiento legacy).
+        const cooker            = np.cooker            ?? null;
+        const cooking_time      = np.cooking_time      ?? null;
+        const supplements       = np.supplements       ?? [];
+        const water_liters      = np.water_liters_per_day ?? null;
+        const coffee            = np.coffee            ?? null;
+        const alcohol           = np.alcohol           ?? null;
+        const free_meals        = np.free_meals_per_week ?? null;
+        const food_relationship = np.food_relationship ?? null;
+        const motivation        = (np.motivation        ?? '').trim();
+        const past_experience   = (np.past_experience   ?? '').trim();
 
         // 2. Auto-calc calories when not provided.
-        let calories_target = parsed.data.calories_target;
+        // Preferimos nutrition_profile (puede tener calories_target
+        // explícito); fallback a estimación con datos compartidos.
+        let calories_target = parsed.data.calories_target ?? np.calories_target;
         if (!calories_target) {
             calories_target =
-                estimateCaloriesFromProfile(user.fitness_profile, user.gender, objective) ||
+                estimateCaloriesFromProfile(np, user.gender, objective) ||
+                estimateCaloriesFromProfile(fp, user.gender, objective) ||
                 fallbackCalories(user.gender);
         }
 
@@ -591,6 +668,17 @@ export default async function aiMealPlansRoutes(fastify) {
                 budget,
                 country,
                 firstName,
+                // Contexto extendido del nuevo perfil de nutrición.
+                cooker,
+                cooking_time,
+                supplements,
+                water_liters,
+                coffee,
+                alcohol,
+                free_meals,
+                food_relationship,
+                motivation,
+                past_experience,
             });
 
             try {

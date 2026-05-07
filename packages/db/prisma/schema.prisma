@@ -263,7 +263,20 @@ model User {
   email_verified_at     DateTime?
   profile_completed     Boolean    @default(false)
   last_login_at         DateTime?
+  // Legacy unified profile (rutina + nutrición). Mantenido como
+  // fallback de lectura mientras migramos a perfiles separados.
+  // Ya no es escrito por el wizard nuevo; futuras versiones del
+  // backend pueden ignorarlo cuando los específicos estén llenos.
   fitness_profile       Json?
+  // Perfil específico para generar rutinas (objetivos físicos,
+  // motivación, equipamiento, lesiones, gustos de entrenamiento).
+  // Consumido por POST /ai/routines/generate. Si null, el endpoint
+  // hace fallback a fitness_profile para no romper cuentas viejas.
+  routine_profile       Json?
+  // Perfil específico para generar planes alimenticios (preferencias,
+  // alergias, dislikes, presupuesto, suplementación, hábitos).
+  // Consumido por POST /ai/meal-plans/generate.
+  nutrition_profile     Json?
   // Set the first time the user pays the one-time inscription fee
   // (charged on first PRO/ELITE subscription). Existing users at
   // cutover are backfilled to NOW() so they're exempt.

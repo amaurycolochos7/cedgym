@@ -17,7 +17,8 @@
       "title": "Empuje en Casa (Pecho + Hombro + Tríceps)",
       "notes": "Lo que falta de carga, sóbralo de técnica y reps.",
       "exercises": [
-        { "exercise_name": "Saltar la cuerda o trote en sitio", "sets": 1, "reps": "12min", "rest_sec": 60, "notes": "calienta parejo, ritmo cómodo" },
+        { "exercise_name": "Trote en sitio + jumping jacks", "sets": 1, "reps": "8min", "rest_sec": 30, "notes": "calienta parejo, ritmo cómodo" },
+        { "exercise_name": "Activación de hombro con toalla o banda", "sets": 2, "reps": "15", "rest_sec": 20, "notes": "rotaciones externas + Y-T-W, prepara el press" },
         { "exercise_name": "Lagartija con pies elevados", "sets": 4, "reps": "15,12,12,10", "rest_sec": 75, "notes": "pecho al piso, codos atrás" },
         { "exercise_name": "Press banco piso con mancuernas", "sets": 4, "reps": "15,12,10,10", "rest_sec": 75, "notes": "controla la bajada" },
         { "exercise_name": "Press hombro de pie con mancuernas", "sets": 4, "reps": "12,12,10,10", "rest_sec": 60, "notes": "core firme, sin arquear" },
@@ -45,7 +46,9 @@
       "title": "Jalón en Casa (Espalda + Bíceps)",
       "notes": "Sin barra de dominadas, banda y mancuerna hacen el trabajo.",
       "exercises": [
-        { "exercise_name": "Saltar la cuerda o trote en sitio", "sets": 1, "reps": "12min", "rest_sec": 60, "notes": "calienta hombro y espalda" },
+        { "exercise_name": "Trote en sitio + skipping", "sets": 1, "reps": "5min", "rest_sec": 30, "notes": "calienta parejo" },
+        { "exercise_name": "Face pull con banda elástica", "sets": 2, "reps": "20", "rest_sec": 20, "notes": "activa la espalda alta y trapecio" },
+        { "exercise_name": "Remo invertido con banda baja", "sets": 2, "reps": "12", "rest_sec": 30, "notes": "aprieta omóplatos antes de cargar" },
         { "exercise_name": "Remo con mancuerna a una mano", "sets": 4, "reps": "15,12,12,10", "rest_sec": 75, "notes": "lleva el codo al cinturón" },
         { "exercise_name": "Jalón al pecho con banda elástica anclada", "sets": 4, "reps": "15,12,12,10", "rest_sec": 60, "notes": "lleva codos hacia atrás" },
         { "exercise_name": "Remo invertido bajo la mesa", "sets": 3, "reps": "12-15", "rest_sec": 60, "notes": "cuerpo recto, aprieta omóplatos" },

@@ -94,6 +94,16 @@ export function buildRoutinePromptFromTemplate(template, profile) {
     const firstName = (profile?.firstName || '').trim();
     const injuries = (profile?.injuries || []).filter(Boolean);
     const level = profile?.level || template.level;
+    const motivation = (profile?.motivation || '').trim();
+    const goalType = profile?.goal_type || null;
+    const goalDeadline = (profile?.goal_deadline || '').trim();
+    const likes = profile?.likes || [];
+    const dislikes = profile?.dislikes || [];
+    const priorityMuscles = profile?.priority_muscles || [];
+    const deprioritized = profile?.deprioritized_muscles || [];
+    const mobility = profile?.mobility_limitations || [];
+    const trainingStyle = profile?.training_style || null;
+    const yearsTraining = profile?.years_training || null;
 
     // Strip fields from the template that the AI shouldn't see/depend on.
     const tplShape = {
@@ -115,6 +125,25 @@ export function buildRoutinePromptFromTemplate(template, profile) {
         })),
     };
 
+    // Bloque de "intención" — solo aparecen líneas con datos. La IA lo
+    // usa para refinar el WORDING de las notas (no la estructura), ej.
+    // si el socio dijo "para mi boda en julio", el day.notes puede
+    // mencionar "vamos a jalar duro estas semanas, quedan pocas".
+    const intentLines = [];
+    if (motivation) intentLines.push(`- En sus palabras: "${motivation}"`);
+    if (goalType) intentLines.push(`- Tipo de meta: ${goalType}`);
+    if (goalDeadline) intentLines.push(`- Fecha objetivo: ${goalDeadline}`);
+    if (likes.length) intentLines.push(`- Le gusta: ${likes.join(', ')}`);
+    if (dislikes.length) intentLines.push(`- NO le gusta (respétalo en el wording): ${dislikes.join(', ')}`);
+    if (priorityMuscles.length) intentLines.push(`- Grupos prioritarios: ${priorityMuscles.join(', ')}`);
+    if (deprioritized.length) intentLines.push(`- Grupos a desenfatizar: ${deprioritized.join(', ')}`);
+    if (mobility.length) intentLines.push(`- Limitaciones de movilidad: ${mobility.join(', ')}`);
+    if (trainingStyle) intentLines.push(`- Estilo preferido: ${trainingStyle}`);
+    if (yearsTraining) intentLines.push(`- Experiencia: ${yearsTraining}`);
+    const intentBlock = intentLines.length
+        ? `\n\nINTENCIÓN DEL SOCIO (úsala SOLO para refinar el wording de las notas — NO cambies estructura):\n${intentLines.join('\n')}`
+        : '';
+
     const userPrompt = `TEMPLATE OFICIAL DEL COACH (este es el shape exacto que debes devolver):
 ${JSON.stringify(tplShape, null, 2)}
 
@@ -122,12 +151,12 @@ PERFIL DEL SOCIO:
 - Nombre: ${firstName || '(sin nombre)'}
 - Nivel: ${level}
 - Lesiones declaradas: ${injuries.length ? injuries.join(', ') : '(ninguna)'}
-- Coach signature de este template: "${template.coach_signature || ''}"
+- Coach signature de este template: "${template.coach_signature || ''}"${intentBlock}
 
 TAREA:
 1. Devuelve la rutina con el MISMO shape (mismos días, mismos ejercicios, mismo orden).
 2. Reescribe \`routine.name\` para incluir el nombre del socio (si existe). Ejemplos válidos: "Rutina Hombre 2025 — Plan de ${firstName || 'Carlos'}", "Glúteo y Femoral — Plan de ${firstName || 'Ana'}".
-3. Refina \`day.notes\` y cada \`exercise.notes\` en voz coach mexicano. Para lesiones, agrega cue de precaución sin quitar el ejercicio.
+3. Refina \`day.notes\` y cada \`exercise.notes\` en voz coach mexicano. Si el socio dio motivación o fecha, refleja esa urgencia/contexto en 1-2 day.notes (ej. "vamos con todo, ya viene la fecha"). Para lesiones, agrega cue de precaución sin quitar el ejercicio.
 4. Si el nivel es BEGINNER, puedes subir \`rest_sec\` hasta +15s en ejercicios compuestos pesados; si es ADVANCED, puedes bajar hasta -15s. No toques nada más.
 5. NO agregues, NO quites, NO renombres ejercicios.
 

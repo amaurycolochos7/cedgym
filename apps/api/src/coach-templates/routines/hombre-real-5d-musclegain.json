@@ -15,9 +15,10 @@
     {
       "day_of_week": 0,
       "title": "Pecho y Tríceps",
-      "notes": "Calienta 20 min en bicicleta antes de pisar el peso.",
+      "notes": "Calienta hombro y pecho antes de pisar el peso fuerte.",
       "exercises": [
-        { "exercise_name": "Bicicleta", "sets": 1, "reps": "20 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Activación de hombro con banda", "sets": 2, "reps": "15", "rest_sec": 30, "notes": "rotaciones externas, prepara el hombro" },
+        { "exercise_name": "Lagartija de calentamiento", "sets": 2, "reps": "12", "rest_sec": 30, "notes": "ritmo controlado, despierta el pecho" },
         { "exercise_name": "Press de banco", "sets": 4, "reps": "15,12,10,8", "rest_sec": 90, "notes": "aumenta peso cada serie" },
         { "exercise_name": "Press de banco inclinado", "sets": 4, "reps": "15,12,10,8", "rest_sec": 90, "notes": "codos no se traban" },
         { "exercise_name": "Press de banco declinado con mancuernas", "sets": 4, "reps": "15", "rest_sec": 75, "notes": "rango completo" },
@@ -68,7 +69,8 @@
       "title": "Brazo, Antebrazo y Trapecio",
       "notes": "Sube lento y aprieta arriba 1 segundo.",
       "exercises": [
-        { "exercise_name": "Bicicleta", "sets": 1, "reps": "10 min", "rest_sec": 0, "notes": "calentamiento" },
+        { "exercise_name": "Rotaciones de muñeca y codo", "sets": 2, "reps": "15 cada lado", "rest_sec": 20, "notes": "movilidad antes de cargar" },
+        { "exercise_name": "Curl bíceps de calentamiento con peso ligero", "sets": 2, "reps": "15", "rest_sec": 30, "notes": "activa el bíceps con peso bajo" },
         { "exercise_name": "Curl bíceps", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "sin balanceo" },
         { "exercise_name": "Curl martillo", "sets": 4, "reps": "15", "rest_sec": 45, "notes": "palmas miran adentro" },
         { "exercise_name": "Predicador", "sets": 4, "reps": "15", "rest_sec": 60, "notes": "no levantes el codo" },

@@ -22,6 +22,15 @@
 //     fonts.gstatic.com         → next/font fallback
 //   - api.cedgym.mx +
 //     api.187-77-11-79.sslip.io → backend (XHR + WebSocket)
+// En development necesitamos permitir el API local (http://localhost:3001)
+// y NO forzar upgrade-insecure-requests, porque el browser convertiría
+// http://localhost en https y reventaría el fetch. En prod mantenemos
+// el CSP estricto solo con los hosts oficiales.
+const isDev = process.env.NODE_ENV !== 'production';
+const devConnectExtras = isDev
+  ? ' http://localhost:3001 ws://localhost:3001 http://127.0.0.1:3001 ws://127.0.0.1:3001'
+  : '';
+
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://va.vercel-scripts.com https://cdn.jsdelivr.net",
@@ -33,13 +42,15 @@ const csp = [
   // browser blocked every fetch from cedgym.mx → api.cedgym.mx with
   // "no podemos conectar con el servidor" — that's what produced the
   // post-deploy outage.
-  "connect-src 'self' https://api.cedgym.mx wss://api.cedgym.mx https://api.187-77-11-79.sslip.io wss://api.187-77-11-79.sslip.io https://api.stripe.com https://m.stripe.network https://m.stripe.com",
+  `connect-src 'self' https://api.cedgym.mx wss://api.cedgym.mx https://api.187-77-11-79.sslip.io wss://api.187-77-11-79.sslip.io https://api.stripe.com https://m.stripe.network https://m.stripe.com${devConnectExtras}`,
   "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://m.stripe.network https://m.stripe.com https://www.youtube-nocookie.com https://www.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
-  "upgrade-insecure-requests",
+  // upgrade-insecure-requests rompe el fetch a http://localhost:3001
+  // en dev — solo lo aplicamos en producción.
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join('; ');
 
 const securityHeaders = [
