@@ -442,9 +442,19 @@ export default async function membershipsStripeRoutes(fastify) {
             // keep status PENDING-ish until the webhook activates. We
             // model "pending" as the existing TRIAL status so the user
             // doesn't see a half-baked ACTIVE.
+            //
+            // El UPDATE refleja el plan/precio del intento ACTUAL — sin
+            // esto, si el socio cambia de plan a mitad del checkout
+            // (STARTER→PRO→ELITE en intentos sucesivos) la fila queda
+            // pegada en el primer plan que Stripe aceptó. No tocamos
+            // status/starts_at/expires_at; eso lo hace el webhook
+            // invoice.payment_succeeded cuando el pago se confirma.
             await prisma.membership.upsert({
                 where: { user_id: user.id },
                 update: {
+                    plan,
+                    price_mxn: amount,
+                    billing_cycle: billingCycle,
                     stripe_subscription_id: subscription.id,
                     stripe_price_id: priceIdFor({ plan, cycle: billingCycle }),
                 },
