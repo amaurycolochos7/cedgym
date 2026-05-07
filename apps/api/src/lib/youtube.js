@@ -17,10 +17,35 @@ import ytsr from 'youtube-sr';
 // where the class lives under `.YouTube`.
 const YouTube = ytsr.YouTube ?? ytsr.default?.YouTube ?? ytsr;
 
-// Normalized name → { videoId, title, url } | null.
-//   null entries mean "we searched and found nothing" — we cache the
-//   miss too so we don't re-query YouTube for garbage names.
+// Cache de búsquedas. Diseño: HITs (objetos) duran indefinido — el
+// videoId de un ejercicio no cambia. MISSes (null) caducan a los 5
+// minutos para reintentar — un miss puede ser un rate-limit temporal
+// de YouTube, un hiccup de red, o una búsqueda que se hizo con el
+// algoritmo viejo (antes de coreOf) y que con la query mejorada
+// ahora sí va a encontrar resultados.
+//
+// Key → { value: { videoId, title, url } | null, expiresAt: number | Infinity }
 const CACHE = new Map();
+const MISS_TTL_MS = 5 * 60 * 1000;
+
+function cacheGet(key) {
+    const entry = CACHE.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt < Date.now()) {
+        CACHE.delete(key);
+        return undefined;
+    }
+    return entry.value;
+}
+
+function cacheSet(key, value) {
+    CACHE.set(key, {
+        value,
+        // Hit: cache indefinido (el video del coach no cambia).
+        // Miss: TTL corto para reintentar pronto.
+        expiresAt: value ? Infinity : Date.now() + MISS_TTL_MS,
+    });
+}
 
 // Active in-flight promises per query key — lets N parallel callers
 // share a single network round-trip instead of hammering YouTube.
@@ -125,15 +150,17 @@ async function doSearch(name) {
 }
 
 // Resolve a single exercise name to a YouTube video. Returns
-// { videoId, title, url } or null. Cached both on hit and miss.
+// { videoId, title, url } or null. Cached on hit (forever) and on
+// miss (5 min TTL — see cacheSet).
 export async function searchExerciseVideo(name) {
     const key = normalize(name);
     if (!key) return null;
-    if (CACHE.has(key)) return CACHE.get(key);
+    const cached = cacheGet(key);
+    if (cached !== undefined) return cached;
     if (INFLIGHT.has(key)) return INFLIGHT.get(key);
 
     const p = doSearch(key).then((result) => {
-        CACHE.set(key, result);
+        cacheSet(key, result);
         INFLIGHT.delete(key);
         return result;
     });
@@ -155,8 +182,10 @@ export async function searchExerciseVideosBatch(names) {
 export function getYoutubeCacheStats() {
     let hits = 0;
     let misses = 0;
-    for (const v of CACHE.values()) {
-        if (v) hits++;
+    const now = Date.now();
+    for (const entry of CACHE.values()) {
+        if (entry.expiresAt < now) continue; // expired but not yet pruned
+        if (entry.value) hits++;
         else misses++;
     }
     return {
