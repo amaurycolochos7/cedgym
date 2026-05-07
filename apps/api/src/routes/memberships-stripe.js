@@ -64,6 +64,7 @@ import {
     getStripe,
     getOrCreateStripeCustomer,
     priceIdFor,
+    inscriptionPriceId,
 } from '../lib/stripe.js';
 import { activateMembershipFromPayment } from '../lib/payment-activation.js';
 
@@ -369,17 +370,12 @@ export default async function membershipsStripeRoutes(fastify) {
                 },
             };
             if (inscriptionAmount > 0) {
+                // Stripe's add_invoice_items[].price_data NO acepta
+                // product_data — exige un Price preexistente. Por eso
+                // referenciamos el Price one-time configurado en env
+                // (STRIPE_PRICE_INSCRIPTION → $100 MXN one-time).
                 subParams.add_invoice_items = [
-                    {
-                        price_data: {
-                            currency: 'mxn',
-                            product_data: {
-                                name: 'Inscripción única CED·GYM',
-                            },
-                            unit_amount: pesosToCentavos(INSCRIPTION_PRICE_MXN),
-                        },
-                        quantity: 1,
-                    },
+                    { price: inscriptionPriceId(), quantity: 1 },
                 ];
             }
             if (couponId) {

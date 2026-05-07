@@ -18,6 +18,7 @@ real card. The list deliberately includes failure paths and security checks.
    STRIPE_PRICE_STARTER_MONTHLY=price_xxx     # test-mode prices
    STRIPE_PRICE_PRO_MONTHLY=price_xxx
    STRIPE_PRICE_ELITE_MONTHLY=price_xxx
+   STRIPE_PRICE_INSCRIPTION=price_xxx         # one-time $100 MXN
    STRIPE_PRICE_MEAL_PLAN_ADDON=price_xxx
    ```
 3. Webhook endpoint in Stripe Test Mode → `https://api.187-77-11-79.sslip.io/webhooks/stripe`

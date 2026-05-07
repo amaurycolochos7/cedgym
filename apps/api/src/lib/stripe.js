@@ -110,6 +110,7 @@ export async function getOrCreateStripeCustomer({ prisma, user }) {
 //   STRIPE_PRICE_STARTER_MONTHLY=price_xxx
 //   STRIPE_PRICE_PRO_MONTHLY=price_xxx
 //   STRIPE_PRICE_ELITE_MONTHLY=price_xxx
+//   STRIPE_PRICE_INSCRIPTION=price_xxx   (one-time $100 line item)
 // Addon (one-shot) uses STRIPE_PRICE_MEAL_PLAN_ADDON.
 
 const VALID_PLANS = ['STARTER', 'PRO', 'ELITE'];
@@ -145,6 +146,22 @@ export function mealPlanAddonPriceId() {
     return priceId;
 }
 
+// One-time $100 MXN line item charged on the FIRST invoice of a
+// PRO/ELITE subscription. Stripe's `add_invoice_items[].price_data`
+// no acepta `product_data` — exige un Price preexistente. Por eso
+// vive aquí y no inline en memberships-stripe.js.
+export function inscriptionPriceId() {
+    const priceId = process.env.STRIPE_PRICE_INSCRIPTION;
+    if (!priceId) {
+        throw err(
+            'PAYMENTS_MISCONFIGURED',
+            'STRIPE_PRICE_INSCRIPTION is not set — create a one-time Price ($100 MXN) in Stripe Dashboard and configure the env var',
+            500,
+        );
+    }
+    return priceId;
+}
+
 /**
  * Pretty-print a charge's payment method for WhatsApp notifications.
  * Returns "Visa •••• 4242" or "MasterCard •••• 0006", or "Tarjeta"
@@ -158,4 +175,4 @@ export function describePaymentMethod(charge) {
     return `${pretty} •••• ${last4}`;
 }
 
-export default { getStripe, constructWebhookEvent, getOrCreateStripeCustomer, priceIdFor, mealPlanAddonPriceId, describePaymentMethod };
+export default { getStripe, constructWebhookEvent, getOrCreateStripeCustomer, priceIdFor, mealPlanAddonPriceId, inscriptionPriceId, describePaymentMethod };
