@@ -1,8 +1,11 @@
 // CED-GYM Service Worker
-// Cache name bumped to v2 in the Stripe migration so old clients drop
-// the v1 cache (which held HTML responses with the old MercadoPago CSP
-// header, breaking Stripe.js after the CSP was rotated).
-const CACHE = 'cedgym-v2';
+// v3: navigations cambian de stale-while-revalidate a network-first.
+// Antes el SW siempre servía el HTML cacheado y solo actualizaba en
+// background → tras un deploy nuevo, el socio veía el bundle viejo y
+// había que recargar 2-3 veces para que apareciera el cambio (banner
+// "Mejoramos tu perfil", etc.). Con network-first la primera recarga
+// ya trae el HTML/JS nuevo y el cache solo sirve si hay 0 conexión.
+const CACHE = 'cedgym-v3';
 const OFFLINE_URLS = ['/offline', '/portal/qr'];
 
 self.addEventListener('install', (event) => {
@@ -48,24 +51,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin page navigations: stale-while-revalidate
+  // Page navigations (HTML): NETWORK-FIRST. Cambio crítico vs v2 — la
+  // versión vieja era stale-while-revalidate, lo que hacía que el
+  // socio viera el HTML/JS de hace 2 deploys hasta recargar 2-3 veces.
+  // Ahora pedimos red SIEMPRE y caemos al cache solo si la red falla,
+  // así un deploy nuevo se ve a la primera recarga sin importar qué
+  // tan agresivo sea el bumpeo de CACHE.
   if (request.mode === 'navigate') {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const net = fetch(request)
-          .then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
-            return res;
-          })
-          .catch(() => cached || caches.match('/offline'));
-        return cached || net;
-      })
+      fetch(request)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(request).then((c) => c || caches.match('/offline')))
     );
     return;
   }
 
-  // Static assets: cache-first
+  // Static assets: cache-first (los nombres de chunk de Next ya
+  // incluyen hash, así que un bundle nuevo cambia de URL y no toca
+  // las entradas viejas — éstas las limpia el activate al bumpear
+  // CACHE).
   if (/\.(js|css|png|jpg|jpeg|svg|webp|woff2?)$/i.test(url.pathname)) {
     event.respondWith(
       caches.match(request).then(

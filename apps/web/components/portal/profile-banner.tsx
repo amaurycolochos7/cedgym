@@ -79,8 +79,14 @@ export function ProfileCompletionBanner() {
   }>({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api.get('/auth/me')).data,
-    enabled: !!user, // solo cuando ya hay sesión
-    staleTime: 60_000,
+    enabled: !!user,
+    // Sin staleTime — queremos que el banner refleje el estado de
+    // BD lo más fresco posible. Si el socio actualiza su perfil en
+    // otra pestaña o desde otro dispositivo, el banner desaparece
+    // sin esperar.
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Never on the perfil page itself — sería ruido redundante.
