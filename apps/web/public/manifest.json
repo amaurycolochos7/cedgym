@@ -2,7 +2,7 @@
   "name": "CED·GYM",
   "short_name": "CED·GYM",
   "description": "Plataforma multi-deporte: entrenamientos, QR de acceso, clases y rutinas.",
-  "start_url": "/portal/dashboard",
+  "start_url": "/start",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

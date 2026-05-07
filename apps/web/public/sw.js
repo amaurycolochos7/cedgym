@@ -1,11 +1,10 @@
 // CED-GYM Service Worker
-// v3: navigations cambian de stale-while-revalidate a network-first.
-// Antes el SW siempre servía el HTML cacheado y solo actualizaba en
-// background → tras un deploy nuevo, el socio veía el bundle viejo y
-// había que recargar 2-3 veces para que apareciera el cambio (banner
-// "Mejoramos tu perfil", etc.). Con network-first la primera recarga
-// ya trae el HTML/JS nuevo y el cache solo sirve si hay 0 conexión.
-const CACHE = 'cedgym-v3';
+// v4: agrega auto-update sin reinstalar la PWA.
+//   - Escucha mensaje SKIP_WAITING del cliente para tomar control
+//     inmediato cuando hay un SW nuevo esperando
+//   - El cliente (PWAUpdater) escucha controllerchange y recarga la
+//     app cuando el SW nuevo toma control → cero reinstalaciones
+const CACHE = 'cedgym-v4';
 const OFFLINE_URLS = ['/offline', '/portal/qr'];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +21,15 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// Cliente puede pedirle al SW pendiente que se active inmediatamente
+// (postMessage({type:'SKIP_WAITING'})). Lo usa PWAUpdater para que un
+// deploy nuevo no espere a que el usuario cierre todas las tabs.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -51,18 +59,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Page navigations (HTML): NETWORK-FIRST. Cambio crítico vs v2 — la
-  // versión vieja era stale-while-revalidate, lo que hacía que el
-  // socio viera el HTML/JS de hace 2 deploys hasta recargar 2-3 veces.
-  // Ahora pedimos red SIEMPRE y caemos al cache solo si la red falla,
-  // así un deploy nuevo se ve a la primera recarga sin importar qué
-  // tan agresivo sea el bumpeo de CACHE.
+  // Page navigations (HTML): NETWORK-FIRST. Pedimos red SIEMPRE y
+  // caemos al cache solo si la red falla, así un deploy nuevo se ve
+  // a la primera recarga sin importar qué tan agresivo sea el
+  // bumpeo de CACHE.
   if (request.mode === 'navigate') {
+    // /start es el redirector dinámico de la PWA — siempre hace
+    // 307 al landing del role. Nunca lo cacheamos: un redirect
+    // cacheado puede provocar loops si el role cambia (logout/login
+    // como otra cuenta) o si el browser interpreta el cache raro.
+    const isStart = url.pathname === '/start' || url.pathname === '/start/';
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+          if (!isStart) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
+          }
           return res;
         })
         .catch(() => caches.match(request).then((c) => c || caches.match('/offline')))

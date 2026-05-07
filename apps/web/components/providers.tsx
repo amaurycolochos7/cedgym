@@ -4,21 +4,13 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AuthProvider } from '@/lib/auth';
 import { Toaster } from 'sonner';
 import { CheckCircle2, XCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
+import { PWAUpdater } from './pwa-updater';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!('serviceWorker' in navigator)) return;
-    if (process.env.NODE_ENV !== 'production') return;
-    navigator.serviceWorker
-      .register('/sw.js')
-      .catch((e) => console.warn('SW registration failed:', e));
-  }, []);
-
   const [client] = useState(
     () =>
       new QueryClient({
@@ -37,6 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <AuthProvider>
+        <PWAUpdater />
         {children}
         <Toaster
           theme="light"
