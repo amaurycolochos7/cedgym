@@ -1132,7 +1132,7 @@ function ExerciseCard({
             <span className="text-[10px] font-bold tabular-nums text-slate-400 bg-slate-100 rounded-md px-1.5 py-0.5">
               {String(index + 1).padStart(2, '0')}
             </span>
-            <h3 className="font-semibold text-slate-900 truncate">{name}</h3>
+            <h3 className="font-semibold text-slate-900 leading-snug line-clamp-2">{name}</h3>
           </div>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-xs">
             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 ring-1 ring-blue-200 font-mono tabular-nums font-semibold">

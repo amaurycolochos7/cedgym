@@ -50,7 +50,34 @@ type VideoKey =
   | 'triceps-extension'
   | 'mountain-climbers'
   | 'lunges'
-  | 'goblet-squat';
+  | 'goblet-squat'
+  // Cobertura para los ejercicios que más estaban quedando sin video:
+  // calentamientos, core/abdominales, isométricos, banda elástica.
+  | 'pushup'
+  | 'crunch'
+  | 'plank'
+  | 'jumping-jacks'
+  | 'jump-rope'
+  | 'face-pull'
+  | 'band-shoulder'
+  | 'wrist-rotation'
+  | 'glute-bridge'
+  | 'row'
+  | 'pulldown'
+  | 'fly'
+  | 'leg-press'
+  | 'hyperextension'
+  | 'calf-raise'
+  | 'hip-thrust'
+  | 'bulgarian-split'
+  | 'jump-squat'
+  | 'leg-curl'
+  | 'leg-extension'
+  | 'preacher-curl'
+  | 'hammer-curl'
+  | 'french-press'
+  | 'rope-pulldown'
+  | 'shrug';
 
 const EXERCISE_VIDEOS: Record<VideoKey, string> = {
   'bench-press':       'rT7DgCr-3pg',
@@ -65,21 +92,92 @@ const EXERCISE_VIDEOS: Record<VideoKey, string> = {
   'mountain-climbers': 'nmwgirgXLYM',
   'lunges':            'YaXPRqUwItQ',
   'goblet-squat':      'CFBZ4jN1CMI',
+  // Nuevos
+  // Para los IDs nuevos: el lookup de YouTube en el backend (lib/
+  // youtube.js) es la primera línea de defensa y resuelve la mayoría
+  // de los ejercicios. Los videos hardcoded son fallbacks por si el
+  // scraper falla o el nombre es exótico — no necesitan ser perfectos,
+  // basta con que muestren el movimiento correcto. Si alguno se
+  // rompe (404 / video privado), el backend search lo cubre y el
+  // FallbackTile evita la ruptura visual.
+  'pushup':            'IODxDxX7oi4', // lagartija / flexión
+  'crunch':            'Xyd_fa5zoEU', // crunch / abdominal
+  'plank':             'pSHjTRCQxIw', // plancha
+  'jumping-jacks':     'iSSAk4XCsRA', // jumping jacks
+  'jump-rope':         '1BZM2Vre5oc', // saltar la cuerda
+  'face-pull':         'rep-qVOkqgk',
+  'band-shoulder':     'gBGPi-NmQCg', // rotaciones de hombro con banda
+  'wrist-rotation':    'pAplQXk3dkU', // movilidad de muñeca
+  'glute-bridge':      'wPM8icPu6H8', // puente de glúteo
+  'row':               'GZbfZ033f74', // remo
+  'pulldown':          'CAwf7n6Luuc', // jalón al pecho
+  'fly':               'eozdVDA78K0', // flys / aperturas
+  'leg-press':         'IZIxOJUcqM8', // prensa de pierna (fix: era pullup duplicado)
+  'hyperextension':    'ph3pddpKzzw', // hiperextensiones
+  'calf-raise':        '3FdhdFEXh6I', // pantorrilla
+  'hip-thrust':        'LM8XHLYJoYs', // hip thrust
+  'bulgarian-split':   '2C-uNgKwPLE', // sentadilla búlgara
+  'jump-squat':        'CVaEhXotL7M', // saltos sentadilla
+  'leg-curl':          '1Tq3QdYUuHs', // curl femoral
+  'leg-extension':     'YyvSfVjQeL0', // extensión cuádriceps
+  'preacher-curl':     'fIWP-FRFNU0', // curl predicador
+  'hammer-curl':       'zC3nLlEvin4', // curl martillo
+  'french-press':      'wj9YGKRHKxk', // press francés
+  'rope-pulldown':     '6vO3xIxCQXQ', // pull down con cuerda
+  'shrug':             'cJRVVxmytaM', // encogimientos / trapecio
 };
 
+// Importante: el orden importa — los más específicos PRIMERO. Si pongo
+// 'curl' arriba de 'curl martillo', "curl martillo" matchearía con
+// 'curl' antes de llegar a la regla específica del martillo.
 const RULES: Array<{ key: VideoKey; keywords: string[] }> = [
+  // Hombro / activación (ANTES de bench/overhead para no robar)
+  { key: 'face-pull',         keywords: ['face pull', 'face-pull'] },
+  { key: 'band-shoulder',     keywords: ['rotaciones de hombro', 'rotacion de hombro', 'rotaciones externas', 'activacion de hombro', 'activación de hombro', 'rotaciones con banda', 'y-t-w', 'ytw'] },
+  { key: 'wrist-rotation',    keywords: ['rotaciones de muneca', 'rotaciones de muñeca', 'movilidad de muneca', 'movilidad de muñeca'] },
+  // Press
   { key: 'overhead-press',    keywords: ['press militar', 'press de hombros', 'shoulder press', 'overhead', 'arnold press'] },
-  { key: 'bench-press',       keywords: ['press banca', 'press banco', 'bench', 'press de pecho'] },
-  { key: 'goblet-squat',      keywords: ['sentadilla goblet', 'goblet squat', 'goblet'] },
-  { key: 'squat',             keywords: ['sentadilla', 'squat'] },
-  { key: 'deadlift',          keywords: ['peso muerto', 'deadlift', 'rumano', 'rdl'] },
+  { key: 'french-press',      keywords: ['press frances', 'press francés', 'french press', 'extension overhead'] },
+  { key: 'bench-press',       keywords: ['press de banco', 'press banca', 'press banco', 'bench', 'press de pecho'] },
+  // Curl variants
+  { key: 'preacher-curl',     keywords: ['predicador', 'preacher'] },
+  { key: 'hammer-curl',       keywords: ['curl martillo', 'hammer curl', 'martillo'] },
+  { key: 'biceps-curl',       keywords: ['curl 21', 'curl bicep', 'curl de bicep', 'bicep curl', 'biceps curl', 'curl concentrado', 'curl con mancuerna', 'curl alterno'] },
+  // Triceps
+  { key: 'rope-pulldown',     keywords: ['pull down', 'pulldown', 'pull-down con cuerda', 'jalón triceps', 'jalon triceps'] },
+  { key: 'triceps-extension', keywords: ['extension de tricep', 'extensiones tricep', 'tricep extension', 'kickback', 'patada de mula', 'tricep copa', 'triceps copa'] },
+  // Pecho
+  { key: 'fly',               keywords: ['flys', 'aperturas', 'pec deck', 'peck deck'] },
+  { key: 'pushup',            keywords: ['lagartija', 'lagartillas', 'flexion', 'flexiones', 'push up', 'push-up', 'pushup'] },
+  { key: 'dips',              keywords: ['fondos en banco', 'fondos paralelos', 'fondos', 'dips', 'paralelas'] },
+  // Espalda
+  { key: 'pulldown',          keywords: ['jalon al frente', 'jalón al frente', 'jalon al pecho', 'jalón al pecho', 'jalon invertido', 'lat pulldown'] },
   { key: 'pullup',            keywords: ['pull up', 'pull-up', 'pullup', 'dominada', 'chin up'] },
-  { key: 'dips',              keywords: ['fondos', 'dips', 'paralelas'] },
-  { key: 'lateral-raise',     keywords: ['elevacion lateral', 'elevaciones laterales', 'lateral raise', 'side raise'] },
-  { key: 'biceps-curl',       keywords: ['curl de biceps', 'curl biceps', 'bicep curl', 'biceps curl', 'curl'] },
-  { key: 'triceps-extension', keywords: ['extension de triceps', 'extensiones triceps', 'triceps extension', 'tricep extension', 'kickback'] },
+  { key: 'row',               keywords: ['remo en maquina', 'remo en máquina', 'remo invertido', 'remo con mancuerna', 'remo barra', 'remo'] },
+  { key: 'shrug',             keywords: ['encogimientos', 'shrugs', 'trapecio', 'isométrico sosteniendo mancuernas', 'isometrico sosteniendo'] },
+  { key: 'hyperextension',    keywords: ['hiperextensiones', 'hyperextension', 'reverencias', 'good morning'] },
+  // Hombro lateral (al final para no robar a band-shoulder)
+  { key: 'lateral-raise',     keywords: ['laterales poliquin', 'elevacion lateral', 'elevaciones laterales', 'lateral raise', 'side raise', 'laterales', 'frontal con disco', 'circulos con mancuerna', 'círculos con mancuerna'] },
+  // Pierna
+  { key: 'goblet-squat',      keywords: ['sentadilla goblet', 'goblet squat', 'goblet'] },
+  { key: 'bulgarian-split',   keywords: ['bulgaro', 'búlgaro', 'bulgara', 'búlgara', 'split squat'] },
+  { key: 'jump-squat',        keywords: ['saltos haciendo sentadilla', 'jump squat', 'saltos sentadilla', 'saltos desplantes'] },
+  { key: 'leg-press',         keywords: ['prensa pierna', 'prensa de pierna', 'leg press'] },
+  { key: 'leg-curl',          keywords: ['curl femoral', 'curl de pierna', 'leg curl'] },
+  { key: 'leg-extension',     keywords: ['extension cuadricep', 'extensiones de cuadricep', 'extensión cuádricep', 'extensión de cuádriceps', 'leg extension'] },
+  { key: 'calf-raise',        keywords: ['pantorrilla', 'calf raise', 'gemelos'] },
+  { key: 'hip-thrust',        keywords: ['hip thrust', 'puente', 'puentes'] },
+  { key: 'glute-bridge',      keywords: ['patada de mula', 'patada atras', 'patada atrás', 'patada lateral', 'gluteo medio'] },
+  { key: 'squat',             keywords: ['sentadilla con barra', 'sentadilla isometrica', 'sentadilla isométrica', 'sentadilla frontal', 'sentadilla hack', 'sentadilla profunda', 'sentadilla'] },
+  { key: 'lunges',            keywords: ['desplante', 'zancada', 'lunge', 'steps con mancuerna'] },
+  { key: 'deadlift',          keywords: ['peso muerto sumo', 'peso muerto rumano', 'peso muerto', 'deadlift', 'rumano', 'rdl'] },
+  // Cardio / calentamiento / casa
+  { key: 'jump-rope',         keywords: ['saltar la cuerda', 'cuerda', 'jump rope', 'skipping en sitio'] },
+  { key: 'jumping-jacks',     keywords: ['jumping jacks', 'saltos de tijera'] },
   { key: 'mountain-climbers', keywords: ['mountain climber', 'mountain climbers', 'escaladores'] },
-  { key: 'lunges',            keywords: ['desplante', 'zancada', 'lunge'] },
+  // Core / abdomen
+  { key: 'plank',             keywords: ['plancha', 'plank'] },
+  { key: 'crunch',             keywords: ['abdominal', 'abdominales', 'crunch', 'sit up', 'situp', 'bicicleta abdominal', 'dead bug', 'hollow hold'] },
 ];
 
 function normalize(s: string): string {
