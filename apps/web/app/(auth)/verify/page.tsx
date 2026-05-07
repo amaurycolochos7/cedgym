@@ -203,7 +203,20 @@ export default function VerifyPage() {
       // dashboard. Profile/emergency contact are now optional and live at
       // /portal/perfil (promoted via a dismissible banner).
       const fallback = stored?.path ?? '/portal/dashboard';
-      router.push(fallback);
+      // En PWA standalone forzamos full-page reload; el router.push
+      // de Next router puede saltarse el round-trip que hace que la
+      // cookie cedgym_session llegue al middleware y eso provoca
+      // loops al login en iOS standalone.
+      const isStandalone =
+        typeof window !== 'undefined' &&
+        (window.matchMedia?.('(display-mode: standalone)').matches ||
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (window.navigator as any).standalone === true);
+      if (isStandalone) {
+        window.location.assign(fallback);
+      } else {
+        router.push(fallback);
+      }
     },
     onError: (err) => {
       const norm = normalizeError(err) as ApiError;

@@ -60,7 +60,24 @@ export default function LoginPage() {
       hydrateFromAuthResponse(resp);
       toast.success(`¡Hola de nuevo, ${resp.user.name.split(' ')[0]}!`);
       const dest = redirect ?? postLoginPathForRole(resp.user.role);
-      router.push(dest);
+      // En PWA standalone (iOS, Android Chrome) usamos full-page
+      // navigation en vez de router.push. Sin esto, iOS Safari
+      // standalone a veces no manda la cookie cedgym_session recién
+      // seteada en la siguiente request al middleware → loop al login.
+      // window.location.assign fuerza un round-trip al servidor con
+      // todas las cookies actualizadas. Para web normal no afecta el
+      // flujo (el browser igual mantiene la sesión).
+      const isStandalone =
+        typeof window !== 'undefined' &&
+        (window.matchMedia?.('(display-mode: standalone)').matches ||
+          // iOS Safari legacy flag
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (window.navigator as any).standalone === true);
+      if (isStandalone) {
+        window.location.assign(dest);
+      } else {
+        router.push(dest);
+      }
     },
     onError: (err) => {
       const norm = normalizeError(err) as ApiError;
