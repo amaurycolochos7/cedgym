@@ -34,16 +34,37 @@ export default async function adminMembersRoutes(fastify) {
     const { search, status, plan, limit = 30, offset = 0 } = req.query;
     const workspaceId = assertWorkspaceAccess(req);
 
-    // Hide soft-deleted users (status='DELETED' with anonymized email).
-    // These come from /admin/staff DELETE which demotes role→ATHLETE +
-    // status→DELETED instead of hard-deleting, to preserve payment/audit
-    // FKs. They should not appear in the athletes listing. If the caller
-    // explicitly filters by status they get exactly that status; otherwise
-    // we exclude DELETED.
+    // El UI manda los filtros de Estado y Plan en minúscula y con
+    // etiquetas humanas ("active", "frozen", "cancelled"). Los enums de
+    // Prisma son MAYÚSCULA y "Estado" en realidad refiere a la membresía,
+    // no al user.status. Mapeamos explícito porque "cancelled" (UI) ≠
+    // "CANCELED" (enum) — un toUpperCase() ingenuo silenciosamente
+    // devolvería 0 resultados.
+    const MEMBERSHIP_STATUS_MAP = {
+      active:    'ACTIVE',
+      frozen:    'SUSPENDED',
+      expired:   'EXPIRED',
+      cancelled: 'CANCELED',
+    };
+    const PLAN_MAP = {
+      starter: 'STARTER',
+      pro:     'PRO',
+      elite:   'ELITE',
+    };
+    const mappedMembershipStatus = status
+      ? MEMBERSHIP_STATUS_MAP[String(status).toLowerCase()]
+      : null;
+    const mappedPlan = plan
+      ? PLAN_MAP[String(plan).toLowerCase()]
+      : null;
+
+    // Siempre escondemos soft-deleted users (status='DELETED' con email
+    // anonimizado). Vienen de /admin/staff DELETE que demota role→ATHLETE
+    // + status→DELETED para preservar FKs de pago/audit.
     const where = {
       workspace_id: workspaceId,
       role: 'ATHLETE',
-      ...(status ? { status } : { status: { not: 'DELETED' } }),
+      status: { not: 'DELETED' },
       ...(search && {
         OR: [
           { name:       { contains: search, mode: 'insensitive' } },
@@ -52,8 +73,11 @@ export default async function adminMembersRoutes(fastify) {
           { phone:      { contains: search } },
         ],
       }),
-      ...(plan && {
-        membership: { plan },
+      ...((mappedMembershipStatus || mappedPlan) && {
+        membership: {
+          ...(mappedMembershipStatus && { status: mappedMembershipStatus }),
+          ...(mappedPlan && { plan: mappedPlan }),
+        },
       }),
     };
 
