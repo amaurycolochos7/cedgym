@@ -27,10 +27,30 @@ export const metadata: Metadata = {
       { url: '/favicon.png', type: 'image/png', sizes: '512x512' },
       { url: '/logo.png', type: 'image/png' },
     ],
-    apple: [{ url: '/logo.png' }],
+    // iOS toma el apple-touch-icon más cercano a 180×180 para el
+    // ícono que se ancla en la pantalla de inicio. icon-192 le sirve
+    // (lo escala a 180 sin perder calidad notoria). Si más adelante
+    // tenemos un PNG de 180×180 dedicado, agregarlo arriba de éste.
+    apple: [
+      { url: '/icons/icon-192.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
     shortcut: ['/favicon.png'],
   },
   manifest: '/manifest.json',
+  // Configura la WebApp para iOS. Con esto Safari, al "Agregar a
+  // pantalla de inicio", la abre en modo standalone (sin barra del
+  // navegador) y reconoce el título correcto del ícono.
+  appleWebApp: {
+    capable: true,
+    title: 'CED·GYM',
+    statusBarStyle: 'default',
+  },
+  // Hint para Microsoft Edge / Windows tile (no afecta iOS).
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'application-name': 'CED·GYM',
+  },
 };
 
 export const viewport: Viewport = {
