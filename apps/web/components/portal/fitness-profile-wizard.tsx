@@ -484,36 +484,71 @@ export function FitnessProfileWizard({ initial }: Props) {
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  /* ── Per-step validity ───────────────────────────────────── */
-  const stepValid = useMemo(() => {
+  /* ── Per-step validity + mensajes de error explícitos ────────
+     Sin esto el botón "Continuar" se deshabilita pero el socio no
+     entiende por qué. Caso real: una socia escribió 1.65 (metros)
+     en altura y como el rango pedido era 100-230 (cm), el botón
+     quedaba gris para siempre.
+     Devolvemos { ok: bool, message?: string } para mostrar la pista
+     debajo del botón cuando falla.
+  */
+  const stepValidation = useMemo<{ ok: boolean; message?: string }>(() => {
     switch (step) {
       case 1: {
-        const age = Number(draft.age);
+        if (draft.age === '' || Number(draft.age) < 6 || Number(draft.age) > 99) {
+          return { ok: false, message: 'Falta tu edad (entre 6 y 99 años).' };
+        }
+        if (!draft.gender) {
+          return { ok: false, message: 'Selecciona tu género.' };
+        }
         const h = Number(draft.height_cm);
+        if (draft.height_cm === '' || !h) {
+          return { ok: false, message: 'Falta tu altura.' };
+        }
+        if (h < 100 || h > 230) {
+          return {
+            ok: false,
+            message: `La altura debe estar en centímetros (entre 100 y 230). Ej: 165, no 1.65.`,
+          };
+        }
         const w = Number(draft.weight_kg);
-        return age >= 6 && age <= 99
-          && !!draft.gender
-          && h >= 100 && h <= 230
-          && w >= 30 && w <= 250
-          && !!draft.activity_level;
+        if (draft.weight_kg === '' || !w) {
+          return { ok: false, message: 'Falta tu peso.' };
+        }
+        if (w < 30 || w > 250) {
+          return { ok: false, message: 'El peso debe estar entre 30 y 250 kg.' };
+        }
+        if (!draft.activity_level) {
+          return { ok: false, message: 'Selecciona tu nivel de actividad.' };
+        }
+        return { ok: true };
       }
       case 2:
-        if (!draft.user_type) return false;
-        if (draft.user_type === 'ATHLETE' && !draft.discipline) return false;
-        if (!draft.level) return false;
-        return true;
+        if (!draft.user_type) return { ok: false, message: 'Selecciona tu tipo de entrenamiento.' };
+        if (draft.user_type === 'ATHLETE' && !draft.discipline) {
+          return { ok: false, message: 'Selecciona tu disciplina deportiva.' };
+        }
+        if (!draft.level) return { ok: false, message: 'Selecciona tu nivel.' };
+        return { ok: true };
       case 3:
-        return !!draft.objective;
+        if (!draft.objective) return { ok: false, message: 'Selecciona tu objetivo principal.' };
+        return { ok: true };
       case 4:
-        return !!draft.location
-          && draft.days_per_week >= 2 && draft.days_per_week <= 6
-          && draft.session_duration_min >= 20 && draft.session_duration_min <= 180;
+        if (!draft.location) return { ok: false, message: 'Selecciona dónde entrenas.' };
+        if (draft.days_per_week < 2 || draft.days_per_week > 6) {
+          return { ok: false, message: 'Días por semana entre 2 y 6.' };
+        }
+        if (draft.session_duration_min < 20 || draft.session_duration_min > 180) {
+          return { ok: false, message: 'Duración entre 20 y 180 min.' };
+        }
+        return { ok: true };
       case 5:
-        return true; // todos opcionales
+        return { ok: true };
       case 6:
-        return draft.notes.length <= 800;
+        if (draft.notes.length > 800) return { ok: false, message: 'Las notas son muy largas (máx 800 caracteres).' };
+        return { ok: true };
       default:
-        return false;
+        return { ok: false };
     }
   }, [step, draft]);
 
@@ -618,6 +653,7 @@ export function FitnessProfileWizard({ initial }: Props) {
     },
   });
 
+  const stepValid = stepValidation.ok;
   const goNext = () => {
     if (!stepValid) return;
     if (step < TOTAL_STEPS) setStep((s) => s + 1);
@@ -667,6 +703,17 @@ export function FitnessProfileWizard({ initial }: Props) {
         {step === 5 && <Step5Food draft={draft} update={update} />}
         {step === 6 && <Step6Habits draft={draft} update={update} />}
       </div>
+
+      {/* Mensaje de validación cuando el botón está deshabilitado.
+          Sin esto el socio puede quedar parado sin entender por qué
+          no avanza (caso clásico: meter 1.65 en altura cuando se
+          pide en cm). */}
+      {!stepValid && stepValidation.message && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
+          <span className="font-bold leading-snug">⚠</span>
+          <span className="leading-snug">{stepValidation.message}</span>
+        </div>
+      )}
 
       {/* Nav */}
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200">
@@ -853,12 +900,28 @@ function Step1Basics({ draft, update }: StepProps) {
             ))}
           </div>
         </LightField>
-        <LightField id="fp_height" label="Altura (cm)">
+        <LightField
+          id="fp_height"
+          label="Altura (cm)"
+          hint="Ej: 165, 170, 178 — en centímetros, no metros."
+        >
           <input
-            id="fp_height" type="number" min={100} max={230} inputMode="numeric"
+            id="fp_height" type="number" min={100} max={230} inputMode="decimal"
             className={INPUT_CLS}
             value={draft.height_cm === '' ? '' : String(draft.height_cm)}
             onChange={(e) => update('height_cm', e.target.value === '' ? '' : Number(e.target.value))}
+            // Auto-conversión SOLO al perder foco. Si la persona
+            // escribe 1.65 (en metros) lo pasamos a 165 cm cuando
+            // termina. Hacerlo en onChange convertía "1" → 100
+            // mientras seguían tecleando.
+            onBlur={(e) => {
+              const raw = e.target.value;
+              if (raw === '') return;
+              const n = Number(raw);
+              if (n > 0 && n < 3) {
+                update('height_cm', Math.round(n * 100));
+              }
+            }}
             placeholder="175"
           />
         </LightField>
