@@ -900,6 +900,87 @@ function SingleChoice<T extends string>({
   );
 }
 
+/**
+ * Input numérico tolerante a formatos de entrada del usuario.
+ *
+ * Por qué este componente: con `<input type="number">` en mobile,
+ * teclear "56,9" en un teléfono con teclado en español a veces se
+ * descarta entero — el browser no lo acepta como número y devuelve "".
+ * Con `<input type="text" inputMode="decimal">` el usuario puede
+ * teclear cualquier carácter, normalizamos coma→punto, y devolvemos
+ * un number al parent.
+ *
+ * Mantiene un STATE INTERNO con el texto literal tipeado para que
+ * "56." (mid-typing) no se renderice como "56" haciendo perder el
+ * punto al socio.
+ */
+function NumericInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+  decimal = false,
+  maxLen = 6,
+  onBlur,
+  className,
+}: {
+  id?: string;
+  value: number | '';
+  onChange: (v: number | '') => void;
+  placeholder?: string;
+  decimal?: boolean;
+  maxLen?: number;
+  onBlur?: (raw: string) => void;
+  className?: string;
+}) {
+  // text local = lo que el usuario está tipeando (puede tener "." al final)
+  const [text, setText] = useState<string>(() =>
+    value === '' || value == null ? '' : String(value),
+  );
+  // Sincronizar cuando el value externo cambia desde fuera (ej. auto-
+  // conversión de altura). Solo si realmente difiere para no pisar
+  // lo que el socio está escribiendo.
+  useEffect(() => {
+    const external = value === '' || value == null ? '' : String(value);
+    const internalParsed = text === '' ? '' : Number(text.replace(',', '.'));
+    if (external !== text && internalParsed !== value) {
+      setText(external);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <input
+      id={id}
+      type="text"
+      inputMode={decimal ? 'decimal' : 'numeric'}
+      className={className ?? INPUT_CLS}
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => {
+        let raw = e.target.value.replace(',', '.');
+        if (decimal) {
+          // sólo dígitos y un único punto
+          raw = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+        } else {
+          raw = raw.replace(/\D/g, '');
+        }
+        if (raw.length > maxLen) raw = raw.slice(0, maxLen);
+        setText(raw);
+        if (raw === '' || raw === '.') {
+          onChange('');
+        } else {
+          const n = Number(raw);
+          if (Number.isFinite(n)) onChange(n);
+        }
+      }}
+      onBlur={(e) => {
+        if (onBlur) onBlur(e.target.value.replace(',', '.'));
+      }}
+    />
+  );
+}
+
 // ── Step 1: Basics ───────────────────────────────────────────
 function Step1Basics({ draft, update }: StepProps) {
   return (
@@ -911,12 +992,12 @@ function Step1Basics({ draft, update }: StepProps) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <LightField id="fp_age" label="Edad">
-          <input
-            id="fp_age" type="number" min={6} max={99} inputMode="numeric"
-            className={INPUT_CLS}
-            value={draft.age === '' ? '' : String(draft.age)}
-            onChange={(e) => update('age', e.target.value === '' ? '' : Number(e.target.value))}
+          <NumericInput
+            id="fp_age"
+            value={draft.age}
+            onChange={(v) => update('age', v)}
             placeholder="28"
+            maxLen={3}
           />
         </LightField>
         <LightField label="Género">
@@ -943,33 +1024,32 @@ function Step1Basics({ draft, update }: StepProps) {
           label="Altura (cm)"
           hint="Ej: 165, 170, 178 — en centímetros, no metros."
         >
-          <input
-            id="fp_height" type="number" min={100} max={230} inputMode="decimal"
-            className={INPUT_CLS}
-            value={draft.height_cm === '' ? '' : String(draft.height_cm)}
-            onChange={(e) => update('height_cm', e.target.value === '' ? '' : Number(e.target.value))}
+          <NumericInput
+            id="fp_height"
+            value={draft.height_cm}
+            onChange={(v) => update('height_cm', v)}
+            placeholder="175"
+            decimal
+            maxLen={6}
             // Auto-conversión SOLO al perder foco. Si la persona
-            // escribe 1.65 (en metros) lo pasamos a 165 cm cuando
-            // termina. Hacerlo en onChange convertía "1" → 100
-            // mientras seguían tecleando.
-            onBlur={(e) => {
-              const raw = e.target.value;
+            // escribe 1.65 (en metros) lo pasamos a 165 cm.
+            onBlur={(raw) => {
               if (raw === '') return;
               const n = Number(raw);
-              if (n > 0 && n < 3) {
+              if (Number.isFinite(n) && n > 0 && n < 3) {
                 update('height_cm', Math.round(n * 100));
               }
             }}
-            placeholder="175"
           />
         </LightField>
-        <LightField id="fp_weight" label="Peso (kg)">
-          <input
-            id="fp_weight" type="number" min={30} max={250} inputMode="decimal"
-            className={INPUT_CLS}
-            value={draft.weight_kg === '' ? '' : String(draft.weight_kg)}
-            onChange={(e) => update('weight_kg', e.target.value === '' ? '' : Number(e.target.value))}
+        <LightField id="fp_weight" label="Peso (kg)" hint="Ej: 65, 70.5, 56.9">
+          <NumericInput
+            id="fp_weight"
+            value={draft.weight_kg}
+            onChange={(v) => update('weight_kg', v)}
             placeholder="72"
+            decimal
+            maxLen={6}
           />
         </LightField>
         <LightField id="fp_activity" label="Nivel de actividad fuera del gym">
