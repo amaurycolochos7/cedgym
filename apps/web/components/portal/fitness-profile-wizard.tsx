@@ -484,72 +484,103 @@ export function FitnessProfileWizard({ initial }: Props) {
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  /* ── Per-step validity + mensajes de error explícitos ────────
-     Sin esto el botón "Continuar" se deshabilita pero el socio no
-     entiende por qué. Caso real: una socia escribió 1.65 (metros)
-     en altura y como el rango pedido era 100-230 (cm), el botón
-     quedaba gris para siempre.
-     Devolvemos { ok: bool, message?: string } para mostrar la pista
-     debajo del botón cuando falla.
+  /* ── Per-step validity ───────────────────────────────────────
+     Devolvemos TODOS los errores del paso, no solo el primero.
+     Si al socio le faltan 3 campos quiere ver los 3, no que los
+     vaya descubriendo de uno en uno. También exportamos la lista
+     `fields` para poder marcar cada input mal con un ring rojo.
   */
-  const stepValidation = useMemo<{ ok: boolean; message?: string }>(() => {
+  const stepValidation = useMemo<{
+    ok: boolean;
+    errors: string[];
+    fields: Set<string>;
+  }>(() => {
+    const errors: string[] = [];
+    const fields = new Set<string>();
+    const fail = (msg: string, field?: string) => {
+      errors.push(msg);
+      if (field) fields.add(field);
+    };
+
     switch (step) {
       case 1: {
-        if (draft.age === '' || Number(draft.age) < 6 || Number(draft.age) > 99) {
-          return { ok: false, message: 'Falta tu edad (entre 6 y 99 años).' };
+        // Edad
+        if (draft.age === '' || draft.age == null) {
+          fail('Escribe tu edad (entre 6 y 99 años).', 'age');
+        } else {
+          const n = Number(draft.age);
+          if (!Number.isFinite(n) || n < 6 || n > 99) {
+            fail('Edad inválida — debe ser un número entre 6 y 99.', 'age');
+          }
         }
-        if (!draft.gender) {
-          return { ok: false, message: 'Selecciona tu género.' };
+
+        // Género
+        if (!draft.gender) fail('Selecciona tu género.', 'gender');
+
+        // Altura — mínimo 80cm para acomodar niños chicos. Si está
+        // en metros (entre 1 y 3) la auto-conversión del input ya la
+        // pasó a cm cuando el campo perdió foco.
+        if (draft.height_cm === '' || draft.height_cm == null) {
+          fail('Escribe tu altura en cm (ej: 165).', 'height_cm');
+        } else {
+          const h = Number(draft.height_cm);
+          if (!Number.isFinite(h)) {
+            fail('Altura inválida.', 'height_cm');
+          } else if (h < 80 || h > 250) {
+            fail(
+              `La altura debe ser un número en centímetros entre 80 y 250 (ej: 165). Tu valor: ${h}.`,
+              'height_cm',
+            );
+          }
         }
-        const h = Number(draft.height_cm);
-        if (draft.height_cm === '' || !h) {
-          return { ok: false, message: 'Falta tu altura.' };
+
+        // Peso
+        if (draft.weight_kg === '' || draft.weight_kg == null) {
+          fail('Escribe tu peso en kg (ej: 65).', 'weight_kg');
+        } else {
+          const w = Number(draft.weight_kg);
+          if (!Number.isFinite(w)) {
+            fail('Peso inválido.', 'weight_kg');
+          } else if (w < 20 || w > 300) {
+            fail(
+              `El peso debe ser entre 20 y 300 kg. Tu valor: ${w}.`,
+              'weight_kg',
+            );
+          }
         }
-        if (h < 100 || h > 230) {
-          return {
-            ok: false,
-            message: `La altura debe estar en centímetros (entre 100 y 230). Ej: 165, no 1.65.`,
-          };
-        }
-        const w = Number(draft.weight_kg);
-        if (draft.weight_kg === '' || !w) {
-          return { ok: false, message: 'Falta tu peso.' };
-        }
-        if (w < 30 || w > 250) {
-          return { ok: false, message: 'El peso debe estar entre 30 y 250 kg.' };
-        }
+
+        // Actividad
         if (!draft.activity_level) {
-          return { ok: false, message: 'Selecciona tu nivel de actividad.' };
+          fail('Selecciona tu nivel de actividad.', 'activity_level');
         }
-        return { ok: true };
+        break;
       }
       case 2:
-        if (!draft.user_type) return { ok: false, message: 'Selecciona tu tipo de entrenamiento.' };
+        if (!draft.user_type) fail('Selecciona tu tipo de entrenamiento.', 'user_type');
         if (draft.user_type === 'ATHLETE' && !draft.discipline) {
-          return { ok: false, message: 'Selecciona tu disciplina deportiva.' };
+          fail('Selecciona tu disciplina deportiva.', 'discipline');
         }
-        if (!draft.level) return { ok: false, message: 'Selecciona tu nivel.' };
-        return { ok: true };
+        if (!draft.level) fail('Selecciona tu nivel (principiante, intermedio o avanzado).', 'level');
+        break;
       case 3:
-        if (!draft.objective) return { ok: false, message: 'Selecciona tu objetivo principal.' };
-        return { ok: true };
+        if (!draft.objective) fail('Selecciona tu objetivo principal.', 'objective');
+        break;
       case 4:
-        if (!draft.location) return { ok: false, message: 'Selecciona dónde entrenas.' };
+        if (!draft.location) fail('Selecciona dónde entrenas (gym, casa o ambos).', 'location');
         if (draft.days_per_week < 2 || draft.days_per_week > 6) {
-          return { ok: false, message: 'Días por semana entre 2 y 6.' };
+          fail('Días por semana entre 2 y 6.', 'days_per_week');
         }
         if (draft.session_duration_min < 20 || draft.session_duration_min > 180) {
-          return { ok: false, message: 'Duración entre 20 y 180 min.' };
+          fail('Duración por sesión entre 20 y 180 min.', 'session_duration_min');
         }
-        return { ok: true };
+        break;
       case 5:
-        return { ok: true };
+        break;
       case 6:
-        if (draft.notes.length > 800) return { ok: false, message: 'Las notas son muy largas (máx 800 caracteres).' };
-        return { ok: true };
-      default:
-        return { ok: false };
+        if (draft.notes.length > 800) fail('Las notas son muy largas (máx 800 caracteres).', 'notes');
+        break;
     }
+    return { ok: errors.length === 0, errors, fields };
   }, [step, draft]);
 
   /* ── Save mutation ───────────────────────────────────────── */
@@ -704,14 +735,21 @@ export function FitnessProfileWizard({ initial }: Props) {
         {step === 6 && <Step6Habits draft={draft} update={update} />}
       </div>
 
-      {/* Mensaje de validación cuando el botón está deshabilitado.
-          Sin esto el socio puede quedar parado sin entender por qué
-          no avanza (caso clásico: meter 1.65 en altura cuando se
-          pide en cm). */}
-      {!stepValid && stepValidation.message && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex items-start gap-2">
-          <span className="font-bold leading-snug">⚠</span>
-          <span className="leading-snug">{stepValidation.message}</span>
+      {/* Lista TODOS los errores del paso para que el socio pueda
+          arreglarlos de una vez sin descubrirlos uno por uno. */}
+      {!stepValid && stepValidation.errors.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          <div className="font-semibold mb-1.5 flex items-center gap-2">
+            <span>⚠</span>
+            {stepValidation.errors.length === 1
+              ? 'Falta un dato para continuar:'
+              : `Faltan ${stepValidation.errors.length} datos para continuar:`}
+          </div>
+          <ul className="list-disc pl-5 space-y-0.5 leading-snug">
+            {stepValidation.errors.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
         </div>
       )}
 
