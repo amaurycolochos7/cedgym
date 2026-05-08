@@ -81,6 +81,24 @@ export default function LoginPage() {
     },
     onError: (err) => {
       const norm = normalizeError(err) as ApiError;
+      // Manejo específico para casos donde el mensaje del backend
+      // es opaco. El plugin de rate-limit del API a veces devuelve
+      // { code:"INTERNAL", message:"Error" } sin contexto — lo
+      // traducimos a algo accionable. La versión nueva del API ya
+      // devuelve el mensaje correcto, pero dejamos este fallback
+      // por si un cliente está cacheado contra una API anterior.
+      if (norm.status === 429 || norm.code === 'TOO_MANY_LOGIN_ATTEMPTS') {
+        setApiError(
+          norm.message && norm.message !== 'Error'
+            ? norm.message
+            : 'Demasiados intentos. Espera unos minutos e intenta de nuevo.',
+        );
+        return;
+      }
+      if (!norm.message || norm.message === 'Error') {
+        setApiError('No pudimos conectar. Revisa tu internet o intenta más tarde.');
+        return;
+      }
       setApiError(norm.message);
     },
   });

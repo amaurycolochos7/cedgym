@@ -480,11 +480,29 @@ export default async function authRoutes(fastify) {
         {
             config: {
                 rateLimit: {
-                    // En dev permitimos 100/15min para no tronar el flujo
-                    // mientras se prueba; en prod queda en 5/15min como
-                    // anti-fuerza-bruta.
-                    max: process.env.NODE_ENV === 'development' ? 100 : 5,
+                    // 5/15min era demasiado agresivo: un socio que se
+                    // equivoca al teclear su contraseña 5 veces queda
+                    // bloqueado 15 min sin saber por qué (el response
+                    // viejo decía solo "Error"). 20/15min sigue
+                    // protegiendo contra fuerza bruta — un atacante
+                    // serio prueba miles, no veintenas — pero da
+                    // margen al socio normal.
+                    // El lockout por usuario (failed_login_attempts) en
+                    // BD ya bloquea cuentas individuales tras 5
+                    // intentos, así que la rate limit por IP solo
+                    // existe para frenar scripts.
+                    max: process.env.NODE_ENV === 'development' ? 200 : 20,
                     timeWindow: '15 minutes',
+                    // Mensaje claro y accionable. Sin esto el plugin
+                    // por default devuelve { code:"INTERNAL", message:"Error" }
+                    // que es opaco para el usuario final.
+                    errorResponseBuilder: (_req, ctx) => ({
+                        error: {
+                            code: 'TOO_MANY_LOGIN_ATTEMPTS',
+                            message: `Demasiados intentos. Espera ${Math.ceil((ctx?.ttl ?? 900_000) / 60_000)} min e intenta de nuevo.`,
+                        },
+                        statusCode: 429,
+                    }),
                 },
             },
         },
