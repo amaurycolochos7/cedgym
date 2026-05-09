@@ -18,9 +18,12 @@ import { putObject } from '../lib/storage.js';
 const ZGender    = z.enum(['MALE', 'FEMALE', 'OTHER']);
 const ZUserType  = z.enum(['ADULT', 'SENIOR', 'KID', 'ATHLETE']);
 const ZDiscipline = z.enum([
-  'STRENGTH', 'HYROX', 'POWERLIFTING', 'FUNCTIONAL',
-  'FOOTBALL_US', 'FOOTBALL_SOCCER', 'BASKETBALL',
-  'TENNIS', 'BOXING', 'CROSSFIT',
+  // Deportes principales (mostrados destacados en el wizard)
+  'FOOTBALL_SOCCER', 'FOOTBALL_US', 'BASKETBALL', 'TENNIS',
+  'SWIMMING', 'BASEBALL', 'VOLLEYBALL',
+  // Otros deportes / disciplinas (acordeón "Otros" en el wizard)
+  'BOXING', 'CROSSFIT', 'POWERLIFTING', 'HYROX',
+  'STRENGTH', 'FUNCTIONAL',
 ]);
 const ZObjective = z.enum(['WEIGHT_LOSS', 'MUSCLE_GAIN', 'MAINTENANCE', 'STRENGTH', 'ENDURANCE', 'GENERAL_FITNESS']);
 const ZLevel     = z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']);

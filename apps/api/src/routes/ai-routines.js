@@ -38,18 +38,45 @@ const LOCATIONS = ['GYM', 'HOME', 'BOTH'];
 const USER_TYPES = ['ADULT', 'SENIOR', 'KID', 'ATHLETE'];
 
 // Disciplinas del gym (si user_type=ATHLETE o quiere enfoque específico).
+// Orden: deportes principales primero (los del catálogo destacado del
+// wizard), luego otras disciplinas. Los strings son los enums que viajan
+// en wire format; las etiquetas humanas viven en DISCIPLINE_LABELS abajo.
 const DISCIPLINES = [
-    'STRENGTH',      // Fuerza / hipertrofia
-    'HYROX',         // HYROX
-    'POWERLIFTING',  // Powerlifting (SBD)
-    'FUNCTIONAL',    // Entrenamiento funcional
-    'FOOTBALL_US',   // Fútbol americano
+    // Principales
     'FOOTBALL_SOCCER',
+    'FOOTBALL_US',
     'BASKETBALL',
     'TENNIS',
+    'SWIMMING',
+    'BASEBALL',
+    'VOLLEYBALL',
+    // Otros
     'BOXING',
     'CROSSFIT',
+    'POWERLIFTING',
+    'HYROX',
+    'STRENGTH',
+    'FUNCTIONAL',
 ];
+
+// Etiqueta humana para el prompt — la IA entiende mejor "natación" que
+// "SWIMMING". Mantenemos los enums como wire format pero proyectamos al
+// español al construir el prompt.
+const DISCIPLINE_LABELS = {
+    FOOTBALL_SOCCER: 'fútbol soccer',
+    FOOTBALL_US:     'fútbol americano',
+    BASKETBALL:      'básquetbol',
+    TENNIS:          'tenis',
+    SWIMMING:        'natación',
+    BASEBALL:        'béisbol',
+    VOLLEYBALL:      'voleibol',
+    BOXING:          'boxeo',
+    CROSSFIT:        'CrossFit',
+    POWERLIFTING:    'powerlifting',
+    HYROX:           'HYROX',
+    STRENGTH:        'fuerza / hipertrofia',
+    FUNCTIONAL:      'entrenamiento funcional',
+};
 
 const generateBody = z.object({
     objective: z.enum(FITNESS_GOALS).optional(),
@@ -151,7 +178,17 @@ ADAPTACIÓN POR TIPO DE USUARIO:
 - ADULT (18-55): rutinas clásicas según objetivo + nivel arriba.
 - SENIOR (55+): máquinas > peso libre, baja carga, alta técnica, mayor descanso, énfasis en movilidad y core. Sin saltos ni cargas máximas.
 - KID (6-17): entrenamiento funcional y peso corporal principalmente. Nada de cargas pesadas. Coordinación, agilidad y diversión.
-- ATHLETE: rutina específica para su deporte — football americano (fuerza + pliometría + HYROX), soccer (explosividad + cambios de dirección), básquet (salto vertical + core), tenis (rotación + hombro), powerlifting (SBD específico), boxing (rotacional + cardio), etc.
+- ATHLETE: rutina específica para su deporte. Adaptaciones por deporte:
+  · fútbol soccer → explosividad, cambios de dirección, sprints cortos, fuerza unilateral de pierna, core anti-rotación.
+  · fútbol americano → fuerza compuesta pesada + pliometría + acondicionamiento estilo HYROX. Cuello/trapecio. Sprints de 10-40 yardas.
+  · básquetbol → salto vertical (sentadilla + pliometría), core, hombro estable, cambio de dirección.
+  · tenis → rotación de tronco, hombro (manguito rotador), antebrazo/pinza, footwork lateral, single-leg balance.
+  · natación → dorsales + jalones (lat pulldown, pull-ups, remo), hombro 360° con manguito rotador, core anti-extensión, cardio bajo impacto, MUCHA movilidad torácica/hombro. Evita compresión axial pesada (squats de carga máxima) en semanas de competencia.
+  · béisbol → rotación explosiva de tronco (med ball throws), cadena posterior y cadera, hombro/codo SIN sobrecarga (volumen moderado, técnica limpia), agilidad lateral, antebrazo/agarre. Cuidar codo de pitcher: cero ejercicios que estresen flexión de codo bajo carga máxima.
+  · voleibol → salto vertical (sentadilla, pliometría, peso muerto rumano), hombro (push press, manguito rotador), core anti-rotación, agilidad reactiva, fuerza unilateral de pierna.
+  · powerlifting → SBD específico (sentadilla, banca, peso muerto), reps 1-5, descansos 3-5 min, accesorios mínimos.
+  · boxeo → rotacional + cardio, hombros, core anti-rotación, footwork.
+  · CrossFit/HYROX/funcional → metcon, levantamientos olímpicos, gymnastics.
 
 CONTEXTO/MOTIVACIÓN DEL SOCIO:
 - Si el socio te dice POR QUÉ entrena (boda, competencia, recuperación), la rutina entera tiene que reflejarlo. Por ej. "verme bien sin camisa para julio" → priorizar pecho/espalda/brazo en el orden de los días, déficit de volumen en pierna si la fecha está cerca, integrar cardio.
@@ -300,7 +337,9 @@ function buildUserPrompt({
 - Si crees que el ejercicio "queda raro" sin pesa, AUMENTA reps/series o agrega tempo (ej. "sentadilla 4 segundos abajo, sube en 1") en vez de meter equipo.`
             : '';
     const notesStr = notes && notes.trim() ? notes.trim() : '(sin notas)';
-    const disciplineStr = discipline ? discipline : '(no aplica)';
+    const disciplineStr = discipline
+        ? (DISCIPLINE_LABELS[discipline] || discipline)
+        : '(no aplica)';
     const firstNameStr = firstName && firstName.trim() ? firstName.trim() : '(sin nombre)';
 
     // Bloque de "intención del socio" — lo metemos al principio del
@@ -383,7 +422,7 @@ REGLAS DEL MÉTODO CED·GYM:
 ADAPTACIÓN POR USER_TYPE:
 - SENIOR: cambia todo peso libre por máquinas cuando posible, descansos más largos (90-120s), reps 12-15, sin saltos ni cargas máximas.
 - KID: rutina de funcional + peso corporal. Nada de barras con peso. Mucha coordinación (escalera, vallas, mountain climbers), core, y ejercicios divertidos.
-- ATHLETE: prioriza el deporte. Football americano → fuerza + pliometría + HYROX. Soccer → explosividad + cambio de dirección. Básquet → salto vertical + core. Powerlifting → SBD específico.
+- ATHLETE: prioriza el deporte. Fútbol soccer → explosividad + cambios de dirección. Fútbol americano → fuerza + pliometría + HYROX. Básquet → salto vertical + core. Tenis → rotación + hombro. Natación → dorsales + jalones + hombro 360° + cardio bajo impacto. Béisbol → rotación explosiva + cadera + agarre, cuidando codo. Voleibol → salto vertical + hombro + agilidad reactiva. Powerlifting → SBD específico.
 
 EN CADA EJERCICIO, la nota (notes) debe ser una frase corta estilo coach mexicano: "sube lento y aprieta arriba", "espalda recta", "codos pegados al cuerpo", "aumenta peso en la última serie". Máximo 10 palabras.
 

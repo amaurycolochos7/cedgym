@@ -14,6 +14,7 @@ import {
   Trophy,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Heart,
   Utensils,
   Target,
@@ -86,16 +87,21 @@ type Objective =
 type Level = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 type UserType = 'ADULT' | 'SENIOR' | 'KID' | 'ATHLETE';
 type Discipline =
-  | 'STRENGTH'
-  | 'HYROX'
-  | 'POWERLIFTING'
-  | 'FUNCTIONAL'
-  | 'FOOTBALL_US'
+  // Principales
   | 'FOOTBALL_SOCCER'
+  | 'FOOTBALL_US'
   | 'BASKETBALL'
   | 'TENNIS'
+  | 'SWIMMING'
+  | 'BASEBALL'
+  | 'VOLLEYBALL'
+  // Otros
   | 'BOXING'
-  | 'CROSSFIT';
+  | 'CROSSFIT'
+  | 'POWERLIFTING'
+  | 'HYROX'
+  | 'STRENGTH'
+  | 'FUNCTIONAL';
 type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'high' | 'very_high';
 type YearsTraining = 'NONE' | 'LT_1' | '1_2' | '3_5' | 'GT_5';
@@ -200,15 +206,28 @@ const USER_TYPES: { value: UserType; title: string; sub: string; Icon: typeof Us
   { value: 'ATHLETE', title: 'Deportista',      sub: 'Entrena un deporte', Icon: Trophy },
 ];
 
-const DISCIPLINES: { value: Discipline; label: string }[] = [
-  { value: 'FOOTBALL_US', label: 'Football Americano' },
-  { value: 'FOOTBALL_SOCCER', label: 'Fútbol Soccer' },
-  { value: 'BASKETBALL', label: 'Básquetbol' },
-  { value: 'TENNIS', label: 'Tenis' },
-  { value: 'BOXING', label: 'Boxeo' },
-  { value: 'CROSSFIT', label: 'CrossFit' },
-  { value: 'POWERLIFTING', label: 'Powerlifting' },
-  { value: 'HYROX', label: 'HYROX' },
+// Deportes destacados — los que el coach trabaja con más socios. Se
+// muestran como chips grandes en el wizard, cada uno con su emoji.
+const PRIMARY_DISCIPLINES: { value: Discipline; label: string; emoji: string }[] = [
+  { value: 'FOOTBALL_SOCCER', label: 'Fútbol soccer', emoji: '⚽' },
+  { value: 'FOOTBALL_US',     label: 'Fútbol americano', emoji: '🏈' },
+  { value: 'BASKETBALL',      label: 'Básquetbol', emoji: '🏀' },
+  { value: 'TENNIS',          label: 'Tenis', emoji: '🎾' },
+  { value: 'SWIMMING',        label: 'Natación', emoji: '🏊' },
+  { value: 'BASEBALL',        label: 'Béisbol', emoji: '⚾' },
+  { value: 'VOLLEYBALL',      label: 'Voleibol', emoji: '🏐' },
+];
+
+// Otras disciplinas — viven detrás de un acordeón "Otros deportes y
+// disciplinas". Mantenemos disponibles las que socios actuales ya
+// tienen seleccionadas para no romperles el perfil.
+const OTHER_DISCIPLINES: { value: Discipline; label: string; emoji: string }[] = [
+  { value: 'BOXING',       label: 'Boxeo', emoji: '🥊' },
+  { value: 'CROSSFIT',     label: 'CrossFit', emoji: '🏋️' },
+  { value: 'POWERLIFTING', label: 'Powerlifting', emoji: '🏋️‍♂️' },
+  { value: 'HYROX',        label: 'HYROX', emoji: '🏃' },
+  { value: 'STRENGTH',     label: 'Fuerza / hipertrofia', emoji: '💪' },
+  { value: 'FUNCTIONAL',   label: 'Funcional', emoji: '🤸' },
 ];
 
 const OBJECTIVES: { value: Objective; title: string; emoji: string }[] = [
@@ -1083,6 +1102,87 @@ function Step1Basics({ draft, update }: StepProps) {
   );
 }
 
+// Discipline picker — chips destacados arriba (los 7 deportes que el
+// coach trabaja con más socios), acordeón "Otros deportes y disciplinas"
+// abajo para los que ya están en perfiles legacy o no son del catálogo
+// principal.
+function DisciplinePicker({
+  value,
+  onChange,
+}: {
+  value: Discipline | '';
+  onChange: (v: Discipline | '') => void;
+}) {
+  // Si el valor seleccionado vive en "Otros", abrimos el acordeón por
+  // defecto — el usuario debe ver lo que ya tenía marcado.
+  const initiallyOpen = useMemo(
+    () => OTHER_DISCIPLINES.some((d) => d.value === value),
+    [value],
+  );
+  const [open, setOpen] = useState(initiallyOpen);
+
+  const renderChip = (
+    d: { value: Discipline; label: string; emoji: string },
+  ) => {
+    const active = value === d.value;
+    return (
+      <button
+        key={d.value}
+        type="button"
+        onClick={() => onChange(active ? '' : d.value)}
+        className={cn(
+          'flex items-center gap-2 rounded-2xl ring-1 px-3 py-2.5 text-left transition-colors',
+          active
+            ? 'ring-blue-500 bg-blue-50 shadow-sm'
+            : 'ring-slate-200 bg-white hover:bg-slate-50 hover:ring-slate-300',
+        )}
+        aria-pressed={active}
+      >
+        <span className="text-xl leading-none" aria-hidden>
+          {d.emoji}
+        </span>
+        <span
+          className={cn(
+            'text-sm font-semibold',
+            active ? 'text-blue-900' : 'text-slate-800',
+          )}
+        >
+          {d.label}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className={LABEL_CLS}>Tu deporte / disciplina</div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {PRIMARY_DISCIPLINES.map(renderChip)}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white hover:border-slate-400"
+        aria-expanded={open}
+      >
+        <span>Otros deportes y disciplinas</span>
+        <ChevronDown
+          size={16}
+          className={cn('transition-transform', open && 'rotate-180')}
+        />
+      </button>
+
+      {open && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {OTHER_DISCIPLINES.map(renderChip)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Step 2: Type / Level / Injuries ──────────────────────────
 function Step2Type({ draft, update }: StepProps) {
   return (
@@ -1122,19 +1222,10 @@ function Step2Type({ draft, update }: StepProps) {
       </div>
 
       {draft.user_type === 'ATHLETE' && (
-        <LightField id="fp_discipline" label="Disciplina">
-          <select
-            id="fp_discipline"
-            value={draft.discipline}
-            onChange={(e) => update('discipline', e.target.value as Discipline)}
-            className="h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
-          >
-            <option value="">Elige tu deporte…</option>
-            {DISCIPLINES.map((d) => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
-        </LightField>
+        <DisciplinePicker
+          value={(draft.discipline as Discipline) || ''}
+          onChange={(v) => update('discipline', v)}
+        />
       )}
 
       <div>
