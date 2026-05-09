@@ -702,11 +702,14 @@ export function FitnessProfileWizard({ initial }: Props) {
       }
     },
     onSuccess: async () => {
-      toast.success('Perfil guardado. Generando tu rutina…');
+      toast.success('Perfil guardado. Tu rutina ya está lista.');
       try { window.localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
       qc.invalidateQueries({ queryKey: ['auth', 'me'] });
       try { await refreshMe(); } catch { /* navegamos igual */ }
-      router.push('/portal/rutinas');
+      // Aterrizamos en el inicio (dashboard) en lugar de /portal/rutinas
+      // — el socio quiere ver su home con todo listo, no que lo
+      // empujemos directo a la rutina.
+      router.push('/portal/dashboard');
     },
     onError: (err) => {
       const norm = normalizeError(err) as ApiError;
