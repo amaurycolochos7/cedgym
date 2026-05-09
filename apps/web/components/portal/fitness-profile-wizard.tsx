@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Dumbbell,
@@ -23,6 +23,7 @@ import { api, normalizeError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import type { ApiError } from '@/lib/schemas';
+import { SelfieCapture } from '@/components/portal/selfie-capture';
 
 /* Light-theme primitives — local so we don't pull the dark shared <Button>/<Input>/<Field>. */
 const INPUT_CLS =
@@ -127,7 +128,12 @@ type Alcohol = 'NONE' | 'SOCIAL' | 'REGULAR';
 
 interface Draft {
   // ── Step 1: sobre ti ─────────────────────────────
-  age: number | '';
+  // Datos requeridos para la membresía (nombre completo INE, fecha de
+  // nacimiento) los integramos aquí para no obligar al socio a un
+  // segundo flujo de "completa tus datos" después del wizard.
+  full_name: string;
+  birth_date: string; // YYYY-MM-DD
+  age: number | ''; // derivado de birth_date — lo mantenemos para el AI
   gender: Gender | '';
   height_cm: number | '';
   weight_kg: number | '';
@@ -185,6 +191,7 @@ interface Draft {
 const DRAFT_KEY = 'cedgym-fitness-profile-draft-v2';
 
 const EMPTY_DRAFT: Draft = {
+  full_name: '', birth_date: '',
   age: '', gender: '', height_cm: '', weight_kg: '', activity_level: '', years_training: '',
   user_type: '', discipline: '', level: '', injuries: [], mobility_limitations: [],
   objective: '', motivation: '', goal_type: '', goal_deadline: '', past_experience: '',
@@ -452,6 +459,18 @@ export function FitnessProfileWizard({ initial }: Props) {
   // el usuario aterriza a media página del paso anterior.
   const sectionRef = useRef<HTMLElement>(null);
 
+  // Tracking de selfie. La SelfieCapture sube directo (POST /users/me/selfie),
+  // pero necesitamos saber si ya está cargada para validar el último paso.
+  // Combinamos lo que diga /auth/me (selfie_url existente) con un flag
+  // local para reflejar uploads de esta sesión sin esperar a refetch.
+  const meQ = useQuery<{ user: { selfie_url?: string | null } }>({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => (await api.get('/auth/me')).data,
+    staleTime: 0,
+  });
+  const [selfieJustUploaded, setSelfieJustUploaded] = useState(false);
+  const hasSelfie = !!meQ.data?.user?.selfie_url || selfieJustUploaded;
+
   /* Hydrate once from localStorage (preferencia) o initial server data. */
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -534,13 +553,30 @@ export function FitnessProfileWizard({ initial }: Props) {
 
     switch (step) {
       case 1: {
-        // Edad
+        // Nombre completo — requerido para la membresía (recibo, INE).
+        if (!draft.full_name || !draft.full_name.trim()) {
+          fail('Escribe tu nombre completo (como aparece en tu INE).', 'full_name');
+        } else if (draft.full_name.trim().length < 5) {
+          fail('Tu nombre completo parece muy corto — incluye apellidos.', 'full_name');
+        }
+
+        // Fecha de nacimiento — requerida para la membresía y de paso
+        // calcula la edad para el AI.
+        if (!draft.birth_date) {
+          fail('Selecciona tu fecha de nacimiento.', 'birth_date');
+        }
+
+        // Edad (derivada de birth_date) — debe quedar en rango 6-99.
         if (draft.age === '' || draft.age == null) {
-          fail('Escribe tu edad (entre 6 y 99 años).', 'age');
+          // Si birth_date está pero age vacía, la fecha cae fuera del
+          // rango 6-99 → mensaje útil.
+          if (draft.birth_date) {
+            fail('La edad calculada no es válida — revisa tu fecha de nacimiento (entre 6 y 99 años).', 'birth_date');
+          }
         } else {
           const n = Number(draft.age);
           if (!Number.isFinite(n) || n < 6 || n > 99) {
-            fail('Edad inválida — debe ser un número entre 6 y 99.', 'age');
+            fail('Edad inválida — debe ser un número entre 6 y 99.', 'birth_date');
           }
         }
 
@@ -608,10 +644,13 @@ export function FitnessProfileWizard({ initial }: Props) {
         break;
       case 6:
         if (draft.notes.length > 800) fail('Las notas son muy largas (máx 800 caracteres).', 'notes');
+        if (!hasSelfie) {
+          fail('Toma una selfie para que el staff te identifique al entrar al gym.', 'selfie');
+        }
         break;
     }
     return { ok: errors.length === 0, errors, fields };
-  }, [step, draft]);
+  }, [step, draft, hasSelfie]);
 
   /* ── Save mutation ───────────────────────────────────────── */
   const save = useMutation({
@@ -683,8 +722,31 @@ export function FitnessProfileWizard({ initial }: Props) {
         ...(draft.nutrition_motivation.trim() ? { motivation: draft.nutrition_motivation.trim() } : {}),
       };
 
-      // Mandamos los dos PATCH en paralelo. Si uno falla, el otro
-      // queda escrito — al usuario le dejamos volver a guardar.
+      // PATCH /auth/me con datos de membresía (nombre completo + fecha
+      // de nacimiento). Lo hacemos PRIMERO en serie porque si falla
+      // algún campo (ej. birth_date inválida) queremos detenernos
+      // antes de tocar el perfil de fitness.
+      const meUpdates: Record<string, unknown> = {};
+      if (draft.full_name && draft.full_name.trim()) {
+        meUpdates.full_name = draft.full_name.trim();
+      }
+      if (draft.birth_date) {
+        meUpdates.birth_date = draft.birth_date;
+      }
+      if (Object.keys(meUpdates).length > 0) {
+        try {
+          await api.patch('/auth/me', meUpdates);
+        } catch (e) {
+          // Si /auth/me no acepta full_name/birth_date (versión vieja
+          // del API), no bloqueamos — el banner de requisitos lo
+          // captará después.
+          const norm = normalizeError(e) as ApiError;
+          if (norm.status !== 400 && norm.status !== 422) throw e;
+        }
+      }
+
+      // Mandamos los dos PATCH de perfil en paralelo. Si uno falla, el
+      // otro queda escrito — al usuario le dejamos volver a guardar.
       try {
         await Promise.all([
           api.patch('/users/me/routine-profile', routinePayload),
@@ -765,7 +827,17 @@ export function FitnessProfileWizard({ initial }: Props) {
         {step === 3 && <Step3Goal draft={draft} update={update} />}
         {step === 4 && <Step4Style draft={draft} update={update} />}
         {step === 5 && <Step5Food draft={draft} update={update} />}
-        {step === 6 && <Step6Habits draft={draft} update={update} />}
+        {step === 6 && (
+          <Step6Habits
+            draft={draft}
+            update={update}
+            hasSelfie={hasSelfie}
+            onSelfieUploaded={() => {
+              setSelfieJustUploaded(true);
+              qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+            }}
+          />
+        )}
       </div>
 
       {/* Lista TODOS los errores del paso para que el socio pueda
@@ -1016,21 +1088,77 @@ function NumericInput({
 
 // ── Step 1: Basics ───────────────────────────────────────────
 function Step1Basics({ draft, update }: StepProps) {
+  // Cuando cambia birth_date, recalculamos age en el draft. La edad
+  // sigue siendo lo que el AI consume, pero el usuario teclea su
+  // fecha (que también guardamos en /auth/me como dato de membresía).
+  const onBirthDateChange = (yyyymmdd: string) => {
+    update('birth_date', yyyymmdd);
+    if (!yyyymmdd) {
+      update('age', '');
+      return;
+    }
+    const dob = new Date(yyyymmdd);
+    if (Number.isNaN(dob.getTime())) {
+      update('age', '');
+      return;
+    }
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const beforeBirthday =
+      today.getMonth() < dob.getMonth() ||
+      (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate());
+    if (beforeBirthday) age -= 1;
+    if (age >= 6 && age <= 99) update('age', age);
+    else update('age', '');
+  };
+
   return (
     <div className="space-y-5">
       <StepHeading
         title="Sobre ti"
-        subtitle="Datos básicos para calcular tu plan calórico (Mifflin-St Jeor)."
+        subtitle="Datos básicos para calcular tu plan calórico y dejar lista tu membresía."
       />
 
+      <LightField
+        id="fp_full_name"
+        label="Nombre completo"
+        hint="Como aparece en tu INE — lo usamos en tu recibo."
+      >
+        <input
+          id="fp_full_name"
+          type="text"
+          value={draft.full_name}
+          onChange={(e) => update('full_name', e.target.value)}
+          placeholder="María Fernanda López García"
+          autoComplete="name"
+          className={INPUT_CLS}
+        />
+      </LightField>
+
+      <LightField
+        id="fp_birth_date"
+        label="Fecha de nacimiento"
+        hint="Obligatoria por política del gym; también la usamos para felicitarte en tu cumpleaños."
+      >
+        <input
+          id="fp_birth_date"
+          type="date"
+          value={draft.birth_date}
+          onChange={(e) => onBirthDateChange(e.target.value)}
+          max={new Date().toISOString().slice(0, 10)}
+          className={INPUT_CLS}
+        />
+      </LightField>
+
       <div className="grid gap-4 sm:grid-cols-2">
-        <LightField id="fp_age" label="Edad">
-          <NumericInput
+        <LightField id="fp_age" label="Edad" hint="Calculada de tu fecha de nacimiento.">
+          <input
             id="fp_age"
-            value={draft.age}
-            onChange={(v) => update('age', v)}
-            placeholder="28"
-            maxLen={3}
+            type="text"
+            value={draft.age === '' ? '' : String(draft.age)}
+            readOnly
+            className={cn(INPUT_CLS, 'bg-slate-50 text-slate-600')}
+            placeholder="—"
           />
         </LightField>
         <LightField label="Género">
@@ -1601,13 +1729,21 @@ function Step5Food({ draft, update }: StepProps) {
   );
 }
 
-// ── Step 6: Restrictions + habits ────────────────────────────
-function Step6Habits({ draft, update }: StepProps) {
+// ── Step 6: Restrictions + habits + selfie ───────────────────
+function Step6Habits({
+  draft,
+  update,
+  hasSelfie,
+  onSelfieUploaded,
+}: StepProps & {
+  hasSelfie: boolean;
+  onSelfieUploaded: () => void;
+}) {
   return (
     <div className="space-y-6">
       <StepHeading
         title="Restricciones y hábitos"
-        subtitle="Lo que no comes, lo que tomas y tus hábitos. Todos los campos son opcionales."
+        subtitle="Restricciones alimenticias, hábitos y tu selfie de identificación."
       />
 
       <div>
@@ -1713,6 +1849,25 @@ function Step6Habits({ draft, update }: StepProps) {
           maxLength={800}
         />
       </LightField>
+
+      {/* Selfie de identificación — requisito para entrar al gym */}
+      <div className="space-y-2 pt-3 border-t border-slate-200">
+        <div className={LABEL_CLS}>Selfie de identificación</div>
+        <p className="text-[11px] text-slate-500 mb-2">
+          La usa el staff para reconocerte en recepción. Sin selfie no
+          puedes usar tu QR de acceso.
+        </p>
+        {hasSelfie ? (
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              ✓
+            </span>
+            Selfie cargada. Puedes continuar.
+          </div>
+        ) : (
+          <SelfieCapture onSuccess={onSelfieUploaded} />
+        )}
+      </div>
 
       <div className="flex items-center gap-2 rounded-xl border border-dashed border-blue-300 bg-blue-50 p-3 text-xs text-blue-900">
         <Dumbbell size={14} className="text-blue-600" />

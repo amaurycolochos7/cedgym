@@ -41,13 +41,15 @@ export default function OnboardingPage() {
   // caso volver a llenar nada.
   useEffect(() => {
     if (me?.user?.profile_completed) {
-      router.replace('/portal/rutinas');
+      router.replace('/portal/dashboard');
     }
   }, [me, router]);
 
   const initial = (() => {
     const u = me?.user as
       | {
+          full_name?: string | null;
+          name?: string | null;
           birth_date?: string | null;
           gender?: string | null;
           fitness_profile?: Record<string, unknown>;
@@ -57,13 +59,21 @@ export default function OnboardingPage() {
       | undefined;
     if (!u) return null;
 
-    // Pre-fill desde datos que ya capturó recepción en el alta walk-in.
-    // El socio aterriza viendo su edad y género ya marcados — solo
-    // confirma o corrige y avanza.
+    // Pre-fill desde datos que ya capturó recepción en el alta walk-in
+    // o que el socio metió al registrarse (full_name del /register).
+    // El socio aterriza viendo nombre, edad y género ya marcados —
+    // solo confirma/corrige y avanza.
     const seed: Record<string, unknown> = {};
+    if (u.full_name && u.full_name.trim()) {
+      seed.full_name = u.full_name.trim();
+    } else if (u.name && u.name.trim()) {
+      seed.full_name = u.name.trim();
+    }
     if (u.birth_date) {
+      // Normalizamos a YYYY-MM-DD para el <input type="date">.
       const dob = new Date(u.birth_date);
       if (!Number.isNaN(dob.getTime())) {
+        seed.birth_date = dob.toISOString().slice(0, 10);
         const today = new Date();
         let age = today.getFullYear() - dob.getFullYear();
         const beforeBirthday =
