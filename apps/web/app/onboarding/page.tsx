@@ -10,15 +10,23 @@
 //                 cuando ve perfiles vacíos)
 //   /portal    → home con su rutina ya generada
 //
+// También es el destino del flujo walk-in (/welcome). Llegan con
+// birth_date + gender ya capturados por recepción, los pre-llenamos
+// en el wizard.
+//
 // Reusamos `<FitnessProfileWizard>` que ya está cocido. Hidrata datos
 // existentes desde /auth/me (el wizard mismo se queda con drafts en
 // localStorage, así que si el socio cierra y vuelve, retoma donde quedó).
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
 
 export default function OnboardingPage() {
+  const router = useRouter();
+
   // /auth/me trae lo que ya haya — para self-register acabado de
   // verificar OTP esto será null en routine_profile/nutrition_profile,
   // pero si el socio viene a medias de una sesión anterior (cerró el
@@ -28,16 +36,53 @@ export default function OnboardingPage() {
     queryFn: async () => (await api.get('/auth/me')).data,
   });
 
+  // Si el socio ya completó el wizard antes (reactivación, vuelve por
+  // un link viejo, etc.) lo soltamos directo al portal — no tiene
+  // caso volver a llenar nada.
+  useEffect(() => {
+    if (me?.user?.profile_completed) {
+      router.replace('/portal/rutinas');
+    }
+  }, [me, router]);
+
   const initial = (() => {
     const u = me?.user as
       | {
+          birth_date?: string | null;
+          gender?: string | null;
           fitness_profile?: Record<string, unknown>;
           routine_profile?: Record<string, unknown>;
           nutrition_profile?: Record<string, unknown>;
         }
       | undefined;
     if (!u) return null;
+
+    // Pre-fill desde datos que ya capturó recepción en el alta walk-in.
+    // El socio aterriza viendo su edad y género ya marcados — solo
+    // confirma o corrige y avanza.
+    const seed: Record<string, unknown> = {};
+    if (u.birth_date) {
+      const dob = new Date(u.birth_date);
+      if (!Number.isNaN(dob.getTime())) {
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const beforeBirthday =
+          today.getMonth() < dob.getMonth() ||
+          (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate());
+        if (beforeBirthday) age -= 1;
+        if (age >= 6 && age <= 99) seed.age = age;
+      }
+    }
+    if (u.gender) {
+      // El user model usa MALE/FEMALE/OTHER/PREFER_NOT_SAY; el wizard
+      // solo entiende MALE/FEMALE/OTHER. Colapsamos PREFER_NOT_SAY a OTHER.
+      const g = u.gender === 'PREFER_NOT_SAY' ? 'OTHER' : u.gender;
+      seed.gender = g;
+    }
+
+    // Lo que ya esté en perfil vivo gana sobre el seed (orden importa).
     const merged: Record<string, unknown> = {
+      ...seed,
       ...(u.fitness_profile ?? {}),
       ...(u.routine_profile ?? {}),
       ...(u.nutrition_profile ?? {}),

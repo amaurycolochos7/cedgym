@@ -154,7 +154,12 @@ export default function WelcomePage() {
       {step === 'done' && (
         <StepDone
           onContinue={() => {
-            router.push('/portal/dashboard');
+            // Mandamos al wizard de perfil. Si el socio ya lo había
+            // completado antes (ej. reactivación de membresía), el
+            // OnboardingGuard lo dejará pasar al /portal sin tocar
+            // nada. Para socios nuevos es justo donde queremos que
+            // empiecen.
+            router.push('/onboarding');
           }}
         />
       )}
@@ -351,18 +356,19 @@ function StepDone({ onContinue }: { onContinue: () => void }) {
         <CheckCircle2 className="h-8 w-8" />
       </span>
       <h1 className="font-display text-2xl font-bold tracking-tight text-slate-900">
-        ¡Todo listo!
+        ¡Cuenta lista!
       </h1>
       <p className="max-w-sm text-sm text-slate-600">
-        Tu cuenta está configurada. Ahora puedes ver tu QR de entrada,
-        tus rutinas y tu plan de comidas en el portal.
+        Falta un último paso: cuéntanos sobre ti para que el sistema
+        te arme tu rutina y plan alimenticio personalizados. Toma
+        unos minutos.
       </p>
       <button
         type="button"
         onClick={onContinue}
         className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 font-display text-sm font-bold uppercase tracking-wider text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700"
       >
-        Entrar a mi portal <ArrowRight className="h-4 w-4" />
+        Continuar <ArrowRight className="h-4 w-4" />
       </button>
     </div>
   );
