@@ -482,9 +482,15 @@ export function FitnessProfileWizard({ initial }: Props) {
     }
   }, [draft]);
 
-  /* Cuando avanzamos de paso, scrolleamos al inicio del wizard.
+  /* Cuando avanzamos de paso, scrolleamos al top de la página.
      Skip en el primer mount (paso 1 inicial) para no causar un
-     salto innecesario al cargar la página. */
+     salto innecesario al cargar la página.
+
+     Antes usábamos scrollIntoView({behavior:'smooth'}) sobre el
+     section ref, pero iOS Safari y varios Android truenan ese API
+     silenciosamente — el usuario quedaba al fondo del paso anterior.
+     window.scrollTo es universal. requestAnimationFrame asegura que
+     React ya commiteó el nuevo DOM antes de scrollear. */
   const isFirstStepRender = useRef(true);
   useEffect(() => {
     if (isFirstStepRender.current) {
@@ -492,12 +498,17 @@ export function FitnessProfileWizard({ initial }: Props) {
       return;
     }
     if (typeof window === 'undefined') return;
-    const node = sectionRef.current;
-    if (node) {
-      node.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    requestAnimationFrame(() => {
+      // Detect smooth-scroll support; iOS 15.3 y anteriores no lo
+      // tienen y silenciosamente ignoran el call entero.
+      const supportsSmooth =
+        'scrollBehavior' in document.documentElement.style;
+      if (supportsSmooth) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        window.scrollTo(0, 0);
+      }
+    });
   }, [step]);
 
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) =>
