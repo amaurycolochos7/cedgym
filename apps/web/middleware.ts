@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const SESSION_COOKIE = 'cedgym_session';
 const ROLE_COOKIE = 'cedgym_role';
 
-const AUTH_ONLY_PREFIXES = ['/dashboard', '/checkout', '/portal'];
+const AUTH_ONLY_PREFIXES = ['/dashboard', '/checkout', '/portal', '/onboarding'];
 
 /** Roles allowed to access /admin/*. */
 const ADMIN_ROLES = new Set(['ADMIN', 'SUPERADMIN']);
@@ -108,6 +108,8 @@ export const config = {
     '/dashboard/:path*',
     '/checkout/:path*',
     '/portal/:path*',
+    '/onboarding',
+    '/onboarding/:path*',
     '/admin/:path*',
     '/staff/:path*',
   ],
