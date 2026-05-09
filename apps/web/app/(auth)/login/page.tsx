@@ -35,7 +35,12 @@ export default function LoginPage() {
   useEffect(() => {
     if (loading || expired || idle) return;
     if (!user) return;
-    router.replace(redirect ?? postLoginPathForRole(user.role));
+    router.replace(
+      redirect ??
+        postLoginPathForRole(user.role, {
+          profileCompleted: user.profile_completed === true,
+        }),
+    );
   }, [loading, user, expired, idle, redirect, router]);
 
   const { register, handleSubmit, formState } = useForm<LoginInput>({
@@ -59,7 +64,11 @@ export default function LoginPage() {
     onSuccess: (resp) => {
       hydrateFromAuthResponse(resp);
       toast.success(`¡Hola de nuevo, ${resp.user.name.split(' ')[0]}!`);
-      const dest = redirect ?? postLoginPathForRole(resp.user.role);
+      const dest =
+        redirect ??
+        postLoginPathForRole(resp.user.role, {
+          profileCompleted: resp.user.profile_completed === true,
+        });
       // En PWA standalone (iOS, Android Chrome) usamos full-page
       // navigation en vez de router.push. Sin esto, iOS Safari
       // standalone a veces no manda la cookie cedgym_session recién

@@ -106,9 +106,14 @@ export interface PostRegisterRedirect {
 /**
  * Map a user role to the landing page they should see after login.
  * Called from login/register flows after `hydrateFromAuthResponse`.
+ *
+ * Para socios (ATHLETE) que aún no completan el wizard de perfil,
+ * los aterrizamos directo en /onboarding para evitar el flash del
+ * portal antes de que el OnboardingGuard del lado cliente los rebote.
  */
 export function postLoginPathForRole(
   role: UserRole | undefined | null,
+  opts?: { profileCompleted?: boolean },
 ): string {
   switch (role) {
     case 'SUPERADMIN':
@@ -118,6 +123,7 @@ export function postLoginPathForRole(
       return '/staff/scan';
     case 'ATHLETE':
     default:
+      if (opts && opts.profileCompleted === false) return '/onboarding';
       return '/portal/dashboard';
   }
 }

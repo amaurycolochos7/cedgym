@@ -199,10 +199,13 @@ export default function VerifyPage() {
         return; // modal handles navigation
       }
       lsDelete(POST_REGISTER_REDIRECT_KEY);
-      // Post-OTP the account is active — land directly on the portal
-      // dashboard. Profile/emergency contact are now optional and live at
-      // /portal/perfil (promoted via a dismissible banner).
-      const fallback = stored?.path ?? '/portal/dashboard';
+      // Si el socio acaba de registrarse y todavía no llena el wizard de
+      // perfil, lo aterrizamos DIRECTO en /onboarding. Sin esto el flujo
+      // hace push a /portal/dashboard y el OnboardingGuard lo rebota,
+      // dejando un flash visible del portal antes del wizard.
+      const profileCompleted = resp?.user?.profile_completed === true;
+      const fallback =
+        stored?.path ?? (profileCompleted ? '/portal/dashboard' : '/onboarding');
       // En PWA standalone forzamos full-page reload; el router.push
       // de Next router puede saltarse el round-trip que hace que la
       // cookie cedgym_session llegue al middleware y eso provoca
