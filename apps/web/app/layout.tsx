@@ -1,11 +1,24 @@
 import type { Metadata, Viewport } from 'next';
-import { Poppins } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
+// Self-hosted Poppins (latin). Antes usábamos `next/font/google` que
+// fetch a fonts.gstatic.com en build-time; cuando la red del builder
+// de Dokploy no resuelve Google Fonts, Next reintenta 3 veces y a
+// veces marca el deploy como Error. Self-hosting elimina la
+// dependencia externa: los .woff2 viven en el repo y Next los
+// optimiza igual (preload, hash, font-display: swap).
+const poppins = localFont({
+  src: [
+    { path: './fonts/poppins-300.woff2', weight: '300', style: 'normal' },
+    { path: './fonts/poppins-400.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/poppins-500.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/poppins-600.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/poppins-700.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/poppins-800.woff2', weight: '800', style: 'normal' },
+    { path: './fonts/poppins-900.woff2', weight: '900', style: 'normal' },
+  ],
   variable: '--font-poppins',
   display: 'swap',
 });
