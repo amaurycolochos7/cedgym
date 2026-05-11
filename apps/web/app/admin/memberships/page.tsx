@@ -19,19 +19,9 @@ import { StatusBadge } from '@/components/admin/status-badge';
 import { DataTable } from '@/components/admin/data-table';
 import { MemberSearch } from '@/components/admin/member-search';
 import { AssignPlanModal } from '@/components/admin/assign-plan-modal';
-import {
-  adminApi,
-  type AdminMember,
-  type AdminMembershipPlan,
-} from '@/lib/admin-api';
+import { adminApi, type AdminMember } from '@/lib/admin-api';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useAuth } from '@/lib/auth';
-
-const MXN = new Intl.NumberFormat('es-MX', {
-  style: 'currency',
-  currency: 'MXN',
-  maximumFractionDigits: 0,
-});
 
 const INPUT_CLS =
   'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none';
@@ -62,11 +52,6 @@ function AdminMembershipsContent() {
     user?.role === 'ADMIN' ||
     user?.role === 'SUPERADMIN' ||
     user?.role === 'RECEPTIONIST';
-
-  const { data: plans } = useQuery({
-    queryKey: ['admin', 'plans'],
-    queryFn: adminApi.listMembershipPlans,
-  });
 
   // ?expiring=Nd llega desde la KPI "Vencen esta semana" del dashboard.
   // Solo aceptamos el formato "Nd"; cualquier otra cosa se ignora para
@@ -281,42 +266,6 @@ function AdminMembershipsContent() {
   return (
     <div className="space-y-6">
       <section>
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
-              Planes
-            </h2>
-            <p className="text-xs text-slate-500">
-              Precio mensual. Cambios se reflejan en landing, portal y cobros.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setAssignPicker(true)}
-            className={`${BTN_PRIMARY} w-full sm:w-auto`}
-          >
-            <Plus className="h-4 w-4" />
-            Asignar plan a miembro
-          </button>
-        </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {plans?.map((p: AdminMembershipPlan) => (
-            <PlanEditor
-              key={p.id}
-              plan={p}
-              onSaved={() =>
-                qc.invalidateQueries({ queryKey: ['admin', 'plans'] })
-              }
-            />
-          ))}
-        </div>
-
-        <div className="mt-4">
-          <MealPlanAddonEditor />
-        </div>
-      </section>
-
-      <section>
         {expiringDays && (
           <div className="mb-3 flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
             <CalendarClock className="h-4 w-4 shrink-0 text-blue-600" />
@@ -365,6 +314,14 @@ function AdminMembershipsContent() {
           </select>
 
           <div className="flex items-center gap-2 sm:ml-auto">
+            <button
+              type="button"
+              onClick={() => setAssignPicker(true)}
+              className={`${BTN_PRIMARY} w-full sm:w-auto`}
+            >
+              <Plus className="h-4 w-4" />
+              Asignar plan a miembro
+            </button>
             <button
               type="button"
               disabled={selected.size === 0 || broadcast.isPending}
@@ -555,150 +512,3 @@ function DeleteMembershipDialog({
   );
 }
 
-function PlanEditor({
-  plan,
-  onSaved,
-}: {
-  plan: AdminMembershipPlan;
-  onSaved: () => void;
-}) {
-  const [form, setForm] = React.useState(plan);
-  const mut = useMutation({
-    mutationFn: () => adminApi.updateMembershipPlan(plan.id, form),
-    onSuccess: () => {
-      toast.success('Plan actualizado');
-      onSaved();
-    },
-    onError: () => toast.error('No se pudo guardar'),
-  });
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-base font-bold text-slate-900">{form.name}</h3>
-        <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-700">
-          <input
-            type="checkbox"
-            checked={form.enabled}
-            onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-            className="accent-blue-600"
-          />
-          Activo
-        </label>
-      </div>
-
-      <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-        Precio mensual (MXN)
-        <input
-          type="number"
-          value={form.monthly_price_mxn}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              monthly_price_mxn: Number(e.target.value),
-            })
-          }
-          className={`${INPUT_CLS} mt-1`}
-        />
-      </label>
-
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>{MXN.format(form.monthly_price_mxn)} / mes</span>
-        <button
-          type="button"
-          onClick={() => mut.mutate()}
-          disabled={mut.isPending}
-          className={BTN_PRIMARY}
-        >
-          {mut.isPending ? 'Guardando…' : 'Guardar'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ───────────────────────────────────────────────────────────────
-// Meal-plan add-on price editor. Lives below the plan cards so
-// admins can tweak the one-time unlock price without leaving the
-// Memberships screen. KV-backed (workspace_settings) — the member-
-// facing GET /addons/meal-plan/price reads the merged value.
-// ───────────────────────────────────────────────────────────────
-function MealPlanAddonEditor() {
-  const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'addon-price'],
-    queryFn: adminApi.getMealPlanAddonPrice,
-  });
-
-  const [price, setPrice] = React.useState<number | ''>('');
-
-  // Hydrate local input when the server value arrives (or is refetched).
-  React.useEffect(() => {
-    if (typeof data?.price_mxn === 'number') setPrice(data.price_mxn);
-  }, [data?.price_mxn]);
-
-  const mut = useMutation({
-    mutationFn: (value: number) => adminApi.updateMealPlanAddonPrice(value),
-    onSuccess: () => {
-      toast.success('Precio actualizado');
-      qc.invalidateQueries({ queryKey: ['admin', 'addon-price'] });
-    },
-    onError: () => toast.error('No se pudo guardar'),
-  });
-
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
-            Plan extra
-          </div>
-          <h3 className="text-base font-bold text-slate-900">
-            Plan Alimenticio (Plan extra)
-          </h3>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Desbloqueo único del plan alimenticio para socios sin Élite.
-          </p>
-        </div>
-        {typeof data?.default_price_mxn === 'number' && (
-          <span className="text-[11px] text-slate-400">
-            Default: {MXN.format(data.default_price_mxn)}
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-          Precio único (MXN)
-          <input
-            type="number"
-            min={0}
-            value={price}
-            onChange={(e) =>
-              setPrice(e.target.value === '' ? '' : Number(e.target.value))
-            }
-            disabled={isLoading}
-            className={`${INPUT_CLS} mt-1`}
-          />
-        </label>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>
-          Actual:{' '}
-          {typeof data?.price_mxn === 'number'
-            ? MXN.format(data.price_mxn)
-            : '—'}
-        </span>
-        <button
-          type="button"
-          onClick={() => typeof price === 'number' && mut.mutate(price)}
-          disabled={mut.isPending || price === '' || isLoading}
-          className={BTN_PRIMARY}
-        >
-          {mut.isPending ? 'Guardando…' : 'Guardar'}
-        </button>
-      </div>
-    </div>
-  );
-}
