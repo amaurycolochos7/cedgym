@@ -24,6 +24,49 @@ interface SelfieCaptureProps {
 
 type Phase = 'idle' | 'live' | 'captured' | 'fallback';
 
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+const MAX_DIMENSION = 1280;
+
+// Re-encode large photos in-browser so users who pick a 6MB gallery
+// shot don't get rejected. Most phones store 4–12MB JPEGs that
+// downscale to ~150–300KB at 1280px with no visible quality loss.
+async function downscaleIfTooLarge(file: File): Promise<File> {
+  if (file.size <= MAX_UPLOAD_BYTES) return file;
+  if (typeof createImageBitmap !== 'function') {
+    throw new Error('NO_DECODE');
+  }
+  const bitmap = await createImageBitmap(file).catch(() => null);
+  if (!bitmap) throw new Error('NO_DECODE');
+  try {
+    const ratio = Math.min(
+      1,
+      MAX_DIMENSION / Math.max(bitmap.width, bitmap.height),
+    );
+    const width = Math.max(1, Math.round(bitmap.width * ratio));
+    const height = Math.max(1, Math.round(bitmap.height * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('NO_CTX');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    for (const quality of [0.82, 0.7, 0.55, 0.4]) {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', quality),
+      );
+      if (blob && blob.size <= MAX_UPLOAD_BYTES) {
+        return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+      }
+    }
+    throw new Error('STILL_TOO_BIG');
+  } finally {
+    bitmap.close?.();
+  }
+}
+
 export function SelfieCapture({ onSuccess, onCancel }: SelfieCaptureProps) {
   const qc = useQueryClient();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -33,6 +76,7 @@ export function SelfieCapture({ onSuccess, onCancel }: SelfieCaptureProps) {
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // ── Camera lifecycle ────────────────────────────────────────
   const stopStream = useCallback(() => {
@@ -132,27 +176,39 @@ export function SelfieCapture({ onSuccess, onCancel }: SelfieCaptureProps) {
   }, [startCamera]);
 
   // ── File fallback ───────────────────────────────────────────
-  const onFilePicked = useCallback((file: File | null) => {
+  const onFilePicked = useCallback(async (file: File | null) => {
     if (!file) return;
     if (!/^image\/(jpeg|png)$/i.test(file.type)) {
       setError('Sube una imagen JPEG o PNG.');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setError('La imagen supera 2 MB.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string') {
-        setDataUrl(result);
-        setPhase('captured');
-        setError(null);
+    setError(null);
+    setIsProcessing(true);
+    try {
+      const processed = await downscaleIfTooLarge(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          setDataUrl(result);
+          setPhase('captured');
+        }
+        setIsProcessing(false);
+      };
+      reader.onerror = () => {
+        setError('No pudimos leer el archivo.');
+        setIsProcessing(false);
+      };
+      reader.readAsDataURL(processed);
+    } catch (e) {
+      setIsProcessing(false);
+      const code = (e as Error).message;
+      if (code === 'NO_DECODE') {
+        setError('No pudimos abrir la imagen. Intenta con otra.');
+      } else {
+        setError('La imagen es demasiado grande, incluso comprimida. Toma una nueva.');
       }
-    };
-    reader.onerror = () => setError('No pudimos leer el archivo.');
-    reader.readAsDataURL(file);
+    }
   }, []);
 
   // ── Upload ──────────────────────────────────────────────────
@@ -227,7 +283,12 @@ export function SelfieCapture({ onSuccess, onCancel }: SelfieCaptureProps) {
       <div className="flex flex-wrap items-center justify-center gap-2">
         {phase === 'idle' && (
           <>
-            <button type="button" className={BTN_PRIMARY} onClick={startCamera}>
+            <button
+              type="button"
+              className={BTN_PRIMARY}
+              onClick={startCamera}
+              disabled={isProcessing}
+            >
               <Camera className="mr-2 h-4 w-4" />
               Abrir cámara
             </button>
@@ -235,9 +296,14 @@ export function SelfieCapture({ onSuccess, onCancel }: SelfieCaptureProps) {
               type="button"
               className={BTN_GHOST}
               onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessing}
             >
-              <Upload className="mr-2 h-4 w-4" />
-              Subir foto
+              {isProcessing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="mr-2 h-4 w-4" />
+              )}
+              {isProcessing ? 'Optimizando…' : 'Subir foto'}
             </button>
           </>
         )}
@@ -266,9 +332,14 @@ export function SelfieCapture({ onSuccess, onCancel }: SelfieCaptureProps) {
             type="button"
             className={BTN_PRIMARY}
             onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
           >
-            <Upload className="mr-2 h-4 w-4" />
-            Subir foto
+            {isProcessing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
+            {isProcessing ? 'Optimizando…' : 'Subir foto'}
           </button>
         )}
 
