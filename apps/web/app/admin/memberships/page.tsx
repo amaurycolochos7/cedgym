@@ -40,7 +40,18 @@ const BTN_SECONDARY =
 const BTN_DANGER =
   'inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60 disabled:pointer-events-none';
 
+// useSearchParams en App Router obliga a una Suspense boundary durante
+// el prerender estático de Next 14. Envolvemos el contenido en
+// <Suspense> para que el build no peté con "missing-suspense-with-csr-bailout".
 export default function AdminMembershipsPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <AdminMembershipsContent />
+    </React.Suspense>
+  );
+}
+
+function AdminMembershipsContent() {
   const qc = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
