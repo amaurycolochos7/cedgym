@@ -1152,8 +1152,8 @@ export const staffApi = {
       .then((r) => r.data),
   search: (q: string) =>
     api
-      .get<AdminMember[]>('/staff/members/search', { params: { q } })
-      .then((r) => r.data),
+      .get<{ items: AdminMember[] }>('/staff/members/search', { params: { q } })
+      .then((r) => r.data?.items ?? []),
   manualCheckin: (memberId: string) =>
     api
       .post<StaffCheckinResult>('/staff/checkins/manual', {
