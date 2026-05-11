@@ -698,7 +698,7 @@ export const adminApi = {
   // for member+membership joined rows). Backend returns `items` with
   // `membership.plan/status/expires_at` nested — we flatten to the
   // AdminMember shape the table expects.
-  listActiveMemberships: (params: { q?: string; plan?: string; page?: number }) => {
+  listActiveMemberships: (params: { q?: string; plan?: string; page?: number; expiring?: string }) => {
     const limit = 30;
     const page = params.page ?? 1;
     const offset = Math.max(0, (page - 1) * limit);
@@ -707,6 +707,7 @@ export const adminApi = {
       offset,
       ...(params.q && { search: params.q }),
       ...(params.plan && { plan: params.plan }),
+      ...(params.expiring && { expiring: params.expiring }),
     };
     return api
       .get<{ items: any[]; total: number; limit: number; offset: number }>(

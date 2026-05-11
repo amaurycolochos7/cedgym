@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, Send, Trash2, Ban } from 'lucide-react';
+import { CalendarClock, Plus, Send, Trash2, Ban, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,8 @@ const BTN_DANGER =
 
 export default function AdminMembershipsPage() {
   const qc = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const canDelete =
     user?.role === 'ADMIN' ||
@@ -52,16 +55,32 @@ export default function AdminMembershipsPage() {
     queryFn: adminApi.listMembershipPlans,
   });
 
+  // ?expiring=Nd llega desde la KPI "Vencen esta semana" del dashboard.
+  // Solo aceptamos el formato "Nd"; cualquier otra cosa se ignora para
+  // evitar inyectar valores raros en el query string del API.
+  const expiringRaw = searchParams.get('expiring');
+  const expiring =
+    expiringRaw && /^\d+d$/.test(expiringRaw) ? expiringRaw : null;
+  const expiringDays = expiring ? Number(expiring.slice(0, -1)) : null;
+
   const [filters, setFilters] = React.useState({ q: '', plan: '' });
   const { data: members } = useQuery({
-    queryKey: ['admin', 'memberships-active', filters],
+    queryKey: ['admin', 'memberships-active', filters, expiring],
     queryFn: () =>
       adminApi.listActiveMemberships({
         q: filters.q || undefined,
         plan: filters.plan || undefined,
+        expiring: expiring || undefined,
         page: 1,
       }),
   });
+
+  const clearExpiringFilter = () => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('expiring');
+    const qs = params.toString();
+    router.replace(qs ? `/admin/memberships?${qs}` : '/admin/memberships');
+  };
 
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [toDelete, setToDelete] = React.useState<AdminMember | null>(null);
@@ -245,6 +264,32 @@ export default function AdminMembershipsPage() {
       </section>
 
       <section>
+        {expiringDays && (
+          <div className="mb-3 flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <CalendarClock className="h-4 w-4 shrink-0 text-blue-600" />
+            <div className="flex-1 text-sm text-slate-900">
+              <span className="font-semibold">
+                {expiringDays === 7
+                  ? 'Vencen esta semana'
+                  : `Vencen en ${expiringDays} días`}
+              </span>
+              <span className="text-slate-600">
+                {' '}— {members?.total ?? 0}{' '}
+                {(members?.total ?? 0) === 1 ? 'socio' : 'socios'} con
+                membresía activa que requieren seguimiento.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={clearExpiringFilter}
+              className="inline-flex items-center gap-1 rounded-lg border border-blue-300 bg-white px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+            >
+              <X className="h-3 w-3" />
+              Quitar filtro
+            </button>
+          </div>
+        )}
+
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
             Membresías activas

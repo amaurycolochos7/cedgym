@@ -31,8 +31,23 @@ export default async function adminMembersRoutes(fastify) {
   const adminOnly = { preHandler: [fastify.authenticate, fastify.requireRole('ADMIN', 'SUPERADMIN')] };
 
   fastify.get('/admin/miembros', guard, async (req) => {
-    const { search, status, plan, limit = 30, offset = 0 } = req.query;
+    const { search, status, plan, expiring, limit = 30, offset = 0 } = req.query;
     const workspaceId = assertWorkspaceAccess(req);
+
+    // Filtro "Vencen en N días" — el dashboard linkea acá con
+    // ?expiring=7d desde la KPI "Vencen esta semana". Aceptamos
+    // cualquier "Nd" entero por si en el futuro queremos un atajo
+    // "Vencen este mes" sin tocar el backend.
+    let expiringWindow = null;
+    if (typeof expiring === 'string') {
+      const m = /^(\d+)d$/.exec(expiring);
+      if (m) {
+        const days = Math.min(365, Math.max(1, Number(m[1])));
+        const now = new Date();
+        const horizon = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+        expiringWindow = { gte: now, lte: horizon };
+      }
+    }
 
     // El UI manda los filtros de Estado y Plan en minúscula y con
     // etiquetas humanas ("active", "frozen", "cancelled"). Los enums de
@@ -73,13 +88,29 @@ export default async function adminMembersRoutes(fastify) {
           { phone:      { contains: search } },
         ],
       }),
-      ...((mappedMembershipStatus || mappedPlan) && {
+      ...((mappedMembershipStatus || mappedPlan || expiringWindow) && {
         membership: {
-          ...(mappedMembershipStatus && { status: mappedMembershipStatus }),
+          // Cuando filtramos por "vencen pronto" forzamos ACTIVE
+          // (un CANCELED/EXPIRED ya no requiere seguimiento) y la
+          // ventana de fechas. Si el admin además mandó status,
+          // ese override gana — pero el caso real es siempre
+          // ACTIVE acá.
+          ...(expiringWindow && {
+            status: mappedMembershipStatus || 'ACTIVE',
+            expires_at: expiringWindow,
+          }),
+          ...(!expiringWindow && mappedMembershipStatus && { status: mappedMembershipStatus }),
           ...(mappedPlan && { plan: mappedPlan }),
         },
       }),
     };
+
+    // Cuando el admin pidió "vencen pronto" ordenamos por fecha de
+    // vencimiento (los más urgentes primero); en el resto seguimos
+    // ordenando por alta más reciente como antes.
+    const orderBy = expiringWindow
+      ? { membership: { expires_at: 'asc' } }
+      : { created_at: 'desc' };
 
     const [items, total] = await Promise.all([
       fastify.prisma.user.findMany({
@@ -87,7 +118,7 @@ export default async function adminMembersRoutes(fastify) {
         include: { membership: true },
         take: Math.min(Number(limit), 100),
         skip: Number(offset),
-        orderBy: { created_at: 'desc' },
+        orderBy,
       }),
       fastify.prisma.user.count({ where }),
     ]);
