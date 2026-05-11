@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { CalendarClock, Plus, Send, Trash2, Ban, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import {
   Dialog,
   DialogContent,
@@ -185,6 +187,46 @@ function AdminMembershipsContent() {
       {
         header: 'Vence',
         accessorKey: 'expires_at',
+        cell: ({ row }) => {
+          const raw = row.original.expires_at;
+          if (!raw) return '—';
+          const d = new Date(raw);
+          if (Number.isNaN(d.getTime())) return '—';
+          // Días restantes desde hoy (UTC-safe: usamos midnight local
+          // para evitar que un vencimiento "esta tarde" cuente como ayer).
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const target = new Date(d);
+          target.setHours(0, 0, 0, 0);
+          const days = Math.round(
+            (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+          );
+          const dateLabel = format(d, "d 'de' MMM yyyy", { locale: es });
+          let hint: string;
+          let hintCls: string;
+          if (days < 0) {
+            hint = `Venció hace ${Math.abs(days)} ${Math.abs(days) === 1 ? 'día' : 'días'}`;
+            hintCls = 'text-rose-600';
+          } else if (days === 0) {
+            hint = 'Vence hoy';
+            hintCls = 'text-amber-600 font-semibold';
+          } else if (days === 1) {
+            hint = 'Vence mañana';
+            hintCls = 'text-amber-600';
+          } else if (days <= 7) {
+            hint = `En ${days} días`;
+            hintCls = 'text-amber-600';
+          } else {
+            hint = `En ${days} días`;
+            hintCls = 'text-slate-500';
+          }
+          return (
+            <div className="leading-tight">
+              <div className="text-sm text-slate-900">{dateLabel}</div>
+              <div className={`text-[11px] ${hintCls}`}>{hint}</div>
+            </div>
+          );
+        },
       },
       ...(canDelete
         ? [
