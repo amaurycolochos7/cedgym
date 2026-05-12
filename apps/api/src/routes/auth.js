@@ -329,16 +329,45 @@ export default async function authRoutes(fastify) {
                 action: 'auth.register.requested',
                 target_type: 'user',
                 target_id: user.id,
-                metadata: { otp_sent: sendResult.ok },
+                metadata: { otp_sent: sendResult.ok, otp_error: sendResult.error || null },
                 ...auditCtx(request),
             });
+
+            // Si el bot de WhatsApp no pudo enviar el código (sesión caída,
+            // 503 del bot, timeout, etc.), NO mentimos diciendo "código
+            // enviado". Antes devolvíamos success: true y el frontend
+            // empujaba al usuario a la pantalla de verificar — el código
+            // nunca llegaba y el socio quedaba atorado. Hacemos rollback
+            // del user+OTP recién creados para que un retry quede limpio
+            // (sin chocar contra USER_EXISTS) y devolvemos 503.
+            if (!sendResult.ok) {
+                fastify.log.warn(
+                    { phone, err: sendResult.error },
+                    '[register] WhatsApp send failed — rolling back user+OTP',
+                );
+                await prisma.otpCode
+                    .deleteMany({ where: { phone, purpose: 'REGISTER' } })
+                    .catch((e) =>
+                        fastify.log.warn({ err: e }, '[register] rollback otp delete failed'),
+                    );
+                await prisma.user
+                    .delete({ where: { id: user.id } })
+                    .catch((e) =>
+                        fastify.log.warn({ err: e }, '[register] rollback user delete failed'),
+                    );
+                return reply.status(503).send(
+                    errPayload(
+                        'OTP_DELIVERY_FAILED',
+                        'No pudimos enviar el código por WhatsApp. Verifica tu número e intenta de nuevo en 1-2 minutos.',
+                        503,
+                    ),
+                );
+            }
 
             return reply.send({
                 success: true,
                 message: 'Código enviado a tu WhatsApp',
                 userId: user.id,
-                // In dev it's handy to see why a message didn't land.
-                ...(sendResult.ok ? {} : { otp_delivery: sendResult.error }),
             });
         }
     );
@@ -965,10 +994,24 @@ export default async function authRoutes(fastify) {
             logger: fastify.log,
         });
 
-        return reply.send({
-            success: true,
-            ...(send.ok ? {} : { otp_delivery: send.error }),
-        });
+        // Mismo principio que /auth/register: si el bot no logró
+        // entregar, devolvemos 503 con un mensaje claro en vez de
+        // mentir con success: true.
+        if (!send.ok) {
+            fastify.log.warn(
+                { phone, purpose, err: send.error },
+                '[otp/resend] WhatsApp send failed',
+            );
+            return reply.status(503).send(
+                errPayload(
+                    'OTP_DELIVERY_FAILED',
+                    'No pudimos enviar el código por WhatsApp. Intenta de nuevo en 1-2 minutos.',
+                    503,
+                ),
+            );
+        }
+
+        return reply.send({ success: true });
     });
 
     // ── GET /auth/me ────────────────────────────────────────
@@ -1145,10 +1188,21 @@ export default async function authRoutes(fastify) {
                 logger: fastify.log,
             });
 
-            return reply.send({
-                success: true,
-                ...(send.ok ? {} : { otp_delivery: send.error }),
-            });
+            if (!send.ok) {
+                fastify.log.warn(
+                    { phone: new_phone, err: send.error },
+                    '[phone/change/start] WhatsApp send failed',
+                );
+                return reply.status(503).send(
+                    errPayload(
+                        'OTP_DELIVERY_FAILED',
+                        'No pudimos enviar el código por WhatsApp. Intenta de nuevo en 1-2 minutos.',
+                        503,
+                    ),
+                );
+            }
+
+            return reply.send({ success: true });
         }
     );
 
