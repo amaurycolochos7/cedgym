@@ -464,7 +464,17 @@ export default async function membershipsStripeRoutes(fastify) {
                     plan,
                     status: 'TRIAL',
                     starts_at: new Date(),
-                    expires_at: new Date(),
+                    // Grace de 1 hora para que aterrice el webhook
+                    // invoice.payment_succeeded. Si llega, sobrescribe
+                    // expires_at a starts_at+30d. Si no llega (checkout
+                    // abandonado / pago rechazado), el cleanup sweep del
+                    // worker borra esta fila zombie y el usuario queda
+                    // sin membresía — estado claro para el admin.
+                    // Antes seteábamos new Date() en ambos: la fila
+                    // nacía vencida en el mismo segundo, se quedaba
+                    // colgada como TRIAL+expired forever, y el admin
+                    // veía "Plan: PRO" sin saber que estaba muerta.
+                    expires_at: new Date(Date.now() + 60 * 60 * 1000),
                     price_mxn: amount,
                     billing_cycle: billingCycle,
                     stripe_subscription_id: subscription.id,
