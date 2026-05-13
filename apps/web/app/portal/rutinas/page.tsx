@@ -19,6 +19,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,6 +32,7 @@ import {
   Loader2,
   Lock,
   RefreshCw,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, normalizeError } from '@/lib/api';
@@ -1603,27 +1605,56 @@ function RegenerateModal({
 
   const quotaBlocks = !!quota && !quota.routine.allowed;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4">
+  // Lock del body scroll mientras el modal está abierto — sin esto en
+  // mobile el background sigue siendo scrolleable y la "hoja inferior"
+  // se siente desconectada.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  // createPortal a document.body — sin esto el modal queda atrapado
+  // dentro del árbol DOM de la página, que vive bajo motion.section
+  // de framer-motion. framer-motion aplica `transform` a sus nodos,
+  // y CSS spec dice que un ancestro con `transform` crea un containing
+  // block que rompe `position:fixed` (el fixed se posiciona relativo
+  // a ese ancestro, NO al viewport). Resultado visible: el header del
+  // portal (z-40) se filtraba por encima del modal porque el modal
+  // empezaba debajo del header en vez de cubrir todo. Renderizar al
+  // body lo saca de cualquier transform-parent y vuelve a ser
+  // verdaderamente fullscreen.
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 sm:p-4" onClick={onClose}>
       <AIGenerationOverlay open={mut.isPending} kind="routine" />
       {/* max-h + overflow-y-auto: el modal creció (ahora también
           edita Tipo + Deporte) y en pantallas chicas el contenido se
           comía el botón "Regenerar". Limitamos a 90vh y dejamos
-          scroll interno; el bg fijo de atrás no se mueve. */}
-      <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain bg-white ring-1 ring-slate-200 shadow-xl rounded-t-2xl sm:rounded-2xl p-6 space-y-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display text-2xl text-slate-900">REGENERAR RUTINA</h2>
-            <p className="text-sm text-slate-500 mt-1">
+          scroll interno; el bg fijo de atrás no se mueve.
+          onClick stopPropagation evita que click dentro del modal lo
+          cierre — solo cierra al tocar el backdrop o la X. */}
+      <div
+        className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain bg-white ring-1 ring-slate-200 shadow-xl rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 space-y-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-xl sm:text-2xl text-slate-900 leading-tight">
+              Regenerar rutina
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
               Esto reemplaza tu rutina activa. La anterior queda en historial.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-700 text-sm"
+            aria-label="Cerrar"
+            className="shrink-0 -mr-1 -mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
           >
-            Cerrar
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -1803,7 +1834,8 @@ function RegenerateModal({
           )}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
