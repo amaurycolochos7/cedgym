@@ -832,14 +832,33 @@ export default async function aiRoutinesRoutes(fastify) {
                     data: { is_active: false, ended_at: new Date() },
                 });
 
+                // Los METADATOS de la rutina guardada vienen del INPUT
+                // del socio (merged = body > routine_profile > defaults),
+                // NO del template. Antes copiábamos de data.routine.*
+                // que viene del template seleccionado — eso causaba que
+                // un socio pidiendo WEIGHT_LOSS / 4d / HOME terminara
+                // con goal=MUSCLE_GAIN, days=5, location=GYM porque el
+                // template más cercano (Hombre 2025 5d MuscleGain) era
+                // lo único que matcheaba al relajar constraints.
+                // El name lo mantenemos del template si existe (es más
+                // descriptivo que un nombre genérico), o caemos a uno
+                // derivado del input.
+                const objectiveLabel = {
+                    WEIGHT_LOSS: 'Pérdida de grasa',
+                    MUSCLE_GAIN: 'Hipertrofia',
+                    MAINTENANCE: 'Mantenimiento',
+                    STRENGTH: 'Fuerza',
+                    ENDURANCE: 'Resistencia',
+                    GENERAL_FITNESS: 'Fitness general',
+                }[merged.objective] || merged.objective;
                 const newRoutine = await tx.routine.create({
                     data: {
                         workspace_id: user.workspace_id,
                         user_id: user.id,
-                        name: data.routine.name,
-                        goal: data.routine.goal,
-                        location: data.routine.location,
-                        days_per_week: data.routine.days_per_week,
+                        name: data.routine.name || `Rutina ${objectiveLabel} — ${firstName}`,
+                        goal: merged.objective,
+                        location: merged.location,
+                        days_per_week: merged.days_per_week,
                         source: 'AI_GENERATED',
                         ai_generation_id: aiGenerationId,
                         is_active: true,

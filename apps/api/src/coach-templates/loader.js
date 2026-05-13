@@ -253,8 +253,12 @@ export function select_routine_template(profile = {}) {
     if (all.length === 0) return null;
 
     // Each layer = list of constraint keys that MUST match. Drop them
-    // one at a time from the tail. Last layer = no constraints — picks
-    // by source/days/id from the entire catalog.
+    // one at a time from the tail. OBJECTIVE NUNCA SE RELAJA: si no hay
+    // template con el objetivo pedido, devolvemos null y el caller usa
+    // el path AI free-form. Antes existía una capa final que soltaba
+    // objective y caía a 'el COACH_EXCEL más cercano' — eso causó que
+    // un socio pidiendo WEIGHT_LOSS terminara con 'Rutina Hombre 2025
+    // MUSCLE_GAIN 5d GYM' (template diametralmente opuesto al input).
     const layers = [
         ['objective', 'gender', 'location', 'discipline', 'user_type', 'level', 'days_per_week'],
         ['objective', 'gender', 'location', 'discipline', 'user_type', 'days_per_week'], // drop level
@@ -263,7 +267,8 @@ export function select_routine_template(profile = {}) {
         ['objective', 'gender', 'location'],                                              // drop discipline
         ['objective', 'gender'],                                                          // drop location
         ['objective'],                                                                    // drop gender
-        [],                                                                               // drop objective — last resort
+        // INTENCIONALMENTE NO hay capa 8 (drop objective). Mejor null →
+        // AI free-form que un template del goal contrario.
     ];
 
     for (const keys of layers) {
