@@ -1606,7 +1606,11 @@ function RegenerateModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-0 sm:p-4">
       <AIGenerationOverlay open={mut.isPending} kind="routine" />
-      <div className="w-full sm:max-w-lg bg-white ring-1 ring-slate-200 shadow-xl rounded-t-2xl sm:rounded-2xl p-6 space-y-5">
+      {/* max-h + overflow-y-auto: el modal creció (ahora también
+          edita Tipo + Deporte) y en pantallas chicas el contenido se
+          comía el botón "Regenerar". Limitamos a 90vh y dejamos
+          scroll interno; el bg fijo de atrás no se mueve. */}
+      <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto overscroll-contain bg-white ring-1 ring-slate-200 shadow-xl rounded-t-2xl sm:rounded-2xl p-6 space-y-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl text-slate-900">REGENERAR RUTINA</h2>
