@@ -306,11 +306,48 @@ export default function PortalRutinasPage() {
 // resuelve cualquier campo faltante con el routine_profile del socio.
 // Solo mandamos los que el socio explícitamente cambió en el panel
 // "ajustar para esta vez", para que se sienta como override claro.
+type UserType = 'ADULT' | 'SENIOR' | 'KID' | 'ATHLETE';
+type Discipline =
+  | 'FOOTBALL_SOCCER' | 'FOOTBALL_US' | 'BASKETBALL' | 'TENNIS'
+  | 'KARATE' | 'GOLF' | 'SWIMMING' | 'BASEBALL' | 'VOLLEYBALL'
+  | 'BOXING' | 'CROSSFIT' | 'POWERLIFTING' | 'HYROX'
+  | 'STRENGTH' | 'FUNCTIONAL';
+
+const USER_TYPE_OPTIONS: { value: UserType; label: string; emoji: string }[] = [
+  { value: 'ADULT',   label: 'Adulto',         emoji: '🧍' },
+  { value: 'SENIOR',  label: 'Adulto mayor',   emoji: '👴' },
+  { value: 'KID',     label: 'Niño/Juvenil',   emoji: '👶' },
+  { value: 'ATHLETE', label: 'Deportista',     emoji: '🏆' },
+];
+
+// Lista completa de disciplinas — replica las del wizard (todas las 15
+// que el backend ya tiene catalogadas). Si el socio cambia a otro
+// deporte solo para esta generación, no tiene que ir al perfil.
+const DISCIPLINE_OPTIONS: { value: Discipline; label: string }[] = [
+  { value: 'FOOTBALL_SOCCER', label: '⚽ Fútbol soccer' },
+  { value: 'FOOTBALL_US',     label: '🏈 Fútbol americano' },
+  { value: 'BASKETBALL',      label: '🏀 Básquetbol' },
+  { value: 'TENNIS',          label: '🎾 Tenis' },
+  { value: 'KARATE',          label: '🥋 Karate' },
+  { value: 'GOLF',            label: '⛳ Golf' },
+  { value: 'SWIMMING',        label: '🏊 Natación' },
+  { value: 'BASEBALL',        label: '⚾ Béisbol' },
+  { value: 'VOLLEYBALL',      label: '🏐 Voleibol' },
+  { value: 'BOXING',          label: '🥊 Boxeo' },
+  { value: 'CROSSFIT',        label: '🏋️ CrossFit' },
+  { value: 'POWERLIFTING',    label: '🏋️‍♂️ Powerlifting' },
+  { value: 'HYROX',           label: '🏃 HYROX' },
+  { value: 'STRENGTH',        label: '💪 Fuerza / hipertrofia' },
+  { value: 'FUNCTIONAL',      label: '🤸 Funcional' },
+];
+
 interface GenerateOverride {
   location?: Location;
   objective?: Objective;
   days_per_week?: number;
   session_duration_min?: number;
+  user_type?: UserType;
+  discipline?: Discipline;
 }
 
 function GenerateRoutineCard({
@@ -384,6 +421,12 @@ function GenerateRoutineCard({
     objective: override.objective ?? profileObjective,
     days_per_week: override.days_per_week ?? profileDays,
     session_duration_min: override.session_duration_min ?? profileDuration,
+    user_type:
+      (override.user_type ?? (profileUserType as UserType | undefined) ?? 'ADULT') as UserType,
+    discipline:
+      (override.discipline ?? (profileDiscipline as Discipline | undefined)) as
+        | Discipline
+        | undefined,
   };
 
   return (
@@ -522,6 +565,65 @@ function GenerateRoutineCard({
               <p className="text-[11px] text-slate-400">
                 Estos cambios solo aplican a esta generación. Tu perfil queda intacto.
               </p>
+
+              <FieldBlock label="Tipo de entrenamiento">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                  {USER_TYPE_OPTIONS.map((t) => {
+                    const active = effective.user_type === t.value;
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() =>
+                          setOverride((ov) => ({
+                            ...ov,
+                            user_type: t.value,
+                            // Si dejó de ser Deportista, limpiar la disciplina
+                            discipline: t.value === 'ATHLETE' ? ov.discipline : undefined,
+                          }))
+                        }
+                        className={[
+                          'flex items-center gap-2 rounded-xl ring-1 p-3 text-left transition-colors',
+                          active
+                            ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                            : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
+                        ].join(' ')}
+                      >
+                        <span className="text-xl leading-none">{t.emoji}</span>
+                        <span className={['text-sm font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
+                          {t.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </FieldBlock>
+
+              {effective.user_type === 'ATHLETE' && (
+                <FieldBlock label="Deporte para esta rutina">
+                  <select
+                    value={effective.discipline ?? ''}
+                    onChange={(e) =>
+                      setOverride((ov) => ({
+                        ...ov,
+                        discipline: (e.target.value || undefined) as Discipline | undefined,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none"
+                  >
+                    <option value="">— Elige deporte —</option>
+                    {DISCIPLINE_OPTIONS.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-[11px] text-slate-500">
+                    Para esta generación nada más. Si quieres cambiarlo
+                    permanente, ve a <Link href="/portal/perfil" className="text-blue-600 hover:underline">Editar perfil</Link>.
+                  </p>
+                </FieldBlock>
+              )}
 
               <FieldBlock label="Objetivo">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
