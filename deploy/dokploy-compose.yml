@@ -130,18 +130,28 @@ services:
       API_KEY: ${WHATSAPP_BOT_KEY}
       PORT: 3002
       NODE_ENV: ${NODE_ENV:-production}
+      # Redundante con el ENV del Dockerfile pero explícito acá para que
+      # cualquier admin que mire el compose vea por qué el bot necesita
+      # heap grande (parse de session data 700+ MB al arrancar).
+      NODE_OPTIONS: --max-old-space-size=1536
     volumes:
       - wwebjs_auth:/app/data/wwebjs_auth
-    shm_size: '512mb'
+    # Chromium con la sesión de WhatsApp pesada necesita shm holgado o
+    # los renderer subsidiary processes mueren intermitente.
+    shm_size: '1gb'
     depends_on:
       db:
         condition: service_healthy
+    # Healthcheck a /health/ready (no /health): sólo se considera healthy
+    # cuando la sesión WA está realmente isConnected. start_period 90s
+    # porque el boot de WWebJS (Puppeteer + parse de session data) toma
+    # 30-60s.
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null --timeout=5 http://localhost:3002/health/ready || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 90s
     networks:
       - dokploy-network
 
