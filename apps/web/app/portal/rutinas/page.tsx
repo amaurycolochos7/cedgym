@@ -1578,12 +1578,48 @@ function RegenerateModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
+  const qcLocal = useQueryClient();
+
   const mut = useMutation({
     // See the GenerateForm comment above — same 180s ceiling, same
     // reason (template-path retry can run two OpenAI calls).
-    mutationFn: async (body: GenerateOverride) =>
-      (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data,
+    //
+    // CAUSA RAÍZ del bug "elegí Natación pero el pill sigue diciendo
+    // Básquet": el modal mandaba user_type/discipline solo como
+    // override de UNA generación, sin persistir nada al perfil. La
+    // rutina sí se generaba para Natación, pero el pill (que lee de
+    // `routine_profile` en BD) seguía mostrando Básquet → cliente
+    // confundido porque las dos cosas no concuerdan. Ahora ANTES de
+    // generar persistimos los cambios al perfil mergeando con lo que
+    // ya tenía, así pill + rutina + próximas generaciones coinciden.
+    mutationFn: async (body: GenerateOverride) => {
+      // Solo mandamos los campos que el modal edita — el endpoint
+      // backend ahora hace merge, así que NO necesitamos enviar todo
+      // el profile y arriesgarnos a pisar likes/injuries/etc.
+      const profilePatch = {
+        location: body.location,
+        objective: body.objective,
+        days_per_week: body.days_per_week,
+        session_duration_min: body.session_duration_min,
+        user_type: body.user_type,
+        // discipline solo aplica si es ATHLETE — si dejó de serlo,
+        // mandamos null para limpiarla del perfil.
+        discipline: body.user_type === 'ATHLETE' ? (body.discipline ?? null) : null,
+      };
+      try {
+        await api.patch('/users/me/routine-profile', profilePatch);
+      } catch (e) {
+        // Si el PATCH falla (ej. validación), seguimos con la
+        // generación — mejor un pill viejo que bloquear al socio.
+        // eslint-disable-next-line no-console
+        console.warn('[regenerate] profile persist failed', e);
+      }
+      return (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data;
+    },
     onSuccess: () => {
+      // Invalidamos /auth/me para que el pill DEPORTE refleje
+      // inmediatamente el nuevo deporte sin requerir un F5.
+      qcLocal.invalidateQueries({ queryKey: ['auth', 'me'] });
       toast.success('Nueva rutina generada.');
       onDone();
     },

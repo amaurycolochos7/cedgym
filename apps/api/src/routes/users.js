@@ -288,10 +288,24 @@ export default async function usersRoutes(fastify) {
         },
       });
     }
+    // MERGE no replace — antes este endpoint sobreescribía el JSON
+    // completo, así que clientes que mandaban solo {user_type, discipline}
+    // borraban el resto (likes, injuries, motivation, etc.). Ahora
+    // pulleamos el actual y mergeamos shallow + dropeamos llaves
+    // que vienen explícitamente como null/undefined para permitir
+    // "borrar" un campo (ej. discipline=null cuando deja de ser ATHLETE).
+    const current = await fastify.prisma.user.findUnique({
+      where: { id: userId },
+      select: { routine_profile: true },
+    });
+    const merged = {
+      ...(current?.routine_profile ?? {}),
+      ...parsed.data,
+    };
     const updated = await fastify.prisma.user.update({
       where: { id: userId },
       data: {
-        routine_profile: parsed.data,
+        routine_profile: merged,
         profile_completed: true,
       },
       select: { id: true, routine_profile: true, profile_completed: true, updated_at: true },
