@@ -308,6 +308,38 @@ export default async function adminMembersRoutes(fastify) {
     return { success: true };
   });
 
+  // Desbloqueo manual: limpia el lockout por intentos fallidos sin
+  // tocar status ni password. Útil cuando el socio llama por teléfono
+  // y prefiere que lo destrabes en vez de esperar 15 min o usar
+  // "olvidé contraseña".
+  fastify.post('/admin/miembros/:id/unlock', adminOnly, async (req) => {
+    const workspaceId = assertWorkspaceAccess(req);
+    const target = await requireSameWorkspace(
+      fastify.prisma,
+      'user',
+      req.params.id,
+      workspaceId,
+      { select: { id: true, locked_until: true, failed_login_attempts: true } },
+    );
+    await fastify.prisma.user.update({
+      where: { id: target.id },
+      data: { locked_until: null, failed_login_attempts: 0 },
+    });
+    audit(fastify, {
+      workspace_id: workspaceId,
+      actor_id: req.user?.sub || req.user?.id || null,
+      action: 'member.unlocked',
+      target_type: 'user',
+      target_id: target.id,
+      metadata: {
+        previous_locked_until: target.locked_until?.toISOString() || null,
+        previous_failed_attempts: target.failed_login_attempts ?? 0,
+      },
+      ...auditCtx(req),
+    });
+    return { success: true };
+  });
+
   // ─── POST /admin/miembros/:id/mark-inscription-paid ──────────────
   //
   // Grandfathering manual: marca al socio como "ya cumplió la

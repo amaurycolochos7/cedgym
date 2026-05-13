@@ -6,12 +6,19 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { loginSchema, type LoginInput } from '@/lib/schemas';
 import { authApi, normalizeError } from '@/lib/api';
 import { useAuth, postLoginPathForRole } from '@/lib/auth';
 import type { ApiError } from '@/lib/schemas';
+
+function formatCountdown(totalSec: number): string {
+  const s = Math.max(0, Math.floor(totalSec));
+  const mm = Math.floor(s / 60).toString().padStart(2, '0');
+  const ss = (s % 60).toString().padStart(2, '0');
+  return `${mm}:${ss}`;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,6 +35,27 @@ export default function LoginPage() {
       ? 'Tu sesión expiró. Inicia sesión de nuevo.'
       : null,
   );
+  // Cuenta regresiva cuando el API responde ACCOUNT_LOCKED. Mientras
+  // > 0, el form se deshabilita y mostramos un banner con MM:SS
+  // refrescado cada segundo + CTA de "recupera contraseña". Al llegar
+  // a 0 limpiamos y volvemos a permitir login.
+  const [lockedUntilMs, setLockedUntilMs] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+
+  useEffect(() => {
+    if (!lockedUntilMs) return;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((lockedUntilMs - Date.now()) / 1000));
+      setSecondsLeft(left);
+      if (left <= 0) {
+        setLockedUntilMs(null);
+        setApiError(null);
+      }
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [lockedUntilMs]);
 
   // If we land here already authenticated (e.g. opened /login in a new tab
   // while a session is active), bounce straight to the role's landing.
@@ -90,6 +118,26 @@ export default function LoginPage() {
     },
     onError: (err) => {
       const norm = normalizeError(err) as ApiError;
+      // Cuenta bloqueada por intentos fallidos — el API devuelve un
+      // ACCOUNT_LOCKED con locked_until ISO en details. Activamos el
+      // cronómetro regresivo en pantalla; el effect del useEffect lo
+      // refresca cada segundo y al llegar a 00:00 limpia el estado.
+      const details = (norm.details ?? {}) as {
+        code?: string;
+        locked_until?: string;
+        retry_after_sec?: number;
+      };
+      if (norm.code === 'ACCOUNT_LOCKED' || details.code === 'ACCOUNT_LOCKED') {
+        const untilIso = details.locked_until;
+        const until = untilIso ? Date.parse(untilIso) : NaN;
+        if (Number.isFinite(until) && until > Date.now()) {
+          setLockedUntilMs(until);
+        } else if (details.retry_after_sec && details.retry_after_sec > 0) {
+          setLockedUntilMs(Date.now() + details.retry_after_sec * 1000);
+        }
+        setApiError(null);
+        return;
+      }
       // Manejo específico para casos donde el mensaje del backend
       // es opaco. El plugin de rate-limit del API a veces devuelve
       // { code:"INTERNAL", message:"Error" } sin contexto — lo
@@ -140,7 +188,44 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {apiError && (
+        {lockedUntilMs && secondsLeft > 0 && (
+          <div
+            role="alert"
+            className="flex flex-col gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            <div className="flex items-start gap-2">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <div className="font-semibold">
+                  Cuenta bloqueada temporalmente
+                </div>
+                <div className="text-amber-800">
+                  Por intentos fallidos. Vuelve a intentar en{' '}
+                  <span className="font-mono font-bold tabular-nums">
+                    {formatCountdown(secondsLeft)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                // Si el user ya tipeó número, lo pasamos pre-cargado.
+                const id = (document.getElementById('identifier') as HTMLInputElement | null)
+                  ?.value || '';
+                const digits = id.replace(/\D/g, '');
+                const href = digits.length >= 10
+                  ? `/forgot-password?phone=${digits}`
+                  : '/forgot-password';
+                router.push(href);
+              }}
+              className="inline-flex w-full items-center justify-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-amber-700"
+            >
+              Recuperar contraseña ahora
+            </button>
+          </div>
+        )}
+        {apiError && !lockedUntilMs && (
           <div
             role="alert"
             className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600"
@@ -218,11 +303,13 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || (lockedUntilMs !== null && secondsLeft > 0)}
           className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-bold uppercase tracking-[0.1em] text-white shadow-md shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:translate-y-0 disabled:opacity-50"
         >
           {mutation.isPending && <Loader2 size={16} className="animate-spin" />}
-          Iniciar sesión
+          {lockedUntilMs && secondsLeft > 0
+            ? `Bloqueado (${formatCountdown(secondsLeft)})`
+            : 'Iniciar sesión'}
         </button>
       </form>
 

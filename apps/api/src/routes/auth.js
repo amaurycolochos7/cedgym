@@ -571,7 +571,28 @@ export default async function authRoutes(fastify) {
                     metadata: { reason: 'locked', until: user.locked_until.toISOString() },
                     ...auditCtx(request),
                 });
-                return reply.status(401).send(errPayload('INVALID_CREDENTIALS', 'Credenciales inválidas', 401));
+                // Anti-enumeration tradeoff: para que el socio sepa qué
+                // hacer cuando su cuenta queda bloqueada, devolvemos
+                // ACCOUNT_LOCKED + timestamp/segundos restantes. Esto
+                // confirma a un atacante que el user existe, pero solo
+                // DESPUÉS de que alguien gastó 5 intentos en el mismo
+                // número — costo no trivial. A cambio el socio ve un
+                // cronómetro real y un CTA de "recupera contraseña" en
+                // lugar del genérico "credenciales inválidas".
+                const retryAfterSec = Math.max(
+                    0,
+                    Math.ceil((user.locked_until.getTime() - Date.now()) / 1000),
+                );
+                return reply.status(401).send({
+                    error: {
+                        code: 'ACCOUNT_LOCKED',
+                        message:
+                            'Cuenta bloqueada temporalmente por intentos fallidos. ' +
+                            'Vuelve a intentar más tarde o recupera tu contraseña.',
+                        locked_until: user.locked_until.toISOString(),
+                        retry_after_sec: retryAfterSec,
+                    },
+                });
             }
 
             const valid = await bcrypt.compare(password, user.password_hash);
@@ -861,6 +882,13 @@ export default async function authRoutes(fastify) {
             userPatch.status = 'ACTIVE';
             userPatch.phone_verified_at = new Date();
         }
+        // Si el user estaba bloqueado por intentos fallidos (locked_until
+        // o failed_login_attempts > 0), limpiamos esos campos: el OTP
+        // por WhatsApp es una prueba de identidad MÁS FUERTE que la
+        // contraseña — sería absurdo dejarlo bloqueado cuando acaba de
+        // demostrar control del número y setear una contraseña nueva.
+        if (user.locked_until) userPatch.locked_until = null;
+        if (user.failed_login_attempts > 0) userPatch.failed_login_attempts = 0;
 
         // Revoke ALL existing refresh tokens — password change should log
         // out every other device.

@@ -10,12 +10,14 @@ import {
   ChevronsLeftRight,
   IdCard,
   KeyRound,
+  Lock,
   MoreVertical,
   Pause,
   PhoneCall,
   Play,
   Send,
   Trash2,
+  Unlock,
   X,
 } from 'lucide-react';
 import {
@@ -105,6 +107,27 @@ export default function AdminMemberDetailPage() {
     onError: () => toast.error('No se pudo marcar al socio'),
   });
 
+  const unlockMut = useMutation({
+    mutationFn: () => adminApi.unlockMember(id),
+    onSuccess: () => {
+      toast.success('Cuenta desbloqueada');
+      invalidate();
+    },
+    onError: () => toast.error('No se pudo desbloquear'),
+  });
+
+  // Membresía-style lockout state: true cuando locked_until > now.
+  const lockedUntilStr: string | null = (m as any)?.locked_until ?? null;
+  const lockedUntilMs = lockedUntilStr ? Date.parse(lockedUntilStr) : NaN;
+  const isLocked =
+    Number.isFinite(lockedUntilMs) && lockedUntilMs > Date.now();
+  const lockedHHMM = isLocked
+    ? new Date(lockedUntilMs).toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+
   return (
     <div className="space-y-5">
       <div className="flex items-start gap-3">
@@ -126,6 +149,15 @@ export default function AdminMemberDetailPage() {
           </h1>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
             {m?.status && <StatusBadge status={m.status} />}
+            {isLocked && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                title={`Bloqueado hasta ${lockedUntilStr}`}
+              >
+                <Lock className="h-3 w-3" />
+                Bloqueado hasta {lockedHHMM}
+              </span>
+            )}
             {m?.phone && <span className="tabular-nums">{m.phone}</span>}
             {m?.email && (
               <span className="break-all">· {m.email}</span>
@@ -193,6 +225,21 @@ export default function AdminMemberDetailPage() {
                   <KeyRound className="h-4 w-4" />
                   Reset password
                 </button>
+                {isLocked && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    disabled={unlockMut.isPending}
+                    onClick={() => {
+                      setActionsOpen(false);
+                      unlockMut.mutate();
+                    }}
+                    className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left text-sm text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                  >
+                    <Unlock className="h-4 w-4" />
+                    {unlockMut.isPending ? 'Desbloqueando…' : 'Desbloquear'}
+                  </button>
+                )}
                 <button
                   type="button"
                   role="menuitem"
@@ -261,6 +308,17 @@ export default function AdminMemberDetailPage() {
             <KeyRound className="h-3.5 w-3.5" />
             Reset password
           </button>
+          {isLocked && (
+            <button
+              type="button"
+              disabled={unlockMut.isPending}
+              onClick={() => unlockMut.mutate()}
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+            >
+              <Unlock className="h-3.5 w-3.5" />
+              {unlockMut.isPending ? 'Desbloqueando…' : 'Desbloquear'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setWaOpen(true)}

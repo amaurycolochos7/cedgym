@@ -535,6 +535,8 @@ export const adminApi = {
     api.post(`/admin/miembros/${id}/suspend`).then((r) => r.data),
   reactivateMember: (id: string) =>
     api.post(`/admin/miembros/${id}/reactivate`).then((r) => r.data),
+  unlockMember: (id: string) =>
+    api.post(`/admin/miembros/${id}/unlock`).then((r) => r.data),
   resetMemberPassword: (id: string) =>
     api.post(`/admin/miembros/${id}/reset-password`).then((r) => r.data),
   // Marca al socio como "ya cumplió la inscripción única". Útil
