@@ -471,23 +471,43 @@ export function FitnessProfileWizard({ initial }: Props) {
   const [selfieJustUploaded, setSelfieJustUploaded] = useState(false);
   const hasSelfie = !!meQ.data?.user?.selfie_url || selfieJustUploaded;
 
-  /* Hydrate once from localStorage (preferencia) o initial server data. */
+  /* Hydrate desde server (initial) + localStorage. Importante: los
+     campos canónicos del user (full_name, birth_date, gender) SIEMPRE
+     ganan del server — el localStorage solo guarda preferencias del
+     wizard (objetivo, equipo, días, etc.). Antes preferíamos
+     localStorage de forma absoluta y un draft cacheado de antes de
+     que el user llenara su perfil dejaba al wizard mostrando "falta
+     nombre" aunque la DB ya lo tuviera. */
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let cached: Partial<Draft> = {};
     try {
       const raw = window.localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<Draft>;
-        setDraft({ ...EMPTY_DRAFT, ...parsed });
-        return;
-      }
+      if (raw) cached = JSON.parse(raw) as Partial<Draft>;
     } catch {
       /* ignore */
     }
-    if (initial && typeof initial === 'object') {
-      // Trust-but-verify: el server guarda este JSON sin estructura dura.
-      setDraft({ ...EMPTY_DRAFT, ...(initial as Partial<Draft>) });
+    const server: Partial<Draft> =
+      initial && typeof initial === 'object' ? (initial as Partial<Draft>) : {};
+
+    // Server-authoritative: estos viven en columnas dedicadas de la
+    // tabla `users`, no en el JSON del wizard. Si el server los tiene
+    // (length>0 / truthy), siempre ganan sobre lo cacheado.
+    const serverOverride: Partial<Draft> = {};
+    if (server.full_name && String(server.full_name).trim()) {
+      serverOverride.full_name = server.full_name;
     }
+    if (server.birth_date && String(server.birth_date).trim()) {
+      serverOverride.birth_date = server.birth_date;
+    }
+    if (server.gender && String(server.gender).trim()) {
+      serverOverride.gender = server.gender;
+    }
+    if (typeof server.age === 'number') {
+      serverOverride.age = server.age;
+    }
+
+    setDraft({ ...EMPTY_DRAFT, ...server, ...cached, ...serverOverride });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
