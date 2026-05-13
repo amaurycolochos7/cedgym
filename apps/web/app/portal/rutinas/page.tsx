@@ -218,6 +218,11 @@ export default function PortalRutinasPage() {
   // y pre-rellenar los overrides con lo que el socio ya configuró en su
   // wizard. Leemos routine_profile (nuevo) con fallback al fitness_profile
   // legacy para cuentas que aún no migraron.
+  // refetchOnMount: 'always' — el socio pide explícitamente que cada
+  // vez que entre a /portal/rutinas (o vuelva de editar perfil) se
+  // recarguen sus preferencias antes de mostrar/generar nada. Sin
+  // esto React Query podía servir caché viejo y la card del header
+  // mostraba un Tipo/Deporte/Nivel desactualizado.
   const meQ = useQuery<{
     user: {
       name?: string | null;
@@ -228,6 +233,7 @@ export default function PortalRutinasPage() {
   }>({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api.get('/auth/me')).data,
+    refetchOnMount: 'always',
   });
 
   // AI usage quota — drives status line above the generator CTA and the
@@ -291,6 +297,7 @@ export default function PortalRutinasPage() {
     <ActiveRoutineView
       routine={routine}
       hasFitnessProfile={hasFitnessProfile}
+      profile={effectiveProfile}
       quota={quota}
       firstName={firstName}
       onRegenerated={onGenOrRegen}
@@ -527,7 +534,23 @@ function GenerateRoutineCard({
           <button
             type="button"
             disabled={disabled}
-            onClick={() => mut.mutate(override)}
+            onClick={() =>
+              // Mandamos el effective COMPLETO (perfil + overrides), no
+              // solo el override. Así el body que viaja al backend
+              // refleja exactamente lo que el socio ve en pantalla,
+              // incluyendo user_type/discipline. Sin esto, si el socio
+              // es ATHLETE/BASKETBALL en perfil pero no abrió el panel
+              // de "ajustar", body llegaba {} y dependíamos 100% de
+              // que el backend leyera la BD fresca.
+              mut.mutate({
+                location: effective.location,
+                objective: effective.objective,
+                days_per_week: effective.days_per_week,
+                session_duration_min: effective.session_duration_min,
+                user_type: effective.user_type,
+                discipline: effective.discipline,
+              })
+            }
             className={[
               'group relative w-full inline-flex items-center justify-center px-5 py-3 rounded-xl text-white font-semibold text-sm transition-all',
               disabled
@@ -792,12 +815,14 @@ function QuotaStatus({ quota }: { quota: AiQuota | null }) {
 function ActiveRoutineView({
   routine,
   hasFitnessProfile,
+  profile,
   quota,
   firstName,
   onRegenerated,
 }: {
   routine: Routine;
   hasFitnessProfile: boolean;
+  profile: Record<string, unknown> | null;
   quota: AiQuota | null;
   firstName: string;
   onRegenerated: () => void;
@@ -921,6 +946,39 @@ function ActiveRoutineView({
   const goalLabel = routine.goal ? GOAL_LABELS[routine.goal] ?? routine.goal : null;
   const locationLabel = routine.location ? LOCATION_LABELS[routine.location] ?? routine.location : null;
 
+  // Tipo / Deporte / Nivel salen del FitnessProfile actual del socio.
+  // No están persistidos en la Routine — si el socio cambia perfil y
+  // regenera, los pills reflejan el perfil con el que se generó esta
+  // nueva rutina. Mostrarlos aquí cierra el ciclo "qué configuré → qué
+  // rutina obtuve" que el socio pidió ver explícito.
+  const profileUserType = profile?.user_type as string | undefined;
+  const profileDiscipline = profile?.discipline as string | undefined;
+  const profileLevel = profile?.level as string | undefined;
+  const profilePills: { label: string; value: string }[] = [];
+  if (profileUserType) {
+    profilePills.push({
+      label: 'Tipo',
+      value: USER_TYPE_LABELS[profileUserType] ?? profileUserType,
+    });
+  }
+  if (profileUserType === 'ATHLETE' && profileDiscipline) {
+    profilePills.push({
+      label: 'Deporte',
+      value: DISCIPLINE_LABELS[profileDiscipline] ?? profileDiscipline,
+    });
+  }
+  if (profileLevel) {
+    profilePills.push({
+      label: 'Nivel',
+      value: LEVEL_LABELS[profileLevel] ?? profileLevel,
+    });
+  }
+  // routine.name suele venir con el deporte ("Básquet — rutina de Ana
+  // 4 días"). Lo mostramos solo si la IA lo personalizó — caemos al
+  // genérico de la página si está vacío.
+  const routineDisplayName =
+    routine.name && routine.name.trim().length > 0 ? routine.name.trim() : null;
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* ─────────────────────────────────────────────────────────────
@@ -964,6 +1022,26 @@ function ActiveRoutineView({
                 <span>
                   {routine.days_per_week} días por semana
                 </span>
+              </div>
+            )}
+            {routineDisplayName && (
+              <div className="mt-1.5 text-[12px] text-slate-400 italic truncate">
+                {routineDisplayName}
+              </div>
+            )}
+            {profilePills.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {profilePills.map((p) => (
+                  <span
+                    key={p.label}
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-100"
+                  >
+                    <span className="uppercase tracking-wide text-[9px] text-blue-500 font-semibold">
+                      {p.label}
+                    </span>
+                    {p.value}
+                  </span>
+                ))}
               </div>
             )}
           </div>
@@ -1444,17 +1522,27 @@ function RegenerateModal({
   // otra Hipertrofia. Loop infinito. Ahora el perfil manda; la
   // rutina actual solo se usa como fallback si el perfil aún no
   // tiene esos campos.
+  //
+  // refetchOnMount: 'always' garantiza que SIEMPRE pidamos al backend
+  // el perfil más reciente al abrir el modal. El socio pidió esto:
+  // "al darle generar quiero que cargue de nuevo las preferencias"
+  // — antes podíamos servir caché de hace minutos y mandar a la IA
+  // un perfil viejo (sin ATHLETE/BASKETBALL recién guardados).
   const meQ = useQuery<{
     user?: { routine_profile?: Record<string, unknown> | null };
   }>({
     queryKey: ['auth', 'me'],
     queryFn: async () => (await api.get('/auth/me')).data,
+    refetchOnMount: 'always',
   });
   const profile = meQ.data?.user?.routine_profile ?? null;
   const profileLocation = profile?.location as Location | undefined;
   const profileObjective = profile?.objective as Objective | undefined;
   const profileDays = profile?.days_per_week as number | undefined;
   const profileDuration = profile?.session_duration_min as number | undefined;
+  const profileUserType = profile?.user_type as UserType | undefined;
+  const profileDiscipline = profile?.discipline as Discipline | undefined;
+  const profileLevel = profile?.level as string | undefined;
 
   const [form, setForm] = useState<Required<GenerateOverride>>({
     location:
@@ -1466,6 +1554,8 @@ function RegenerateModal({
     days_per_week:
       profileDays ?? currentRoutine.days_per_week ?? 4,
     session_duration_min: profileDuration ?? 60,
+    user_type: profileUserType ?? 'ADULT',
+    discipline: profileDiscipline as Discipline,
   });
   // Si el perfil llega DESPUÉS del primer render (useQuery todavía
   // cargando al montar el modal), sincronizamos el form una sola vez
@@ -1479,6 +1569,8 @@ function RegenerateModal({
       objective: profileObjective ?? f.objective,
       days_per_week: profileDays ?? f.days_per_week,
       session_duration_min: profileDuration ?? f.session_duration_min,
+      user_type: profileUserType ?? f.user_type,
+      discipline: (profileDiscipline ?? f.discipline) as Discipline,
     }));
     setHydratedFromProfile(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1540,6 +1632,83 @@ function RegenerateModal({
                 Ir a mi perfil →
               </Link>
             </div>
+          </div>
+        )}
+
+        {/* Tipo y Deporte editables EN EL MODAL. El socio pidió poder
+            cambiar deporte sin tener que ir al perfil — útil cuando
+            quiere "esta semana entreno básquet, la próxima karate"
+            sin reescribir su perfil base. Si selecciona ATHLETE pero
+            no elige Deporte, el backend resuelve fallback al perfil
+            guardado, no falla. El Nivel sigue heredándose del perfil
+            porque es una propiedad estable del socio (años de
+            entrenamiento) — para cambiarlo, link a Editar perfil. */}
+        <FieldBlock label="Tipo de entrenamiento">
+          <div className="grid grid-cols-2 gap-2">
+            {USER_TYPE_OPTIONS.map((t) => {
+              const active = form.user_type === t.value;
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      user_type: t.value,
+                      // Si dejó de ser Deportista, limpiar disciplina
+                      discipline: t.value === 'ATHLETE' ? f.discipline : (undefined as unknown as Discipline),
+                    }))
+                  }
+                  className={[
+                    'flex items-center gap-2 rounded-xl ring-1 p-2.5 text-left transition-colors',
+                    active
+                      ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                      : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
+                  ].join(' ')}
+                >
+                  <span className="text-lg leading-none">{t.emoji}</span>
+                  <span className={['text-xs font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
+                    {t.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </FieldBlock>
+
+        {form.user_type === 'ATHLETE' && (
+          <FieldBlock label="Deporte">
+            <select
+              value={form.discipline ?? ''}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  discipline: (e.target.value || undefined) as Discipline,
+                }))
+              }
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 focus:outline-none"
+            >
+              <option value="">— Elige deporte —</option>
+              {DISCIPLINE_OPTIONS.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </FieldBlock>
+        )}
+
+        {profileLevel && (
+          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-[11px]">
+            <span className="text-slate-600">
+              <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] mr-1.5">
+                Nivel
+              </span>
+              {LEVEL_LABELS[profileLevel] ?? profileLevel}
+            </span>
+            <Link href="/portal/perfil" className="text-blue-600 hover:underline font-semibold">
+              Cambiar →
+            </Link>
           </div>
         )}
 

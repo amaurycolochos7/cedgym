@@ -426,7 +426,22 @@ REGLAS DEL MÉTODO CED·GYM:
 ADAPTACIÓN POR USER_TYPE:
 - SENIOR: cambia todo peso libre por máquinas cuando posible, descansos más largos (90-120s), reps 12-15, sin saltos ni cargas máximas.
 - KID: rutina de funcional + peso corporal. Nada de barras con peso. Mucha coordinación (escalera, vallas, mountain climbers), core, y ejercicios divertidos.
-- ATHLETE: prioriza el deporte. Fútbol soccer → explosividad + cambios de dirección. Fútbol americano → fuerza + pliometría + HYROX. Básquet → salto vertical + core. Tenis → rotación + hombro. Natación → dorsales + jalones + hombro 360° + cardio bajo impacto. Béisbol → rotación explosiva + cadera + agarre, cuidando codo. Voleibol → salto vertical + hombro + agilidad reactiva. Powerlifting → SBD específico.
+- ATHLETE: prioriza las cualidades específicas del deporte. REGLA DURA: en CADA día de entrenamiento, AL MENOS 2 ejercicios deben ser específicos del deporte (no genéricos tipo "press banca" o "curl bíceps"). El socio debe sentir que la rutina fue diseñada PARA SU DEPORTE, no un plan de gym general.
+  · Fútbol soccer → cambios de dirección (cone drills), sprints cortos, isométricos de cadera, fortalecimiento de aductores, core anti-rotación.
+  · Fútbol americano → press banca pesado + sentadilla pesada, pliometría (box jumps, broad jumps), sled push, HYROX, cuello.
+  · Básquet → saltos verticales (box jump, depth jump, jump squat), trabajo unilateral (sentadilla búlgara, single-leg RDL), agilidad lateral (lateral bounds), core rotacional + anti-rotación (Pallof press), jalones para alcance vertical.
+  · Tenis → rotación de tronco con cable/banda, hombro 360° + manguito rotador, lunges laterales, agilidad reactiva, antebrazo + agarre.
+  · Karate → core rotacional explosivo (medicine ball slams, woodchoppers), movilidad de cadera, pliometría de piernas (saltos de tijera, knee drives), golpes con banda elástica, condicionamiento HIIT, cuello.
+  · Golf → rotación torácica con cable, antirrotación (Pallof, dead bug), movilidad torácica (T-spine rotation), glúteo medio (clamshells, monster walks), agarre + antebrazo, equilibrio unipodal.
+  · Natación → jalones (dominadas, jalón al pecho), dorsales pesados, hombro 360° + Y-T-W, core (hollow hold, dragon flag), cardio bajo impacto (bicicleta).
+  · Béisbol → rotación explosiva con balón medicinal, cadera + glúteo, agarre + antebrazo, hombro estable cuidando codo, single-leg work.
+  · Voleibol → salto vertical (box jump, depth jump), hombro estable + manguito, agilidad reactiva, single-leg + glúteo medio, core.
+  · Boxeo → core rotacional (woodchoppers, russian twists), hombros + tríceps, cardio HIIT/sparring shadow, cuello, agarre.
+  · CrossFit/HYROX → metcon (AMRAP, EMOM), fuerza compuesta (clean, deadlift, thruster), capacidad de trabajo, carry (farmer carry).
+  · Powerlifting → sentadilla, peso muerto y press banca con variantes (pausa, deficit, tempo), accesorios SBD.
+  · Strength → fuerza pura compuesta — sentadilla, peso muerto, press, remo pesado, baja repetición alta carga.
+  · Funcional → patrones de movimiento humano (empuje, jalón, sentadilla, bisagra, carga, locomoción), kettlebell, carga unilateral.
+  · NUNCA pongas una rutina "Hipertrofia genérica" a un ATHLETE — aunque su objetivo sea MUSCLE_GAIN o WEIGHT_LOSS, la columna vertebral debe ser del deporte.
 
 EN CADA EJERCICIO, la nota (notes) debe ser una frase corta estilo coach mexicano: "sube lento y aprieta arriba", "espalda recta", "codos pegados al cuerpo", "aumenta peso en la última serie". Máximo 10 palabras.
 
