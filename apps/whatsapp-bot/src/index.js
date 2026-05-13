@@ -64,7 +64,12 @@ if (!API_KEY_BUF) {
     console.warn('[BOT] ⚠️ No API_KEY env var set — every authenticated request will be rejected.');
 }
 app.use((req, res, next) => {
-    if (req.path === '/health') return next();
+    // Exentar /health y /health/* (liveness + readiness) del API key
+    // check — son endpoints públicos diseñados para que healthchecks
+    // externos (Docker, watchdog) los consulten sin compartir el
+    // secret. No exponen información sensible más allá de "estoy vivo"
+    // o "mis sesiones están isConnected: true/false".
+    if (req.path === '/health' || req.path.startsWith('/health/')) return next();
     if (!API_KEY_BUF) return res.status(503).json({ error: 'API key not configured' });
 
     const provided = req.headers['x-api-key'];
