@@ -1,0 +1,16 @@
+[Unit]
+Description=Dispara el watchdog del bot de WhatsApp cada 2 min
+Requires=cedgym-bot-watchdog.service
+
+[Timer]
+# Corre 1 min después del boot (que docker+stack arranquen)
+OnBootSec=1min
+# Y luego cada 2 min mientras el sistema esté arriba
+OnUnitActiveSec=2min
+# Persistente: si el sistema estuvo apagado, no acumular ejecuciones
+Persistent=false
+# Pequeño jitter para no chocar con cronjobs simultáneos
+RandomizedDelaySec=15
+
+[Install]
+WantedBy=timers.target
