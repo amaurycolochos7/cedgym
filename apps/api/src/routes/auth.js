@@ -746,7 +746,15 @@ export default async function authRoutes(fastify) {
 
             const user = await prisma.user.findUnique({ where: { phone } });
             // Silent-success path: never reveal whether the number exists.
-            if (user && user.status === 'ACTIVE') {
+            // Aceptamos también UNVERIFIED — un socio que se quedó atorado
+            // en el registro (bot caído, OTP perdido) puede recuperarse
+            // por esta vía: si demuestra control del número (recibe y
+            // escribe el OTP), /auth/password/reset le actualiza el
+            // password Y le marca status=ACTIVE + phone_verified_at.
+            // Excluimos SUSPENDED/DELETED a propósito — esos son
+            // estados administrativos, no bugs.
+            const ELIGIBLE_FOR_RESET = new Set(['ACTIVE', 'UNVERIFIED']);
+            if (user && ELIGIBLE_FOR_RESET.has(user.status)) {
                 const code = generateOtpCode();
                 const code_hash = await hashOtpCode(code);
                 await prisma.otpCode.create({
@@ -758,7 +766,7 @@ export default async function authRoutes(fastify) {
                         max_attempts: OTP_MAX_ATTEMPTS,
                     },
                 });
-                await sendOtpViaWhatsApp({
+                const sendResult = await sendOtpViaWhatsApp({
                     workspaceId: user.workspace_id,
                     phone,
                     code,
@@ -771,8 +779,27 @@ export default async function authRoutes(fastify) {
                     action: 'auth.password.forgot.requested',
                     target_type: 'user',
                     target_id: user.id,
+                    metadata: {
+                        user_status: user.status,
+                        otp_sent: sendResult.ok,
+                        otp_error: sendResult.error || null,
+                    },
                     ...auditCtx(request),
                 });
+                // Mismo principio que /auth/register y /auth/otp/resend:
+                // si el bot no logró entregar, devolver 503 honesto en
+                // vez de mentir con success: true. Borramos la OTP
+                // huérfana para que el siguiente intento empiece limpio.
+                if (!sendResult.ok) {
+                    await prisma.otpCode
+                        .deleteMany({ where: { phone, purpose: 'PASSWORD_RESET', verified_at: null } })
+                        .catch(() => null);
+                    return reply.status(503).send(errPayload(
+                        'OTP_DELIVERY_FAILED',
+                        'No pudimos enviar el código por WhatsApp. Intenta de nuevo en 1-2 minutos.',
+                        503,
+                    ));
+                }
             }
             return reply.send({ success: true });
         }
@@ -823,12 +850,24 @@ export default async function authRoutes(fastify) {
 
         const password_hash = await bcrypt.hash(new_password, BCRYPT_COST);
 
+        // Si el user venía UNVERIFIED (registro abandonado por bot caído
+        // o similar), aprovechamos la prueba de identidad del OTP para
+        // activar la cuenta en la misma transacción. El OTP por WA prueba
+        // control del número — exactamente la misma garantía que pide el
+        // flujo de registro normal. Para users que ya estaban ACTIVE no
+        // toca nada de esos campos.
+        const userPatch = { password_hash };
+        if (user.status === 'UNVERIFIED') {
+            userPatch.status = 'ACTIVE';
+            userPatch.phone_verified_at = new Date();
+        }
+
         // Revoke ALL existing refresh tokens — password change should log
         // out every other device.
         await prisma.$transaction([
             prisma.user.update({
                 where: { id: user.id },
-                data: { password_hash },
+                data: userPatch,
             }),
             prisma.otpCode.update({
                 where: { id: otp.id },
