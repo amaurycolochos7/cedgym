@@ -42,6 +42,17 @@ ENV CHROME_PATH=/usr/bin/chromium
 # This path MUST match the volume mount in docker-compose
 ENV WWEBJS_DATA_PATH=/app/data/wwebjs_auth
 
+# Heap holgado para Node — la session data de WWebJS crece a 500MB-1GB+
+# en disco (cookies, IndexedDB, cache de WhatsApp Web), y al arrancar
+# v8 parsea archivos JSON gigantes que con el heap default de 4GB pero
+# segmentado en young/old causan OOM intermitente (SIGSEGV en
+# v8::internal::JsonParser observado en producción). 1.5GB de old-space
+# da margen sin estresar al host (la imagen entera consume ~1.8GB RSS
+# típico). Lo seteamos acá (en el Dockerfile) porque Dokploy cachea su
+# propia copia del docker-compose.yml y descarta cambios al `environment:`
+# del compose. Embebido en la imagen no hay forma de que se pierda.
+ENV NODE_OPTIONS=--max-old-space-size=1536
+
 WORKDIR /app
 
 # Enable pnpm via corepack (monorepo uses pnpm workspaces)
