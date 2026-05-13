@@ -19,6 +19,7 @@ import { api, normalizeError, portalApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ApiError } from '@/lib/schemas';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
+import { buildFitnessProfileInitial } from '@/lib/fitness-profile-seed';
 import {
   ProfileRequirements,
   type RequirementKey,
@@ -513,56 +514,36 @@ export default function PortalPerfilPage() {
         <div>
           <FitnessProfileWizard
             initial={(() => {
-              // Combinamos los dos perfiles separados (preferencia) +
-              // legacy fitness_profile como fallback. Spread order: el
-              // perfil de nutrición sobrescribe los campos compartidos
-              // de routine_profile (age/gender/etc. los pisa el más
-              // reciente) y el legacy queda al fondo.
+              // Renaming de campos del nutrition_profile que en el
+              // wizard se llaman distinto que en el blob server. Se
+              // calcula aparte y se pasa como extraMerge al helper;
+              // el seed (nombre/fecha/edad/género del user record)
+              // sigue ganando al final gracias al helper.
               const u = me?.user as
                 | {
-                    fitness_profile?: Record<string, unknown>;
                     routine_profile?: Record<string, unknown>;
                     nutrition_profile?: Record<string, unknown>;
                   }
                 | undefined;
-              const merged: Record<string, unknown> = {
-                ...(u?.fitness_profile ?? {}),
-                ...(u?.routine_profile ?? {}),
-                ...(u?.nutrition_profile ?? {}),
-              };
-              // Renombrar campos del nutrition para no chocar con
-              // los del routine en el draft del wizard:
-              if (
-                u?.nutrition_profile &&
-                typeof u.nutrition_profile === 'object'
-              ) {
-                const np = u.nutrition_profile as Record<string, unknown>;
-                if (np.objective !== undefined) {
-                  merged.nutrition_objective = np.objective;
-                  // mantenemos `objective` desde routine_profile
-                  if (
-                    u.routine_profile &&
-                    typeof u.routine_profile === 'object'
-                  ) {
-                    const rp = u.routine_profile as Record<string, unknown>;
-                    if (rp.objective !== undefined) merged.objective = rp.objective;
-                  }
+              const extra: Record<string, unknown> = {};
+              const np = u?.nutrition_profile;
+              if (np && typeof np === 'object') {
+                const npObj = np as Record<string, unknown>;
+                if (npObj.objective !== undefined) {
+                  extra.nutrition_objective = npObj.objective;
+                  const rp = u?.routine_profile as Record<string, unknown> | undefined;
+                  if (rp?.objective !== undefined) extra.objective = rp.objective;
                 }
-                if (np.motivation !== undefined) {
-                  merged.nutrition_motivation = np.motivation;
-                  if (
-                    u.routine_profile &&
-                    typeof u.routine_profile === 'object'
-                  ) {
-                    const rp = u.routine_profile as Record<string, unknown>;
-                    if (rp.motivation !== undefined) merged.motivation = rp.motivation;
-                  }
+                if (npObj.motivation !== undefined) {
+                  extra.nutrition_motivation = npObj.motivation;
+                  const rp = u?.routine_profile as Record<string, unknown> | undefined;
+                  if (rp?.motivation !== undefined) extra.motivation = rp.motivation;
                 }
-                if (np.dietary_restrictions !== undefined) {
-                  merged.dietary = np.dietary_restrictions;
+                if (npObj.dietary_restrictions !== undefined) {
+                  extra.dietary = npObj.dietary_restrictions;
                 }
               }
-              return Object.keys(merged).length ? merged : null;
+              return buildFitnessProfileInitial(me?.user, extra);
             })()}
           />
         </div>

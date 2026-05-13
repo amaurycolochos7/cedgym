@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { FitnessProfileWizard } from '@/components/portal/fitness-profile-wizard';
+import { buildFitnessProfileInitial } from '@/lib/fitness-profile-seed';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -45,60 +46,11 @@ export default function OnboardingPage() {
     }
   }, [me, router]);
 
-  const initial = (() => {
-    const u = me?.user as
-      | {
-          full_name?: string | null;
-          name?: string | null;
-          birth_date?: string | null;
-          gender?: string | null;
-          fitness_profile?: Record<string, unknown>;
-          routine_profile?: Record<string, unknown>;
-          nutrition_profile?: Record<string, unknown>;
-        }
-      | undefined;
-    if (!u) return null;
-
-    // Pre-fill desde datos que ya capturó recepción en el alta walk-in
-    // o que el socio metió al registrarse (full_name del /register).
-    // El socio aterriza viendo nombre, edad y género ya marcados —
-    // solo confirma/corrige y avanza.
-    const seed: Record<string, unknown> = {};
-    if (u.full_name && u.full_name.trim()) {
-      seed.full_name = u.full_name.trim();
-    } else if (u.name && u.name.trim()) {
-      seed.full_name = u.name.trim();
-    }
-    if (u.birth_date) {
-      // Normalizamos a YYYY-MM-DD para el <input type="date">.
-      const dob = new Date(u.birth_date);
-      if (!Number.isNaN(dob.getTime())) {
-        seed.birth_date = dob.toISOString().slice(0, 10);
-        const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const beforeBirthday =
-          today.getMonth() < dob.getMonth() ||
-          (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate());
-        if (beforeBirthday) age -= 1;
-        if (age >= 6 && age <= 99) seed.age = age;
-      }
-    }
-    if (u.gender) {
-      // El user model usa MALE/FEMALE/OTHER/PREFER_NOT_SAY; el wizard
-      // solo entiende MALE/FEMALE/OTHER. Colapsamos PREFER_NOT_SAY a OTHER.
-      const g = u.gender === 'PREFER_NOT_SAY' ? 'OTHER' : u.gender;
-      seed.gender = g;
-    }
-
-    // Lo que ya esté en perfil vivo gana sobre el seed (orden importa).
-    const merged: Record<string, unknown> = {
-      ...seed,
-      ...(u.fitness_profile ?? {}),
-      ...(u.routine_profile ?? {}),
-      ...(u.nutrition_profile ?? {}),
-    };
-    return Object.keys(merged).length ? merged : null;
-  })();
+  // Pre-fill con datos del registro (full_name, birth_date, gender) +
+  // cualquier perfil JSON ya guardado. El helper asegura que el seed
+  // del user (4 campos canónicos en columnas dedicadas) SIEMPRE gane
+  // sobre los blobs, que pueden tener valores viejos / vacíos.
+  const initial = buildFitnessProfileInitial(me?.user);
 
   return (
     <div className="space-y-6">
