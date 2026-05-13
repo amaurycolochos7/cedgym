@@ -54,6 +54,42 @@ const LOCATION_LABELS: Record<string, string> = {
   BOTH: 'Gym + casa',
 };
 
+// Etiquetas humanas + emoji para mostrar tipo de usuario y disciplina
+// que el socio configuró en su perfil. Si vino como ATHLETE+KARATE,
+// queremos que vea "🥋 Karate" en su resumen para confirmar que la
+// rutina sí va a salir orientada a karate (antes el resumen ignoraba
+// estos campos y daba la impresión de que se perdían).
+const USER_TYPE_LABELS: Record<string, string> = {
+  ADULT:   '🧍 Adulto',
+  SENIOR:  '👴 Adulto mayor',
+  KID:     '👶 Niño/Juvenil',
+  ATHLETE: '🏆 Deportista',
+};
+
+const DISCIPLINE_LABELS: Record<string, string> = {
+  FOOTBALL_SOCCER: '⚽ Fútbol soccer',
+  FOOTBALL_US:     '🏈 Fútbol americano',
+  BASKETBALL:      '🏀 Básquetbol',
+  TENNIS:          '🎾 Tenis',
+  KARATE:          '🥋 Karate',
+  GOLF:            '⛳ Golf',
+  SWIMMING:        '🏊 Natación',
+  BASEBALL:        '⚾ Béisbol',
+  VOLLEYBALL:      '🏐 Voleibol',
+  BOXING:          '🥊 Boxeo',
+  CROSSFIT:        '🏋️ CrossFit',
+  POWERLIFTING:    '🏋️‍♂️ Powerlifting',
+  HYROX:           '🏃 HYROX',
+  STRENGTH:        '💪 Fuerza/hipertrofia',
+  FUNCTIONAL:      '🤸 Funcional',
+};
+
+const LEVEL_LABELS: Record<string, string> = {
+  BEGINNER:     'Principiante',
+  INTERMEDIATE: 'Intermedio',
+  ADVANCED:     'Avanzado',
+};
+
 const DAY_LABELS_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -294,6 +330,14 @@ function GenerateRoutineCard({
   const profileObjective = (profile?.objective as Objective | undefined) ?? 'GENERAL_FITNESS';
   const profileDays = (profile?.days_per_week as number | undefined) ?? 4;
   const profileDuration = (profile?.session_duration_min as number | undefined) ?? 60;
+  // Tipo, disciplina y nivel también vienen del routine_profile —
+  // los mostramos en el resumen aunque no sean editables por
+  // generación. El backend SÍ los usa al generar (ai-routines.js
+  // hace merge body > routine_profile, y como nosotros no los
+  // mandamos en body, gana lo del perfil).
+  const profileUserType = profile?.user_type as string | undefined;
+  const profileDiscipline = profile?.discipline as string | undefined;
+  const profileLevel = profile?.level as string | undefined;
 
   const [showOverrides, setShowOverrides] = useState(false);
   const [override, setOverride] = useState<GenerateOverride>({});
@@ -403,7 +447,35 @@ function GenerateRoutineCard({
                 <SummaryPill label="Dónde" value={LOCATION_LABELS[effective.location] ?? effective.location} />
                 <SummaryPill label="Días/sem" value={`${effective.days_per_week}`} />
                 <SummaryPill label="Duración" value={`${effective.session_duration_min} min`} />
+                {profileUserType && (
+                  <SummaryPill
+                    label="Tipo"
+                    value={USER_TYPE_LABELS[profileUserType] ?? profileUserType}
+                  />
+                )}
+                {profileUserType === 'ATHLETE' && profileDiscipline && (
+                  <SummaryPill
+                    label="Deporte"
+                    value={DISCIPLINE_LABELS[profileDiscipline] ?? profileDiscipline}
+                  />
+                )}
+                {profileLevel && (
+                  <SummaryPill
+                    label="Nivel"
+                    value={LEVEL_LABELS[profileLevel] ?? profileLevel}
+                  />
+                )}
               </div>
+              {profileUserType === 'ATHLETE' && profileDiscipline && (
+                <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                  Tu rutina será específica para{' '}
+                  <strong>
+                    {(DISCIPLINE_LABELS[profileDiscipline] ?? profileDiscipline).replace(/^[^ ]+ /, '')}
+                  </strong>{' '}
+                  — con énfasis en las demandas del deporte (movilidad,
+                  potencia, etc.), no solo fitness general.
+                </div>
+              )}
             </div>
           )}
 
