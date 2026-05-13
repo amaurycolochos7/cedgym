@@ -1334,16 +1334,53 @@ function RegenerateModal({
   onClose: () => void;
   onDone: () => void;
 }) {
-  // En el modal SÍ tenemos los 4 campos llenos siempre — son los
-  // valores de la rutina activa, listos para que el socio los ajuste
-  // si quiere algo distinto. El body que mandamos coincide con la
-  // forma de override que entiende el backend.
-  const [form, setForm] = useState<Required<GenerateOverride>>({
-    location: (currentRoutine.location as Location) ?? 'GYM',
-    objective: (currentRoutine.goal as Objective) ?? 'GENERAL_FITNESS',
-    days_per_week: currentRoutine.days_per_week ?? 4,
-    session_duration_min: 60,
+  // Pre-rellenamos con el PERFIL ACTUAL del socio, NO con la rutina
+  // vieja. Antes leíamos de currentRoutine, así que si el socio
+  // actualizaba su perfil (ej. cambió objetivo de Hipertrofia a
+  // WeightLoss) y abría "Regenerar", el modal arrancaba con los
+  // valores viejos y si daba Regenerar sin tocar nada regeneraba
+  // otra Hipertrofia. Loop infinito. Ahora el perfil manda; la
+  // rutina actual solo se usa como fallback si el perfil aún no
+  // tiene esos campos.
+  const meQ = useQuery<{
+    user?: { routine_profile?: Record<string, unknown> | null };
+  }>({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => (await api.get('/auth/me')).data,
   });
+  const profile = meQ.data?.user?.routine_profile ?? null;
+  const profileLocation = profile?.location as Location | undefined;
+  const profileObjective = profile?.objective as Objective | undefined;
+  const profileDays = profile?.days_per_week as number | undefined;
+  const profileDuration = profile?.session_duration_min as number | undefined;
+
+  const [form, setForm] = useState<Required<GenerateOverride>>({
+    location:
+      profileLocation ?? (currentRoutine.location as Location) ?? 'GYM',
+    objective:
+      profileObjective ??
+      (currentRoutine.goal as Objective) ??
+      'GENERAL_FITNESS',
+    days_per_week:
+      profileDays ?? currentRoutine.days_per_week ?? 4,
+    session_duration_min: profileDuration ?? 60,
+  });
+  // Si el perfil llega DESPUÉS del primer render (useQuery todavía
+  // cargando al montar el modal), sincronizamos el form una sola vez
+  // cuando aterriza. Si el socio ya tocó algún campo, no pisamos su
+  // edición — solo aplicamos al estado "intacto".
+  const [hydratedFromProfile, setHydratedFromProfile] = useState(!!profile);
+  useEffect(() => {
+    if (hydratedFromProfile || !profile) return;
+    setForm((f) => ({
+      location: profileLocation ?? f.location,
+      objective: profileObjective ?? f.objective,
+      days_per_week: profileDays ?? f.days_per_week,
+      session_duration_min: profileDuration ?? f.session_duration_min,
+    }));
+    setHydratedFromProfile(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
 
   const mut = useMutation({
     // See the GenerateForm comment above — same 180s ceiling, same
