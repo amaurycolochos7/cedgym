@@ -18,6 +18,7 @@ import {
   Heart,
   Utensils,
   Target,
+  Save,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -511,7 +512,12 @@ export function FitnessProfileWizard({ initial }: Props) {
       serverOverride.age = server.age;
     }
 
-    setDraft({ ...EMPTY_DRAFT, ...server, ...cached, ...serverOverride });
+    const hydrated = { ...EMPTY_DRAFT, ...server, ...cached, ...serverOverride };
+    setDraft(hydrated);
+    // Snapshot inicial = lo recién hidratado. Así isDirty arranca en
+    // false; solo se activa cuando el socio TIPEA encima del valor
+    // ya cargado.
+    setSavedSnapshot(JSON.stringify(hydrated));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -677,8 +683,18 @@ export function FitnessProfileWizard({ initial }: Props) {
   }, [step, draft, hasSelfie]);
 
   /* ── Save mutation ───────────────────────────────────────── */
+  // Snapshot del último save exitoso — lo usamos para saber si hay
+  // cambios sin guardar. Si current JSON ≠ snapshot Y current ≠ EMPTY,
+  // el draft está "dirty". Es la señal para mostrar el banner amarillo
+  // arriba del nav y los guards de navegación.
+  const [savedSnapshot, setSavedSnapshot] = useState<string>('');
+  const currentSnapshot = useMemo(() => JSON.stringify(draft), [draft]);
+  const emptySnapshot = useMemo(() => JSON.stringify(EMPTY_DRAFT), []);
+  const isDirty =
+    currentSnapshot !== savedSnapshot && currentSnapshot !== emptySnapshot;
+
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (variant: 'final' | 'partial' = 'final') => {
       // Build routine + nutrition payloads. Filtramos llaves vacías
       // para no mandar `"": ""` o arrays huecos al backend.
       const cleanArr = (arr: string[], exclusive?: string) => {
@@ -782,19 +798,30 @@ export function FitnessProfileWizard({ initial }: Props) {
         const norm = normalizeError(err) as ApiError;
         if (norm.status === 404) {
           await api.patch('/users/me/fitness-profile', { ...routinePayload, ...nutritionPayload });
-          return;
+          return variant;
         }
         throw err;
       }
+      return variant;
     },
-    onSuccess: async () => {
+    onSuccess: async (variant) => {
+      // Snapshot del draft justo guardado — desactiva el dirty flag
+      // y por tanto los guards de "tienes cambios sin guardar".
+      setSavedSnapshot(JSON.stringify(draft));
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+
+      if (variant === 'partial') {
+        // Guardado intermedio: mantenemos al socio en el paso actual,
+        // no borramos el draft local (puede seguir editando), no
+        // redirigimos. Solo confirmamos visualmente.
+        toast.success('Progreso guardado. Puedes seguir editando o salir tranquilo.');
+        return;
+      }
+
+      // Guardado final del último paso → redirigimos al dashboard.
       toast.success('Perfil guardado. Tu rutina ya está lista.');
       try { window.localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
-      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
       try { await refreshMe(); } catch { /* navegamos igual */ }
-      // Aterrizamos en el inicio (dashboard) en lugar de /portal/rutinas
-      // — el socio quiere ver su home con todo listo, no que lo
-      // empujemos directo a la rutina.
       router.push('/portal/dashboard');
     },
     onError: (err) => {
@@ -803,11 +830,93 @@ export function FitnessProfileWizard({ initial }: Props) {
     },
   });
 
+  // ── Guards de navegación cuando hay cambios sin guardar ─────────
+  // 1) beforeunload: cubre cerrar pestaña / refresh / ir a otro
+  //    dominio. El browser muestra su prompt nativo.
+  // 2) document click capture: cubre clicks en anchors internos (links
+  //    del sidebar/topbar del portal). Si la nueva URL sale del wizard,
+  //    confirmamos antes de soltar la navegación.
+  // 3) popstate: cubre el botón Atrás del browser.
+  //
+  // Solo activos cuando isDirty=true para no molestar al socio que
+  // solo está leyendo. Si quiere salir sin guardar, decimos "estás
+  // seguro" — no bloqueamos hard, solo confirmamos.
+  useEffect(() => {
+    if (!isDirty || save.isPending) return;
+
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome ignora el string custom desde 2017+ — usa su propio
+      // mensaje. Igual seteamos returnValue por compat con Firefox.
+      e.returnValue = '';
+    };
+
+    const isWizardChrome = (el: Element | null) =>
+      !!el && !!sectionRef.current && sectionRef.current.contains(el);
+
+    const clickHandler = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const target = e.target as Element | null;
+      const anchor = target?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+      // Clicks dentro del wizard (back/save/etc) no piden confirmación
+      if (isWizardChrome(anchor)) return;
+      const href = anchor.getAttribute('href') || '';
+      // Externos, anchors de fragmento o telefónicos: dejamos pasar
+      if (
+        anchor.target === '_blank' ||
+        href === '' ||
+        href.startsWith('#') ||
+        href.startsWith('mailto:') ||
+        href.startsWith('tel:')
+      ) {
+        return;
+      }
+      // Misma URL? no es navegación
+      try {
+        const dest = new URL(href, window.location.href);
+        if (dest.pathname === window.location.pathname && dest.search === window.location.search) return;
+      } catch {
+        /* ignore */
+      }
+      const ok = window.confirm(
+        'Tienes cambios sin guardar en tu perfil. ¿Salir sin guardar?',
+      );
+      if (!ok) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const popStateHandler = () => {
+      const ok = window.confirm(
+        'Tienes cambios sin guardar en tu perfil. ¿Salir sin guardar?',
+      );
+      if (!ok) {
+        // Empujamos un estado nuevo para que la URL no cambie. El user
+        // se queda en el wizard. Truco estándar para "cancelar back".
+        window.history.pushState(null, '', window.location.href);
+      }
+    };
+
+    window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('click', clickHandler, true);
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', popStateHandler);
+
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('click', clickHandler, true);
+      window.removeEventListener('popstate', popStateHandler);
+    };
+  }, [isDirty, save.isPending]);
+
   const stepValid = stepValidation.ok;
   const goNext = () => {
     if (!stepValid) return;
     if (step < TOTAL_STEPS) setStep((s) => s + 1);
-    else save.mutate();
+    else save.mutate('final');
   };
   const goBack = () => setStep((s) => Math.max(1, s - 1));
 
@@ -882,8 +991,18 @@ export function FitnessProfileWizard({ initial }: Props) {
         </div>
       )}
 
+      {/* Indicador de cambios sin guardar — útil cuando el socio
+          modificó algo y quiere recordar que tiene "Guardar progreso"
+          disponible. Solo si está dirty y no está saveando. */}
+      {isDirty && !save.isPending && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+          Tienes cambios sin guardar. Usa <strong>Guardar progreso</strong> para
+          persistirlos sin terminar el wizard.
+        </div>
+      )}
+
       {/* Nav */}
-      <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-200">
         <button
           type="button"
           onClick={goBack}
@@ -893,26 +1012,46 @@ export function FitnessProfileWizard({ initial }: Props) {
           <ChevronLeft className="w-4 h-4 mr-1" />
           Atrás
         </button>
-        {step < TOTAL_STEPS ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Guardar progreso — disponible en CUALQUIER paso (no obliga
+              al socio a llegar al paso 6 para persistir). No requiere
+              stepValid: guardamos lo que haya, los pasos posteriores
+              quedan vacíos en el server hasta que el socio vuelva. */}
           <button
             type="button"
-            onClick={goNext}
-            disabled={!stepValid}
-            className="inline-flex items-center h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed text-sm font-semibold transition shadow-sm"
+            onClick={() => save.mutate('partial')}
+            disabled={save.isPending || !isDirty}
+            title={
+              !isDirty
+                ? 'No hay cambios pendientes que guardar'
+                : 'Guardar lo que llevas y seguir luego'
+            }
+            className="inline-flex items-center h-10 px-4 rounded-xl bg-white border border-blue-300 text-blue-700 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold transition"
           >
-            Continuar
-            <ChevronRight className="w-4 h-4 ml-1" />
+            <Save className="w-4 h-4 mr-1.5" />
+            {save.isPending ? 'Guardando…' : 'Guardar progreso'}
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={!stepValid || save.isPending}
-            className="inline-flex items-center h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed text-sm font-semibold transition shadow-sm"
-          >
-            {save.isPending ? 'Guardando…' : 'Guardar perfil'}
-          </button>
-        )}
+          {step < TOTAL_STEPS ? (
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!stepValid || save.isPending}
+              className="inline-flex items-center h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed text-sm font-semibold transition shadow-sm"
+            >
+              Continuar
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!stepValid || save.isPending}
+              className="inline-flex items-center h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed text-sm font-semibold transition shadow-sm"
+            >
+              {save.isPending ? 'Guardando…' : 'Guardar perfil'}
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );
