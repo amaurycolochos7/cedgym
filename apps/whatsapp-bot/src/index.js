@@ -85,9 +85,35 @@ app.use((req, res, next) => {
 app.set('sessionManager', sessionManager);
 app.set('prisma', prisma);
 
-// Health check — sin auth
+// Liveness — proceso vivo y respondiendo. Lo usa Docker healthcheck.
+// Devuelve 200 ASAP, sin verificar sesiones (que tardan 30-60s en
+// estabilizar y harían que el container quede unhealthy todo el boot).
 app.get('/health', (req, res) => {
     res.json({ ok: true });
+});
+
+// Readiness — el bot está realmente listo para *enviar mensajes*.
+// 200 sólo cuando hay al menos una sesión con isConnected=true. El
+// watchdog externo (deploy/bot-watchdog.sh) y el API usan esto en
+// lugar de /health para evitar la ventana de 30-60s donde el
+// container ya está "Up" pero WWebJS todavía está autenticando la
+// sesión — sin esto, una request al bot durante ese boot devuelve
+// fetch failed / 500 y el usuario ve "no pudimos enviar el código".
+app.get('/health/ready', (req, res) => {
+    const sessions = Array.from(sessionManager.sessions.entries()).map(
+        ([workspaceId, s]) => ({
+            workspaceId,
+            isConnected: !!s.isConnected,
+            initializing: !!s.initializing,
+        }),
+    );
+    const anyReady = sessions.some((s) => s.isConnected);
+    res.status(anyReady ? 200 : 503).json({
+        ok: anyReady,
+        sessions,
+        ready_count: sessions.filter((s) => s.isConnected).length,
+        total_count: sessions.length,
+    });
 });
 
 // Routes

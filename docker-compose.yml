@@ -94,6 +94,12 @@ services:
       API_KEY: ${WHATSAPP_BOT_KEY}
       PORT: 3002
       NODE_ENV: ${NODE_ENV:-production}
+      # WWebJS acumula 500MB-1GB+ de session data (cookies, IndexedDB,
+      # cache). Al arrancar, Node parsea archivos JSON gigantes y crashea
+      # con OOM (SIGSEGV en v8::JsonParser) si no le damos heap suficiente.
+      # 1.5 GB de heap deja margen para 2 GB de RSS total y previene los
+      # restarts cíclicos que veníamos observando.
+      NODE_OPTIONS: --max-old-space-size=1536
     volumes:
       - wwebjs_auth:/app/data/wwebjs_auth
     # Bind to loopback only. The API container reaches the bot via
@@ -104,7 +110,19 @@ services:
     # (audit hallazgo C10).
     ports:
       - "127.0.0.1:3002:3002"
-    shm_size: '512mb'
+    # Chromium con session de WhatsApp grande necesita shm holgado para
+    # los procesos de renderer; 512mb causaba page crashes intermitentes.
+    shm_size: '1gb'
+    # Healthcheck a /health/ready (no /health) — sólo se considera
+    # healthy cuando la sesión WA está realmente isConnected. Damos
+    # start_period generoso (90s) porque el primer parse de la session
+    # data toma 30-60s en arrancar Puppeteer + WWebJS.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null --timeout=5 http://localhost:3002/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
     depends_on:
       db:
         condition: service_healthy

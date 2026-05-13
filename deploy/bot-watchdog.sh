@@ -54,11 +54,14 @@ bot_health() {
 }
 
 bot_http_ok() {
-  # Probamos /health desde otro container del stack (api) que tiene
-  # network access al hostname `whatsapp-bot`. Si responde 200 es que
-  # de verdad el bot está vivo, no solo "running" en docker.
+  # Probamos /health/ready desde otro container del stack (api) que tiene
+  # network access al hostname `whatsapp-bot`. /health/ready devuelve 200
+  # SÓLO cuando la sesión de WWebJS está realmente isConnected — no sólo
+  # cuando el proceso Node escucha. Esto cubre la ventana de 30-60s entre
+  # container Up y session ready, donde antes el watchdog declaraba
+  # "recovered" pero los usuarios todavía veían fetch failed.
   docker exec compose-index-wireless-monitor-gscocg-api-1 \
-    sh -c 'wget -q -O /dev/null --timeout=5 http://whatsapp-bot:3002/health 2>/dev/null' \
+    sh -c 'wget -q -O /dev/null --timeout=5 http://whatsapp-bot:3002/health/ready 2>/dev/null' \
     2>/dev/null
 }
 
