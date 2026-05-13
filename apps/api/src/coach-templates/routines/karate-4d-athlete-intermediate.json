@@ -1,0 +1,72 @@
+{
+  "id": "rt-karate-4d-athlete-intermediate",
+  "name": "Karate Atleta Intermedio — 4 días",
+  "description": "Plan del Coach Samuel para karateca intermedio: 4 días enfocados en pliometría, core rotacional, cadera explosiva y resistencia muscular para combate y kata. Combina trabajo de fuerza con técnica deportiva específica para potenciar pateo, velocidad de manos y estabilidad de plantas.",
+  "source": "GENERIC",
+  "coach_signature": "Estructura adaptada del Coach Samuel para artistas marciales — basada en demandas reales del karate competitivo (kumite + kata).",
+  "objective": "GENERAL_FITNESS",
+  "user_type": "ATHLETE",
+  "level": "INTERMEDIATE",
+  "days_per_week": 4,
+  "location": "BOTH",
+  "discipline": "KARATE",
+  "gender": null,
+  "days": [
+    {
+      "day_of_week": 1,
+      "title": "Tren inferior explosivo + cadera",
+      "notes": "Día de motor: cadera fuerte = patadas potentes. Calidad sobre cantidad en los saltos.",
+      "exercises": [
+        { "exercise_name": "Calentamiento movilidad de cadera (90/90, world's greatest)", "sets": 2, "reps": "8 cada lado", "rest_sec": 30, "notes": "Sin forzar, calienta articulación" },
+        { "exercise_name": "Sentadilla goblet", "sets": 4, "reps": "8-10", "rest_sec": 90, "notes": "Bajada controlada, subida explosiva" },
+        { "exercise_name": "Peso muerto rumano con mancuernas", "sets": 4, "reps": "10", "rest_sec": 90, "notes": "Tensión en isquios, espalda neutra" },
+        { "exercise_name": "Sentadilla búlgara unilateral", "sets": 3, "reps": "8 cada pierna", "rest_sec": 75, "notes": "Estabilidad — clave para patear con balance" },
+        { "exercise_name": "Saltos al cajón (box jumps)", "sets": 5, "reps": "5", "rest_sec": 120, "notes": "Aterriza suave, baja caminando para reset" },
+        { "exercise_name": "Patadas frontales en bolsa (mae-geri) — técnico", "sets": 4, "reps": "10 cada pierna", "rest_sec": 60, "notes": "Énfasis en cadera, no en la pierna" },
+        { "exercise_name": "Plancha lateral", "sets": 3, "reps": "30s cada lado", "rest_sec": 45, "notes": "Cadera arriba, alineada" }
+      ]
+    },
+    {
+      "day_of_week": 2,
+      "title": "Empuje + core rotacional",
+      "notes": "Trabajo de pecho/hombro/tríceps para golpes directos + core que transmite fuerza al puño.",
+      "exercises": [
+        { "exercise_name": "Movilidad torácica con foam roller", "sets": 2, "reps": "10 rotaciones", "rest_sec": 30, "notes": "Abre torácica antes de press" },
+        { "exercise_name": "Press de banca con mancuernas", "sets": 4, "reps": "8-10", "rest_sec": 90, "notes": "Codo a 45°, baja controlada" },
+        { "exercise_name": "Press militar de pie", "sets": 4, "reps": "8", "rest_sec": 90, "notes": "Core firme, sin arquear lumbar" },
+        { "exercise_name": "Fondos en paralelas (asistidos si necesario)", "sets": 3, "reps": "8-12", "rest_sec": 75, "notes": "Pecho levemente inclinado" },
+        { "exercise_name": "Lanzamiento de balón medicinal contra pared (rotacional)", "sets": 4, "reps": "8 cada lado", "rest_sec": 60, "notes": "Genera del piso, no solo del brazo" },
+        { "exercise_name": "Pallof press con polea", "sets": 3, "reps": "12 cada lado", "rest_sec": 60, "notes": "Anti-rotación, controla el cable" },
+        { "exercise_name": "Golpes rápidos en bolsa (jab-cross) — técnico", "sets": 5, "reps": "30s", "rest_sec": 30, "notes": "Velocidad sobre fuerza, hombros sueltos" }
+      ]
+    },
+    {
+      "day_of_week": 4,
+      "title": "Tirón + agilidad",
+      "notes": "Espalda fuerte para retirar el golpe rápido + footwork para entrar y salir del rango.",
+      "exercises": [
+        { "exercise_name": "Movilidad de hombro con bandas", "sets": 2, "reps": "12", "rest_sec": 30, "notes": "Rotaciones externas e internas" },
+        { "exercise_name": "Dominadas (asistidas o con banda)", "sets": 4, "reps": "6-8", "rest_sec": 90, "notes": "Aprieta omóplatos arriba" },
+        { "exercise_name": "Remo con barra inclinado", "sets": 4, "reps": "10", "rest_sec": 90, "notes": "Cadera atrás, espalda recta" },
+        { "exercise_name": "Face pull con polea", "sets": 3, "reps": "15", "rest_sec": 60, "notes": "Protege hombros, salud postural" },
+        { "exercise_name": "Curl martillo", "sets": 3, "reps": "10 cada brazo", "rest_sec": 60, "notes": "Antebrazo y agarre — útil para sujetar gi" },
+        { "exercise_name": "Escalera de agilidad (footwork drills)", "sets": 5, "reps": "20s", "rest_sec": 40, "notes": "Pasos rápidos, mantén bajo el centro" },
+        { "exercise_name": "Burpees sin lagartija", "sets": 4, "reps": "10", "rest_sec": 45, "notes": "Sube explosivo, simula recuperación post-combate" }
+      ]
+    },
+    {
+      "day_of_week": 5,
+      "title": "Acondicionamiento + core de combate",
+      "notes": "Día de cardio específico tipo combate (intervals) + core resistente para aguantar 3-5 rounds.",
+      "exercises": [
+        { "exercise_name": "Cuerda para saltar", "sets": 5, "reps": "2min", "rest_sec": 60, "notes": "Ritmo de combate, alterna pies" },
+        { "exercise_name": "Sprint en cinta o aire bike (intervalos)", "sets": 6, "reps": "30s sprint / 30s descanso", "rest_sec": 30, "notes": "Simula round (2min total intensidad)" },
+        { "exercise_name": "Mountain climbers", "sets": 4, "reps": "30s", "rest_sec": 30, "notes": "Cadera baja, ritmo sostenido" },
+        { "exercise_name": "V-ups", "sets": 3, "reps": "12-15", "rest_sec": 45, "notes": "Toca pies con manos, controla la bajada" },
+        { "exercise_name": "Russian twist con peso", "sets": 3, "reps": "20 (10 cada lado)", "rest_sec": 45, "notes": "Talones arriba, rota desde el tronco" },
+        { "exercise_name": "Plancha con toque de hombro", "sets": 3, "reps": "20 toques", "rest_sec": 45, "notes": "Cadera estable, anti-rotación" },
+        { "exercise_name": "Estiramiento de aductores y cadera (pancake, butterfly)", "sets": 1, "reps": "5min", "rest_sec": 0, "notes": "Mantén cada posición 30-45s, respira profundo" }
+      ]
+    }
+  ]
+}

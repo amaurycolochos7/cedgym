@@ -1,0 +1,59 @@
+{
+  "id": "rt-golf-3d-athlete-intermediate",
+  "name": "Golf Atleta Intermedio — 3 días",
+  "description": "Plan del Coach Samuel para golfista intermedio: 3 días enfocados en rotación de cadera y torácica, estabilidad de core, fuerza unilateral y movilidad de hombros. El swing depende 70% del tronco y cadera, no de los brazos — esta rutina ataca esa cadena.",
+  "source": "GENERIC",
+  "coach_signature": "Diseño del Coach Samuel para golfistas amateur/club — enfoque en prevenir lesiones de espalda baja (la #1 en golf) y aumentar distancia del swing vía velocidad de cadera.",
+  "objective": "GENERAL_FITNESS",
+  "user_type": "ATHLETE",
+  "level": "INTERMEDIATE",
+  "days_per_week": 3,
+  "location": "BOTH",
+  "discipline": "GOLF",
+  "gender": null,
+  "days": [
+    {
+      "day_of_week": 1,
+      "title": "Rotación + cadera (motor del swing)",
+      "notes": "El swing nace en la cadera. Día crítico para potencia de drive.",
+      "exercises": [
+        { "exercise_name": "Movilidad de cadera 90/90 + apertura torácica", "sets": 3, "reps": "8 cada lado", "rest_sec": 30, "notes": "Sin forzar, calienta los pivotes del swing" },
+        { "exercise_name": "Sentadilla goblet", "sets": 4, "reps": "10", "rest_sec": 75, "notes": "Bajada controlada, profundidad cómoda" },
+        { "exercise_name": "Peso muerto rumano con mancuernas", "sets": 4, "reps": "10", "rest_sec": 90, "notes": "Cadera atrás, no flexiones lumbar" },
+        { "exercise_name": "Sentadilla búlgara con apoyo lateral", "sets": 3, "reps": "8 cada pierna", "rest_sec": 75, "notes": "Unilateral — replica disociación cadera-pie del swing" },
+        { "exercise_name": "Lanzamiento rotacional de balón medicinal contra pared", "sets": 4, "reps": "6 cada lado", "rest_sec": 60, "notes": "Genera desde la cadera, no del brazo — base del swing" },
+        { "exercise_name": "Wood chop con polea (alto a bajo)", "sets": 3, "reps": "10 cada lado", "rest_sec": 60, "notes": "Movimiento diagonal completo, simula trayectoria del palo" },
+        { "exercise_name": "Puente de glúteo con barra ligera", "sets": 3, "reps": "12", "rest_sec": 60, "notes": "Aprieta arriba 2s — glúteo fuerte = cadera estable" }
+      ]
+    },
+    {
+      "day_of_week": 3,
+      "title": "Empuje + tirón + estabilidad de hombro",
+      "notes": "El swing termina en los brazos pero usa todo el torso. Hombros sanos = más años jugando.",
+      "exercises": [
+        { "exercise_name": "Movilidad torácica con foam roller", "sets": 2, "reps": "10 rotaciones cada lado", "rest_sec": 30, "notes": "Esencial para back-swing amplio" },
+        { "exercise_name": "Press de banca con mancuernas inclinado", "sets": 4, "reps": "10", "rest_sec": 90, "notes": "Inclinación 30°, codo a 45°" },
+        { "exercise_name": "Remo con un brazo en banca", "sets": 4, "reps": "10 cada brazo", "rest_sec": 75, "notes": "Activa espalda — clave para postura en setup" },
+        { "exercise_name": "Press militar con mancuernas sentado", "sets": 3, "reps": "10", "rest_sec": 75, "notes": "Hombros redondos = swing largo" },
+        { "exercise_name": "Face pull con polea", "sets": 3, "reps": "15", "rest_sec": 60, "notes": "Salud postural del hombro" },
+        { "exercise_name": "Rotaciones externas con banda elástica", "sets": 3, "reps": "12 cada brazo", "rest_sec": 45, "notes": "Manguito rotador — prevención de lesiones" },
+        { "exercise_name": "Curl martillo + tríceps al cable", "sets": 3, "reps": "10 cada uno", "rest_sec": 45, "notes": "Mantenimiento, no foco principal" }
+      ]
+    },
+    {
+      "day_of_week": 5,
+      "title": "Core anti-rotación + balance",
+      "notes": "Core que RESISTE rotación es más importante que core que rota. Y balance unilateral = swing estable.",
+      "exercises": [
+        { "exercise_name": "Caminata o bicicleta suave", "sets": 1, "reps": "10min", "rest_sec": 120, "notes": "Calentamiento general" },
+        { "exercise_name": "Pallof press con banda o polea", "sets": 4, "reps": "12 cada lado", "rest_sec": 60, "notes": "Anti-rotación pura — la base del control en el swing" },
+        { "exercise_name": "Plancha frontal", "sets": 4, "reps": "45s", "rest_sec": 45, "notes": "Cuerpo recto, no levantes cadera" },
+        { "exercise_name": "Plancha lateral", "sets": 3, "reps": "30s cada lado", "rest_sec": 45, "notes": "Cadera arriba, en línea con tronco" },
+        { "exercise_name": "Dead bug", "sets": 3, "reps": "10 cada lado", "rest_sec": 45, "notes": "Lumbar pegada al piso siempre" },
+        { "exercise_name": "Bird dog con extensión lenta", "sets": 3, "reps": "8 cada lado", "rest_sec": 45, "notes": "Estira contralateral 3s, controla descenso" },
+        { "exercise_name": "Equilibrio una pierna con ojos cerrados", "sets": 3, "reps": "30s cada pierna", "rest_sec": 30, "notes": "Propiocepción — útil para setup en pendientes" },
+        { "exercise_name": "Estiramiento cadena posterior y torácica", "sets": 1, "reps": "5min", "rest_sec": 0, "notes": "Mantén cada posición 30-45s, respira profundo" }
+      ]
+    }
+  ]
+}

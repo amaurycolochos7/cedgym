@@ -52,6 +52,8 @@ const DISCIPLINES = [
     'VOLLEYBALL',
     // Otros
     'BOXING',
+    'KARATE',
+    'GOLF',
     'CROSSFIT',
     'POWERLIFTING',
     'HYROX',
@@ -71,6 +73,8 @@ const DISCIPLINE_LABELS = {
     BASEBALL:        'béisbol',
     VOLLEYBALL:      'voleibol',
     BOXING:          'boxeo',
+    KARATE:          'karate (artes marciales)',
+    GOLF:            'golf',
     CROSSFIT:        'CrossFit',
     POWERLIFTING:    'powerlifting',
     HYROX:           'HYROX',

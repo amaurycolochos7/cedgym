@@ -98,6 +98,8 @@ type Discipline =
   | 'VOLLEYBALL'
   // Otros
   | 'BOXING'
+  | 'KARATE'
+  | 'GOLF'
   | 'CROSSFIT'
   | 'POWERLIFTING'
   | 'HYROX'
@@ -230,6 +232,8 @@ const PRIMARY_DISCIPLINES: { value: Discipline; label: string; emoji: string }[]
 // tienen seleccionadas para no romperles el perfil.
 const OTHER_DISCIPLINES: { value: Discipline; label: string; emoji: string }[] = [
   { value: 'BOXING',       label: 'Boxeo', emoji: '🥊' },
+  { value: 'KARATE',       label: 'Karate', emoji: '🥋' },
+  { value: 'GOLF',         label: 'Golf', emoji: '⛳' },
   { value: 'CROSSFIT',     label: 'CrossFit', emoji: '🏋️' },
   { value: 'POWERLIFTING', label: 'Powerlifting', emoji: '🏋️‍♂️' },
   { value: 'HYROX',        label: 'HYROX', emoji: '🏃' },
