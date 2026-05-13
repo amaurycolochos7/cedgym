@@ -80,9 +80,10 @@ const NOISE_WORDS = new Set([
     'peso', 'corporal', 'propio',
     'aparato', 'maquina', 'máquina',
     'mancuerna', 'mancuernas', 'barra',
-    'pies', 'elevados', 'elevada', 'inclinado', 'declinado',
+    'pies', 'pie', 'elevados', 'elevada', 'inclinado', 'declinado',
     'frente', 'banco', 'piso', 'suelo',
     'una', 'mano', 'unilateral',
+    'sentado', 'sentada', 'parado', 'parada',
     'banda', 'bandas', 'elastica', 'elástica',
     'minuto', 'segundos',
 ]);
@@ -108,7 +109,74 @@ function coreOf(name) {
     return tokens.slice(0, 3).join(' ');
 }
 
+// ─────────────────────────────────────────────────────────────────
+// Curated keyword → YouTube video ID map.
+//
+// Spanish gym slang ("pájaros" = reverse fly) confuses YouTube
+// scraping — a raw search returns bird videos. Press names that don't
+// say "militar" ("Press hombro en máquina", "Press hombro de pie")
+// also drift toward unrelated results because YouTube doesn't get the
+// muscle group from a generic word like "press".
+//
+// These rules run BEFORE the scrape. If any keyword matches the
+// normalized exercise name, we return that curated video ID
+// directly. IDs mirror the verified set in
+// apps/web/components/portal/exercise-media.tsx — keep both in sync.
+//
+// Order matters: more specific keywords first so generic ones don't
+// steal a more-specific match.
+// ─────────────────────────────────────────────────────────────────
+const CURATED_RULES = [
+    // Rear delt — "pájaros" alone returns bird videos
+    { videoId: 'rep-qVOkqgk', keywords: ['pajaros', 'pajaro', 'face pull', 'face-pull'] },
+    // Rotator cuff / activation
+    { videoId: 'gBGPi-NmQCg', keywords: [
+        'rotaciones de hombro', 'rotacion de hombro',
+        'rotaciones externas', 'rotaciones internas',
+        'activacion de hombro', 'activacion hombro',
+        'movilidad de hombro', 'movilidad hombro',
+        'rotaciones con banda', 'y-t-w', 'ytw',
+    ] },
+    // Overhead press family — "press hombro" sin "de" no cae solo
+    { videoId: '6Fzep104f0s', keywords: [
+        'press militar', 'press de hombros', 'press de hombro',
+        'press hombro', 'shoulder press', 'arnold press', 'overhead',
+    ] },
+    // Lateral / front raise
+    { videoId: '3VcKaXpzqRo', keywords: [
+        'laterales poliquin', 'elevacion lateral', 'elevaciones laterales',
+        'lateral raise', 'side raise', 'laterales',
+        'frontal con disco', 'elevacion frontal',
+        'circulos con mancuerna',
+    ] },
+    // Trapecio / shrug
+    { videoId: 'cJRVVxmytaM', keywords: ['encogimientos', 'shrugs', 'shrug', 'trapecio'] },
+];
+
+function curatedVideoFor(normalizedName) {
+    if (!normalizedName) return null;
+    for (const rule of CURATED_RULES) {
+        for (const kw of rule.keywords) {
+            if (normalizedName.includes(kw)) return rule.videoId;
+        }
+    }
+    return null;
+}
+
 async function doSearch(name) {
+    // Curated short-circuit: if the exercise name matches a known
+    // problematic pattern, return the hand-picked video and skip the
+    // YouTube scrape entirely. Eliminates "pájaros → bird videos" and
+    // similar misclassifications that don't survive a raw search.
+    const curated = curatedVideoFor(name);
+    if (curated) {
+        return {
+            videoId: curated,
+            title: null,
+            url: `https://www.youtube.com/watch?v=${curated}`,
+        };
+    }
+
     try {
         // Intento 1: nombre completo + "técnica ejercicio".
         // Funciona bien para nombres simples ("press banca",

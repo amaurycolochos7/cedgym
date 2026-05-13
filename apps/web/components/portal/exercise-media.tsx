@@ -132,11 +132,17 @@ const EXERCISE_VIDEOS: Record<VideoKey, string> = {
 // 'curl' antes de llegar a la regla específica del martillo.
 const RULES: Array<{ key: VideoKey; keywords: string[] }> = [
   // Hombro / activación (ANTES de bench/overhead para no robar)
-  { key: 'face-pull',         keywords: ['face pull', 'face-pull'] },
-  { key: 'band-shoulder',     keywords: ['rotaciones de hombro', 'rotacion de hombro', 'rotaciones externas', 'activacion de hombro', 'activación de hombro', 'rotaciones con banda', 'y-t-w', 'ytw'] },
+  // 'pajaros' / 'pajaro' (reverse fly mexicano) van aquí porque face-pull
+  // también es deltoide posterior — sin esta regla YouTube devuelve videos
+  // de aves literales en el scraper del backend.
+  { key: 'face-pull',         keywords: ['face pull', 'face-pull', 'pajaros', 'pájaros', 'pajaro', 'pájaro'] },
+  { key: 'band-shoulder',     keywords: ['rotaciones de hombro', 'rotacion de hombro', 'rotaciones externas', 'rotaciones internas', 'activacion de hombro', 'activación de hombro', 'movilidad de hombro', 'movilidad hombro', 'rotaciones con banda', 'y-t-w', 'ytw'] },
   { key: 'wrist-rotation',    keywords: ['rotaciones de muneca', 'rotaciones de muñeca', 'movilidad de muneca', 'movilidad de muñeca'] },
-  // Press
-  { key: 'overhead-press',    keywords: ['press militar', 'press de hombros', 'shoulder press', 'overhead', 'arnold press'] },
+  // Press — 'press hombro' sin "de" es como lo nombra el Coach Samuel en
+  // varios templates ("Press hombro en máquina", "Press hombro de pie con
+  // mancuernas"). Si no lo capturamos aquí, el fallback del backend con
+  // sólo "press hombro" en la query devuelve cosas como press de pierna.
+  { key: 'overhead-press',    keywords: ['press militar', 'press de hombros', 'press de hombro', 'press hombro', 'shoulder press', 'overhead', 'arnold press'] },
   { key: 'french-press',      keywords: ['press frances', 'press francés', 'french press', 'extension overhead'] },
   { key: 'bench-press',       keywords: ['press de banco', 'press banca', 'press banco', 'bench', 'press de pecho'] },
   // Curl variants
