@@ -29,6 +29,7 @@ import {
   UserRound,
   UtensilsCrossed,
   Flame,
+  Video,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -41,12 +42,20 @@ interface Step {
   ms: number;
 }
 
+// Duraciones calibradas al tiempo REAL de generación (~40-45 s en
+// promedio): la llamada al modelo tarda 30-50 s y la búsqueda de
+// videos otros 5-15 s. Antes los pasos sumaban 22 s, así que la barra
+// se llenaba y se quedaba "esperando" — se sentía colgado. Si la API
+// termina antes, el overlay salta al final y cierra; si tarda más,
+// se queda en el último paso con spinner. Mejor sub-prometer un
+// poquito y cerrar antes que prometer 20 s y dejar al socio esperando.
 const ROUTINE_STEPS: Step[] = [
-  { label: 'Leyendo tu perfil fitness', icon: UserRound, ms: 1800 },
-  { label: 'Seleccionando ejercicios del método Coach Samuel', icon: ClipboardList, ms: 4200 },
-  { label: 'Diseñando tu rutina personalizada', icon: Dumbbell, ms: 6500 },
-  { label: 'Ajustando series, reps y descansos', icon: Gauge, ms: 5500 },
-  { label: 'Añadiendo notas del coach', icon: NotebookPen, ms: 4000 },
+  { label: 'Leyendo tu perfil fitness', icon: UserRound, ms: 3000 },
+  { label: 'Seleccionando ejercicios del método Coach Samuel', icon: ClipboardList, ms: 8000 },
+  { label: 'Diseñando tu rutina personalizada', icon: Dumbbell, ms: 13000 },
+  { label: 'Ajustando series, reps y descansos', icon: Gauge, ms: 9000 },
+  { label: 'Buscando el video de cada ejercicio', icon: Video, ms: 6000 },
+  { label: 'Añadiendo las notas del coach', icon: NotebookPen, ms: 3000 },
 ];
 
 const MEAL_STEPS: Step[] = [
@@ -105,7 +114,7 @@ export function AIGenerationOverlay({
   const title = kind === 'routine' ? 'Preparando tu rutina' : 'Preparando tu plan alimenticio';
   const subtitle =
     kind === 'routine'
-      ? 'El Coach Samuel está armando algo hecho para ti.'
+      ? 'El Coach Samuel está armando algo hecho para ti. Suele tomar ~40 segundos.'
       : 'Estamos diseñando tu plan con ingredientes mexicanos.';
 
   return (

@@ -594,7 +594,7 @@ function GenerateRoutineCard({
             {mut.isPending ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Generando tu rutina… ~20 s
+                Generando tu rutina… ~40 s
               </span>
             ) : (
               <span className="tracking-tight">Generar mi rutina</span>
@@ -1972,7 +1972,7 @@ function RegenerateModal({
           {mut.isPending ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Generando… ~20s
+              Generando… ~40s
             </>
           ) : (
             <>

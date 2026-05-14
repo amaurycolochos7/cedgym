@@ -913,7 +913,17 @@ export default async function aiRoutinesRoutes(fastify) {
             }
             let videoMap = new Map();
             try {
-                videoMap = await searchExerciseVideosBatch(exerciseNames);
+                // Acotamos el scrape de YouTube a 10s. Con caché tibia esto
+                // termina en <1s, pero con caché fría —o ejercicios que la
+                // IA inventó para un atleta y nunca se han buscado— puede
+                // arrastrar la request 10-15s extra encima de la llamada al
+                // modelo. Si se pasa del límite, seguimos con lo que haya
+                // (video_url=null en el resto) y el scrape sigue corriendo
+                // en segundo plano para calentar la caché de la próxima vez.
+                videoMap = await Promise.race([
+                    searchExerciseVideosBatch(exerciseNames),
+                    new Promise((resolve) => setTimeout(() => resolve(new Map()), 10_000)),
+                ]);
             } catch (e) {
                 req.log.warn({ err: e.message }, '[ai-routines] video lookup batch failed');
             }
