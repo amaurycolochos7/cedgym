@@ -651,6 +651,17 @@ function GenerateRoutineCard({
               )}
 
               <FieldBlock label="Objetivo">
+                {/* Para un Deportista el deporte es la columna vertebral del
+                    plan; el objetivo de gym solo modula volumen/intensidad.
+                    Aclaramos esto para que el socio no crea que el objetivo
+                    cambia el enfoque de la rutina. */}
+                {effective.user_type === 'ATHLETE' && (
+                  <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                    Eres Deportista: tu rutina se arma según tu deporte. El
+                    objetivo solo ajusta el volumen y la intensidad — no
+                    cambia el enfoque del plan.
+                  </div>
+                )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                   {OBJECTIVE_OPTIONS.map((o) => {
                     const active = effective.objective === o.value;
@@ -709,6 +720,8 @@ function GenerateRoutineCard({
                     { value: 75, label: '75 min' },
                     { value: 90, label: '90 min' },
                     { value: 120, label: '120 min' },
+                    { value: 150, label: '150 min' },
+                    { value: 180, label: '180 min' },
                   ]}
                   value={effective.session_duration_min}
                   onChange={(v) => setOverride((ov) => ({ ...ov, session_duration_min: v as number }))}
@@ -1784,6 +1797,17 @@ function RegenerateModal({
         )}
 
         <FieldBlock label="Objetivo">
+          {/* Para un Deportista el deporte es la columna vertebral del plan;
+              el objetivo de gym solo modula volumen/intensidad. Aclaramos
+              esto para que el socio no crea que el objetivo cambia el
+              enfoque de la rutina. */}
+          {form.user_type === 'ATHLETE' && (
+            <div className="mb-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+              Eres Deportista: tu rutina se arma según tu deporte. El objetivo
+              solo ajusta el volumen y la intensidad — no cambia el enfoque
+              del plan.
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             {OBJECTIVE_OPTIONS.map((o) => {
               const active = form.objective === o.value;
@@ -1836,6 +1860,9 @@ function RegenerateModal({
               { value: 45, label: '45' },
               { value: 60, label: '60' },
               { value: 90, label: '90' },
+              { value: 120, label: '120' },
+              { value: 150, label: '150' },
+              { value: 180, label: '180' },
             ]}
             value={form.session_duration_min}
             onChange={(v) =>

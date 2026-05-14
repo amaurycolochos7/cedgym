@@ -207,19 +207,36 @@ async function issueTokens(fastify, request, user) {
 }
 
 // Cookie -> { record, matched } OR null. Because the refresh token
-// is bcrypt-hashed and we don't know which row it belongs to, we
-// look up recent non-revoked tokens and bcrypt-compare each. The
-// list is tiny in practice (one device ≈ 1 active row); we cap at
-// 20 to prevent pathological scans.
-async function findRefreshTokenRow(prisma, rawToken) {
+// is bcrypt-hashed y opaco, no sabemos a qué fila pertenece sin
+// bcrypt-comparar contra cada candidato.
+//
+// CAUSA RAÍZ del bug de sesiones cerradas: antes traíamos los 20
+// tokens más recientes GLOBALES (de todos los usuarios). Con varios
+// socios activos —sobre todo tras un deploy, cuando la API reinicia
+// y todos renuevan token a la vez— el refresh token de un usuario
+// "viejo" se caía del top 20, /auth/refresh devolvía 401 y el
+// frontend cerraba la sesión.
+//
+// FIX: cuando se conoce el `userId` (extraído del access token
+// caducado que el cliente manda en el header Authorization), se
+// acota la búsqueda a ese usuario — por usuario hay poquísimas
+// filas activas (≈1 por dispositivo), así que take:50 sobra.
+// Si NO viene userId (fallback retrocompat, p.ej. clientes que aún
+// no mandan el access token), se mantiene el escaneo global pero
+// con take:200 para reducir el riesgo en lo que todos los clientes
+// se actualizan.
+async function findRefreshTokenRow(prisma, rawToken, userId = null) {
     if (!rawToken) return null;
     const candidates = await prisma.refreshToken.findMany({
         where: {
+            // Acota por usuario cuando se conoce — esto es lo que
+            // evita que el token se caiga del top-N global.
+            ...(userId ? { user_id: userId } : {}),
             revoked_at: null,
             expires_at: { gt: new Date() },
         },
         orderBy: { created_at: 'desc' },
-        take: 20,
+        take: userId ? 50 : 200,
     });
     for (const row of candidates) {
         if (await compareRefreshToken(rawToken, row.token_hash)) {
@@ -227,6 +244,27 @@ async function findRefreshTokenRow(prisma, rawToken) {
         }
     }
     return null;
+}
+
+// Extrae el user_id (sub) del access token caducado que el cliente
+// manda en `Authorization: Bearer <token>`. El access token es un
+// JWT firmado con JWT_SECRET; aunque esté expirado, la FIRMA sigue
+// siendo válida, así que lo verificamos ignorando la expiración
+// solo para sacar el `sub` y acotar la búsqueda del refresh token.
+// Si no hay token, la firma es inválida o cualquier otro fallo,
+// devolvemos null y el caller cae al fallback (escaneo global).
+function userIdFromExpiredAccessToken(fastify, request) {
+    try {
+        const authHeader = request.headers?.authorization || '';
+        const token = authHeader.startsWith('Bearer ')
+            ? authHeader.slice(7).trim()
+            : null;
+        if (!token) return null;
+        const decoded = fastify.jwt.verify(token, { ignoreExpiration: true });
+        return decoded?.sub || null;
+    } catch {
+        return null;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -685,7 +723,12 @@ export default async function authRoutes(fastify) {
         if (!raw) {
             return reply.status(401).send(errPayload('NO_REFRESH', 'No hay refresh token', 401));
         }
-        const row = await findRefreshTokenRow(prisma, raw);
+        // Sacamos el user_id del access token caducado para acotar la
+        // búsqueda del refresh token a ese usuario (ver findRefreshTokenRow).
+        // Si no viene o la firma es inválida, userId = null y se usa el
+        // fallback de escaneo global.
+        const userId = userIdFromExpiredAccessToken(fastify, request);
+        const row = await findRefreshTokenRow(prisma, raw, userId);
         if (!row) {
             return reply.status(401).send(errPayload('REFRESH_INVALID', 'Refresh token inválido o expirado', 401));
         }
@@ -724,7 +767,11 @@ export default async function authRoutes(fastify) {
     fastify.post('/logout', async (request, reply) => {
         const raw = request.cookies?.[REFRESH_COOKIE_NAME];
         if (raw) {
-            const row = await findRefreshTokenRow(prisma, raw);
+            // Igual que en /refresh: intentamos acotar por user_id sacado
+            // del access token caducado. Si no hay token, userId = null y
+            // el fallback global mantiene el logout funcionando.
+            const userId = userIdFromExpiredAccessToken(fastify, request);
+            const row = await findRefreshTokenRow(prisma, raw, userId);
             if (row) {
                 await prisma.refreshToken.update({
                     where: { id: row.id },

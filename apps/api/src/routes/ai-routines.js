@@ -82,6 +82,75 @@ const DISCIPLINE_LABELS = {
     FUNCTIONAL:      'entrenamiento funcional',
 };
 
+// ── Guía DURA por deporte ─────────────────────────────────────────
+// Cuando el socio es ATHLETE con disciplina, esto se inyecta cerca del
+// TOPE del user prompt como CONTRATO (no sugerencia). Las listas suaves
+// de "ADAPTACIÓN POR USER_TYPE" siguen abajo, pero esto manda.
+//   focus → lo que la rutina DEBE priorizar (cada día ≥2 de aquí)
+//   avoid → lo que está PROHIBIDO usar como eje del plan
+const DISCIPLINE_GUIDE = {
+    FOOTBALL_SOCCER: {
+        focus: 'sprints y cambios de dirección (cone drills), fuerza unilateral de pierna (sentadilla búlgara, single-leg RDL), aductores, isométricos de cadera, core anti-rotación, pliometría',
+        avoid: 'no armes un split de gym clásico (día de pecho / día de brazo); el fútbol no se entrena con curls de bíceps',
+    },
+    FOOTBALL_US: {
+        focus: 'fuerza compuesta pesada (sentadilla, peso muerto, press banca), pliometría (box jumps, broad jumps), sled push, acondicionamiento tipo HYROX, cuello y trapecio, sprints cortos',
+        avoid: 'no lo conviertas en rutina de hipertrofia con aislamiento; el eje es potencia y fuerza aplicada',
+    },
+    BASKETBALL: {
+        focus: 'salto vertical (box jump, depth jump, jump squat), trabajo unilateral de pierna, agilidad lateral (lateral bounds), core rotacional y anti-rotación (Pallof press), hombro estable, jalones',
+        avoid: 'no centres el plan en pecho/brazo; el básquet vive de piernas explosivas y core',
+    },
+    TENNIS: {
+        focus: 'rotación de tronco con cable/banda, hombro 360° con manguito rotador, antebrazo y agarre, lunges laterales, footwork y agilidad reactiva, equilibrio unipodal',
+        avoid: 'no press de banca pesado como eje; cuida el hombro, prioriza rotación y estabilidad',
+    },
+    SWIMMING: {
+        focus: 'dorsales y espalda (jalón al pecho, dominadas, remo), hombro 360° con manguito rotador (Y-T-W, rotaciones externas con banda), core anti-extensión (hollow hold, plancha), movilidad torácica y de hombro',
+        avoid: 'NO un día dedicado a pecho pesado, NO press de banca como eje del plan, NO cargas axiales máximas — el nadador necesita espalda y hombro sanos, no volumen de pecho',
+    },
+    BASEBALL: {
+        focus: 'rotación explosiva de tronco (lanzamientos de balón medicinal), cadera y cadena posterior, agarre y antebrazo, hombro estable cuidando el codo, trabajo unilateral de pierna',
+        avoid: 'no cargues el codo/hombro con press pesado ni curls al fallo; volumen moderado y técnica limpia',
+    },
+    VOLLEYBALL: {
+        focus: 'salto vertical (box jump, depth jump, peso muerto rumano), hombro estable con manguito rotador, agilidad reactiva, fuerza unilateral de pierna y glúteo medio, core anti-rotación',
+        avoid: 'no split de gym clásico; el voleibol es salto y hombro, no hipertrofia de pecho',
+    },
+    BOXING: {
+        focus: 'core rotacional (woodchoppers, russian twists, lanzamientos de balón medicinal), hombros y tríceps, cardio HIIT / shadow boxing, cuello, agarre, footwork',
+        avoid: 'no rutina de hipertrofia lenta; el boxeo es potencia rotacional y resistencia',
+    },
+    KARATE: {
+        focus: 'core rotacional explosivo (medicine ball slams, woodchoppers), pliometría de piernas (saltos de tijera, knee drives), movilidad de cadera, golpes y patadas con banda elástica, acondicionamiento HIIT, cuello',
+        avoid: 'no split de gym clásico (día de pecho / día de espalda aislado); el karate es cadera explosiva, core y velocidad',
+    },
+    GOLF: {
+        focus: 'rotación torácica con cable, anti-rotación (Pallof press, dead bug), movilidad torácica (T-spine rotation), glúteo medio (clamshells, monster walks), agarre y antebrazo, equilibrio unipodal',
+        avoid: 'no cargas pesadas de pecho/pierna que limiten el rango del swing; prioriza movilidad y rotación controlada',
+    },
+    CROSSFIT: {
+        focus: 'metcon (AMRAP, EMOM), levantamientos olímpicos (clean, snatch, thruster), gymnastics, capacidad de trabajo, carry (farmer carry)',
+        avoid: 'no lo conviertas en split de hipertrofia con descansos largos',
+    },
+    POWERLIFTING: {
+        focus: 'sentadilla, press banca y peso muerto con variantes (pausa, déficit, tempo), reps 1-5, descansos 3-5 min, accesorios SBD mínimos',
+        avoid: 'no metas circuitos ni cardio HIIT como eje; es fuerza máxima',
+    },
+    HYROX: {
+        focus: 'fuerza funcional y cardio combinados (sled push/pull, burpees broad jump, wall balls, farmer carry, sandbag, ski erg, rower, lunges), intervalos de carrera',
+        avoid: 'no split de gym aislado; HYROX es estación más carrera',
+    },
+    STRENGTH: {
+        focus: 'fuerza pura compuesta (sentadilla, peso muerto, press, remo pesado), baja repetición y alta carga',
+        avoid: 'no circuitos de alta densidad ni aislamiento como eje',
+    },
+    FUNCTIONAL: {
+        focus: 'patrones de movimiento humano (empuje, jalón, sentadilla, bisagra, carga, locomoción), kettlebell, carga unilateral',
+        avoid: 'no split de máquinas aislado por grupo muscular',
+    },
+};
+
 const generateBody = z.object({
     objective: z.enum(FITNESS_GOALS).optional(),
     level: z.enum(LEVELS).optional(),
@@ -206,7 +275,8 @@ DURACIÓN DE LA SESIÓN:
 - 35-50 min: 5-7 ejercicios.
 - 50-75 min: 7-9 ejercicios.
 - 75-100 min: 9-11 ejercicios.
-- > 100 min: 10-13 ejercicios. Solo justificable para nivel avanzado o athletes.
+- 100-140 min: 11-14 ejercicios.
+- > 140 min: 13-16 ejercicios. Agrega más volumen por grupo (más series o ejercicios accesorios), NUNCA relleno sin propósito. Solo para nivel avanzado o athletes.
 Calcula tiempo total = sum(sets × (tiempo_serie_aprox + rest_sec)) y queda DENTRO de la duración pedida.
 
 TONO: mexicano norteño, directo, de coach que lleva al atleta de la mano. Nada de inglés innecesario. Cuando pongas notas en los ejercicios, usa frases cortas tipo "sube lento y aprieta arriba", "espalda recta", "codos pegados al cuerpo".
@@ -346,6 +416,27 @@ function buildUserPrompt({
         : '(no aplica)';
     const firstNameStr = firstName && firstName.trim() ? firstName.trim() : '(sin nombre)';
 
+    // Contrato deportivo — cuando el socio es ATHLETE con disciplina, esto
+    // se inyecta arriba en el prompt y MANDA sobre las listas suaves de
+    // abajo. Causa raíz del bug "nadador con ejercicios de pecho": la
+    // biblioteca que recibe la IA es de gym general (no tiene ejercicios
+    // deportivos), y el prompt le decía "usa SIEMPRE estos nombres". Para
+    // un atleta eso lo empuja a forzar press de banca / curls. Aquí le
+    // damos permiso explícito de INVENTAR ejercicios del deporte y un
+    // contrato de "qué priorizar / qué está prohibido".
+    const guide = (user_type === 'ATHLETE' && discipline)
+        ? DISCIPLINE_GUIDE[discipline]
+        : null;
+    const athleteGuideBlock = guide
+        ? `\n\n⚠️ CONTRATO DEPORTIVO — ${disciplineStr.toUpperCase()} (ESTO MANDA SOBRE TODO LO DEMÁS):
+Este socio es DEPORTISTA de ${disciplineStr}. La rutina ENTERA debe verse y sentirse como un plan para ${disciplineStr}, NO un plan de gym general.
+- DEBE PRIORIZAR: ${guide.focus}.
+- En CADA día de entrenamiento, AL MENOS 2 ejercicios tienen que ser específicos de ${disciplineStr} (de la lista "debe priorizar"). No genéricos tipo "press banca" o "curl de bíceps".
+- PROHIBIDO: ${guide.avoid}.
+- La BIBLIOTECA de abajo es de gym GENERAL — casi no tiene ejercicios deportivos. Para ${disciplineStr} TIENES PERMITIDO (y se espera que lo hagas) INVENTAR ejercicios específicos del deporte con exercise_id=null. NO fuerces un ejercicio genérico solo porque está en la lista.
+- El objetivo (${objective}) es secundario: ajusta volumen e intensidad, pero la columna vertebral del plan es ${disciplineStr}.`
+        : '';
+
     // Bloque de "intención del socio" — lo metemos al principio del
     // prompt porque es la información que más fácil ignora la IA si la
     // dejamos al final. Solo aparecen líneas para campos no vacíos.
@@ -389,7 +480,7 @@ PERFIL:
 - Equipo disponible en casa: ${equipmentStr}
 - Lesiones/restricciones: ${injuriesStr}
 - Limitaciones de movilidad: ${mobilityStr}
-- Notas adicionales: ${notesStr}${intentBlock}${homeStrictBlock}
+- Notas adicionales: ${notesStr}${intentBlock}${athleteGuideBlock}${homeStrictBlock}
 
 BIBLIOTECA DE EJERCICIOS DEL COACH (usa SIEMPRE estos nombres cuando el ejercicio esté en la lista — son los nombres que el Coach Samuel usa con sus atletas. Solo inventa si realmente no hay equivalente):
 ${libJson}

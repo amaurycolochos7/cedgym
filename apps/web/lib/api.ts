@@ -91,11 +91,21 @@ async function tryRefresh(): Promise<string | null> {
   const refresh = tokenStore.getRefresh();
   if (!refresh) return null;
   try {
+    // Mandamos el access token caducado en el header Authorization.
+    // El backend lo usa SOLO para sacar el user_id (la firma sigue
+    // siendo válida aunque el token esté expirado) y así acotar la
+    // búsqueda del refresh token a ese usuario — evita que el token
+    // se "caiga" del top-N global y se cierre la sesión. Si no hay
+    // access token, el backend cae a su fallback de escaneo global.
+    const access = tokenStore.getAccess();
     const { data } = await axios.post<AuthResponse>(
       `${baseURL}/auth/refresh`,
       { refresh_token: refresh },
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(access ? { Authorization: `Bearer ${access}` } : {}),
+        },
         withCredentials: true,
       },
     );
