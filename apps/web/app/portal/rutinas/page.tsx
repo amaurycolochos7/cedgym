@@ -96,6 +96,7 @@ const DAY_LABELS_FULL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', '
 
 // ── Types ────────────────────────────────────────────────────────────────
 type Location = 'GYM' | 'HOME' | 'BOTH';
+type Level = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 type Objective =
   | 'WEIGHT_LOSS'
   | 'MUSCLE_GAIN'
@@ -329,6 +330,15 @@ const USER_TYPE_OPTIONS: { value: UserType; label: string; emoji: string }[] = [
   { value: 'ATHLETE', label: 'Deportista',     emoji: '🏆' },
 ];
 
+// Nivel de entrenamiento — editable desde la pantalla de generar/regenerar
+// para que el socio no tenga que ir hasta el perfil fitness solo para
+// cambiarlo. El `hint` ayuda a que se ubique sin adivinar.
+const LEVEL_OPTIONS: { value: Level; label: string; emoji: string; hint: string }[] = [
+  { value: 'BEGINNER',     label: 'Principiante', emoji: '🌱', hint: 'Empezando o menos de 1 año' },
+  { value: 'INTERMEDIATE', label: 'Intermedio',   emoji: '💪', hint: '1 a 3 años constante' },
+  { value: 'ADVANCED',     label: 'Avanzado',     emoji: '🔥', hint: 'Más de 3 años, técnica sólida' },
+];
+
 // Lista completa de disciplinas — replica las del wizard (todas las 15
 // que el backend ya tiene catalogadas). Si el socio cambia a otro
 // deporte solo para esta generación, no tiene que ir al perfil.
@@ -357,6 +367,7 @@ interface GenerateOverride {
   session_duration_min?: number;
   user_type?: UserType;
   discipline?: Discipline;
+  level?: Level;
 }
 
 function GenerateRoutineCard({
@@ -387,6 +398,7 @@ function GenerateRoutineCard({
 
   const [showOverrides, setShowOverrides] = useState(false);
   const [override, setOverride] = useState<GenerateOverride>({});
+  const qc = useQueryClient();
 
   const mut = useMutation({
     // 180s mirrors the Fastify requestTimeout in apps/api/src/index.js.
@@ -396,9 +408,25 @@ function GenerateRoutineCard({
     // limit aborted axios while the backend was still working, which
     // surfaced as "No pudimos conectar con el servidor" in the toast.
     // Same fix that meal-plans got in d441e50.
-    mutationFn: async (body: GenerateOverride) =>
-      (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data,
+    mutationFn: async (body: GenerateOverride) => {
+      // El NIVEL sí se persiste al perfil — es una propiedad estable del
+      // socio, no algo de "solo esta vez". Así no tiene que irse hasta el
+      // perfil fitness para cambiarlo. El resto de overrides siguen siendo
+      // por-generación. Si el PATCH falla, seguimos generando igual.
+      if (body.level) {
+        try {
+          await api.patch('/users/me/routine-profile', { level: body.level });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn('[generate] level persist failed', e);
+        }
+      }
+      return (await api.post('/ai/routines/generate', body, { timeout: 180_000 })).data;
+    },
     onSuccess: () => {
+      // Refresca /auth/me para que el nivel guardado se refleje en el
+      // resumen del perfil sin requerir F5.
+      qc.invalidateQueries({ queryKey: ['auth', 'me'] });
       toast.success('Tu rutina está lista.');
       onGenerated();
     },
@@ -436,6 +464,8 @@ function GenerateRoutineCard({
       (override.discipline ?? (profileDiscipline as Discipline | undefined)) as
         | Discipline
         | undefined,
+    level:
+      (override.level ?? (profileLevel as Level | undefined) ?? 'BEGINNER') as Level,
   };
 
   return (
@@ -551,6 +581,7 @@ function GenerateRoutineCard({
                 session_duration_min: effective.session_duration_min,
                 user_type: effective.user_type,
                 discipline: effective.discipline,
+                level: effective.level,
               })
             }
             className={[
@@ -588,8 +619,38 @@ function GenerateRoutineCard({
           {showOverrides && hasFitnessProfile && (
             <div className="space-y-5 pt-2 border-t border-slate-200">
               <p className="text-[11px] text-slate-400">
-                Estos cambios solo aplican a esta generación. Tu perfil queda intacto.
+                El nivel sí se guarda en tu perfil. El resto de ajustes solo
+                aplican a esta generación.
               </p>
+
+              <FieldBlock label="Nivel">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  {LEVEL_OPTIONS.map((l) => {
+                    const active = effective.level === l.value;
+                    return (
+                      <button
+                        key={l.value}
+                        type="button"
+                        onClick={() => setOverride((ov) => ({ ...ov, level: l.value }))}
+                        className={[
+                          'flex flex-col gap-0.5 rounded-xl ring-1 p-3 text-left transition-colors',
+                          active
+                            ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                            : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
+                        ].join(' ')}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-lg leading-none">{l.emoji}</span>
+                          <span className={['text-sm font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
+                            {l.label}
+                          </span>
+                        </span>
+                        <span className="text-[10px] text-slate-500 leading-tight">{l.hint}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </FieldBlock>
 
               <FieldBlock label="Tipo de entrenamiento">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
@@ -1571,6 +1632,7 @@ function RegenerateModal({
     session_duration_min: profileDuration ?? 60,
     user_type: profileUserType ?? 'ADULT',
     discipline: profileDiscipline as Discipline,
+    level: (profileLevel as Level | undefined) ?? 'BEGINNER',
   });
   // Si el perfil llega DESPUÉS del primer render (useQuery todavía
   // cargando al montar el modal), sincronizamos el form una sola vez
@@ -1586,6 +1648,7 @@ function RegenerateModal({
       session_duration_min: profileDuration ?? f.session_duration_min,
       user_type: profileUserType ?? f.user_type,
       discipline: (profileDiscipline ?? f.discipline) as Discipline,
+      level: (profileLevel as Level | undefined) ?? f.level,
     }));
     setHydratedFromProfile(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1618,6 +1681,9 @@ function RegenerateModal({
         // discipline solo aplica si es ATHLETE — si dejó de serlo,
         // mandamos null para limpiarla del perfil.
         discipline: body.user_type === 'ATHLETE' ? (body.discipline ?? null) : null,
+        // level se persiste igual — el socio lo edita aquí mismo en vez
+        // de tener que irse al perfil fitness.
+        level: body.level,
       };
       try {
         await api.patch('/users/me/routine-profile', profilePatch);
@@ -1782,19 +1848,38 @@ function RegenerateModal({
           </FieldBlock>
         )}
 
-        {profileLevel && (
-          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-[11px]">
-            <span className="text-slate-600">
-              <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] mr-1.5">
-                Nivel
-              </span>
-              {LEVEL_LABELS[profileLevel] ?? profileLevel}
-            </span>
-            <Link href="/portal/perfil" className="text-blue-600 hover:underline font-semibold">
-              Cambiar →
-            </Link>
+        {/* Nivel editable AQUÍ MISMO — antes era solo lectura con un link
+            "Cambiar →" que mandaba al perfil fitness; eso creaba fricción.
+            Ahora se cambia en el modal y se persiste al perfil (ver el
+            profilePatch del mutationFn), igual que Tipo y Deporte. */}
+        <FieldBlock label="Nivel">
+          <div className="grid grid-cols-3 gap-2">
+            {LEVEL_OPTIONS.map((l) => {
+              const active = form.level === l.value;
+              return (
+                <button
+                  key={l.value}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, level: l.value }))}
+                  className={[
+                    'flex flex-col gap-0.5 rounded-xl ring-1 p-2.5 text-left transition-colors',
+                    active
+                      ? 'ring-blue-500 bg-blue-50 shadow-sm'
+                      : 'ring-slate-200 bg-slate-50 hover:bg-white hover:ring-slate-300',
+                  ].join(' ')}
+                >
+                  <span className="flex items-center gap-1">
+                    <span className="text-base leading-none">{l.emoji}</span>
+                    <span className={['text-xs font-semibold', active ? 'text-blue-900' : 'text-slate-900'].join(' ')}>
+                      {l.label}
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 leading-tight">{l.hint}</span>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </FieldBlock>
 
         <FieldBlock label="Objetivo">
           {/* Para un Deportista el deporte es la columna vertebral del plan;
