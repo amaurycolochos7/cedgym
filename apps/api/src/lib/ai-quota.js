@@ -32,13 +32,14 @@ function periodEnd(periodStart) {
     return new Date(periodStart.getTime() + 30 * DAY_MS);
 }
 
-// Use the same dayjs('day') diff pattern as lib/memberships.js's
-// `daysRemaining`. Floor semantics keep this number consistent with
-// the "Vence en X días" readout on the dashboard — otherwise one
-// ceil + one floor produce off-by-one mismatches for the same date.
+// Mismas semánticas (días-calendario, baja a medianoche) que
+// lib/memberships.js#daysRemaining para que "próxima rutina en X días"
+// no esté off-by-one respecto al "Vence en X días" del dashboard.
 function daysRemainingInPeriod(periodStart, now = new Date()) {
     const end = periodEnd(periodStart);
-    const diff = dayjs(end).diff(dayjs(now), 'day');
+    const diff = dayjs(end)
+        .startOf('day')
+        .diff(dayjs(now).startOf('day'), 'day');
     return diff > 0 ? diff : 0;
 }
 

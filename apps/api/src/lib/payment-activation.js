@@ -77,14 +77,16 @@ export async function activateMembershipFromPayment(fastify, payment) {
         where: { user_id: payment.user_id },
     });
 
-    // Extend from the later of (now, current expires_at) so we
-    // never accidentally shrink a paid period when the webhook
-    // races the sync endpoint.
-    const base =
-        existing && dayjs(existing.expires_at).isAfter(dayjs())
-            ? existing.expires_at
-            : new Date();
-    const newExpiresAt = computeExpiresAt(billingCycle, base);
+    // Política del gym: cada activación reinicia el ciclo a 30 días
+    // frescos desde HOY. Aplica tanto a renovaciones del mismo plan
+    // como a upgrades (Básico→Élite). El socio no acumula sobrantes
+    // del periodo anterior — el contador del dashboard regresa a 30
+    // y baja día a día. Antes hacíamos `base = max(now, expires_at)`
+    // para "no encoger un periodo pagado" en la race webhook+sync,
+    // pero esa race ya está cubierta por el guard idempotente
+    // (meta.activated_at + Redis SETNX) más arriba, así que el base
+    // siempre es `now`.
+    const newExpiresAt = computeExpiresAt(billingCycle, new Date());
 
     // Read the workspace-overridden price so admin edits in
     // /admin/memberships/plans/:code are reflected on the membership.

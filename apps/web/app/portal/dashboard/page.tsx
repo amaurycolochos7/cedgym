@@ -95,6 +95,11 @@ export default function PortalDashboardPage() {
                 <span className="font-semibold text-blue-600">
                   {membership.days_remaining ?? '—'} días
                 </span>
+                {membership.expires_at && (
+                  <span className="text-xs text-slate-500">
+                    {' '}· {formatExpiryDate(membership.expires_at)}
+                  </span>
+                )}
               </div>
               <Link
                 href="/portal/membership"
@@ -168,6 +173,23 @@ export default function PortalDashboardPage() {
       <PlansModal open={plansOpen} onClose={() => setPlansOpen(false)} />
     </div>
   );
+}
+
+// Formatea una fecha tipo "8 jun 2026" en español para que el socio
+// pueda verificar a simple vista si el vencimiento se movió. Útil
+// porque el contador "X días" es relativo y no permite distinguir si
+// la membresía no se está consumiendo (bug) vs si en realidad sí baja
+// pero no se nota.
+function formatExpiryDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('es-MX', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return '';
+  }
 }
 
 function QuickTile({

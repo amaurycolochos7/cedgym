@@ -210,11 +210,13 @@ async function activateMembershipNow(prisma, { user, plan, billingCycle, priceMx
     const existing = await prisma.membership.findUnique({
         where: { user_id: user.id },
     });
-    const base =
-        existing && dayjs(existing.expires_at).isAfter(dayjs())
-            ? existing.expires_at
-            : new Date();
-    const newExpiresAt = computeExpiresAt(billingCycle, base);
+    // Política del gym: cada activación reinicia el ciclo a 30 días
+    // frescos desde HOY (renovación o upgrade da igual). Antes
+    // extendíamos desde el max(now, expires_at) para no perder días
+    // pagados, pero el flujo del gym es más simple: cobras el ciclo
+    // nuevo, vence un mes después. El socio ve el contador volver a
+    // 30 y bajar día a día.
+    const newExpiresAt = computeExpiresAt(billingCycle, new Date());
 
     if (existing) {
         return {

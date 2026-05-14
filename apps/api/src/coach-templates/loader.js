@@ -252,31 +252,51 @@ export function select_routine_template(profile = {}) {
     const all = load_all_routine_templates();
     if (all.length === 0) return null;
 
-    // Each layer = list of constraint keys that MUST match. Drop them
-    // one at a time from the tail. OBJECTIVE NUNCA SE RELAJA: si no hay
-    // template con el objetivo pedido, devolvemos null y el caller usa
-    // el path AI free-form. Antes existía una capa final que soltaba
-    // objective y caía a 'el COACH_EXCEL más cercano' — eso causó que
-    // un socio pidiendo WEIGHT_LOSS terminara con 'Rutina Hombre 2025
-    // MUSCLE_GAIN 5d GYM' (template diametralmente opuesto al input).
-    const layers = [
-        ['objective', 'gender', 'location', 'discipline', 'user_type', 'level', 'days_per_week'],
-        ['objective', 'gender', 'location', 'discipline', 'user_type', 'days_per_week'], // drop level
-        ['objective', 'gender', 'location', 'discipline', 'days_per_week'],               // drop user_type
-        ['objective', 'gender', 'location', 'discipline'],                                // drop days_per_week
-        ['objective', 'gender', 'location'],                                              // drop discipline
-        ['objective', 'gender'],                                                          // drop location
-        ['objective'],                                                                    // drop gender
-        // INTENCIONALMENTE NO hay capa 8 (drop objective). Mejor null →
-        // AI free-form que un template del goal contrario.
-    ];
+    // ATHLETE con disciplina elegida: NUNCA relajamos discipline. Si no
+    // existe template para ese deporte, devolvemos null y el caller cae
+    // al path AI free-form (que tiene instrucciones detalladas por
+    // deporte en SYSTEM_PROMPT — saltos verticales para básquet, sprints
+    // para fútbol, rotacional para boxeo, etc.).
+    //
+    // Antes relajábamos discipline en la capa 5, lo cual hacía que un
+    // socio ATHLETE/BASKETBALL terminara con "Rutina Hombre 2025
+    // MUSCLE_GAIN 5d GYM" (Pecho/Pierna/Espalda/Brazo) — el cliente se
+    // quejó de que la rutina no tenía nada que ver con su deporte. Para
+    // esos socios preferimos AI free-form sport-specific antes que un
+    // template genérico.
+    //
+    // OBJECTIVE tampoco se relaja (preserva la regla previa): un socio
+    // pidiendo WEIGHT_LOSS no debe recibir un template MUSCLE_GAIN.
+    const isAthleteWithDiscipline = profile?.user_type === 'ATHLETE' && !!profile?.discipline;
+
+    const layers = isAthleteWithDiscipline
+        ? [
+            ['objective', 'gender', 'location', 'discipline', 'user_type', 'level', 'days_per_week'],
+            ['objective', 'gender', 'location', 'discipline', 'user_type', 'days_per_week'], // drop level
+            ['objective', 'gender', 'location', 'discipline', 'days_per_week'],               // drop user_type
+            ['objective', 'gender', 'location', 'discipline'],                                // drop days_per_week
+            ['objective', 'gender', 'discipline'],                                            // drop location, KEEP discipline
+            ['objective', 'discipline'],                                                      // drop gender, KEEP discipline
+            ['discipline'],                                                                   // last resort: solo discipline
+            // NO hay capa que suelte discipline para ATHLETE. Si llegamos
+            // aquí sin match → null → AI free-form sport-specific.
+        ]
+        : [
+            ['objective', 'gender', 'location', 'discipline', 'user_type', 'level', 'days_per_week'],
+            ['objective', 'gender', 'location', 'discipline', 'user_type', 'days_per_week'], // drop level
+            ['objective', 'gender', 'location', 'discipline', 'days_per_week'],               // drop user_type
+            ['objective', 'gender', 'location', 'discipline'],                                // drop days_per_week
+            ['objective', 'gender', 'location'],                                              // drop discipline
+            ['objective', 'gender'],                                                          // drop location
+            ['objective'],                                                                    // drop gender
+        ];
 
     for (const keys of layers) {
         const pool = _filter(all, (t) => keys.every((k) => R_MATCH[k](t, profile)));
         const best = _pickBest(pool, (t) => _routineRankKey(t, profile));
         if (best) return best;
     }
-    return null; // unreachable when catalog non-empty (last layer is unconditional)
+    return null; // ATHLETE con disciplina sin template: cae a AI free-form
 }
 
 const M_MATCH = {

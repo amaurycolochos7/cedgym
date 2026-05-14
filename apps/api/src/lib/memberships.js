@@ -223,19 +223,37 @@ export function humanMembershipDescription(planCode, billingCycle, kind) {
 // ────────────────────────────────────────────────────────────────
 // Expires-at math.
 //
-// When the webhook flips a payment to APPROVED we extend (or
-// start) the membership. If the user still has days left we add
-// the new cycle on top of `expires_at`, otherwise on top of
-// `now` (paused / expired memberships shouldn't get retro credit).
+// Suma 1 mes al `from`. Política del gym: cada activación
+// (renovación o upgrade) llama a esto con `from = new Date()`, así
+// `expires_at` se reinicia a 30 días desde HOY y el socio ve el
+// contador volver a 30. Antes apilábamos sobre el expires_at viejo
+// (Básico con 25 días + Élite = 55 días), pero confundía al socio
+// que esperaba "30 frescos" al pagar el ciclo nuevo.
 // ────────────────────────────────────────────────────────────────
 export function computeExpiresAt(_billingCycle, from = new Date()) {
     return dayjs(from).add(1, 'month').toDate();
 }
 
-// Days remaining until `expires_at`. Floor so "0.9 days left" reads as 0.
+// Días restantes hasta `expires_at`.
+//
+// Semántica: días-CALENDARIO (ambas fechas ancladas a startOf('day')).
+// El socio espera que el contador baje en 1 cada medianoche, sin
+// importar a qué hora se aplicó la membresía. Antes hacíamos
+// `dayjs(expiresAt).diff(now, 'day')` con floor, que cuenta bloques
+// de 24 h desde el momento exacto de creación — eso producía la
+// percepción de "atorado en 29" porque entre las 14:01 del día de
+// creación y las 14:00 del día siguiente el número se mantenía igual,
+// y solo saltaba a 28 al cruzar el aniversario horario, no a medianoche.
+//
+// Casos extremos:
+//   - expires_at en el pasado → 0 (ya venció)
+//   - expires_at hoy mismo a cualquier hora → 0 (vence hoy, no mañana)
+//   - expires_at mañana a cualquier hora → 1
 export function daysRemaining(expiresAt) {
     if (!expiresAt) return 0;
-    const diff = dayjs(expiresAt).diff(dayjs(), 'day');
+    const diff = dayjs(expiresAt)
+        .startOf('day')
+        .diff(dayjs().startOf('day'), 'day');
     return diff > 0 ? diff : 0;
 }
 
