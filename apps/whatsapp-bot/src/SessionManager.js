@@ -1,11 +1,95 @@
 import WhatsAppSession from './WhatsAppSession.js';
 
+// ── Auto-reconnect tuning ─────────────────────────────────────────
+// Razones de desconexión que SÍ se pueden recuperar sin QR nuevo: la
+// sesión local (LocalAuth) sigue válida, solo se cayó la página/red.
+// Si la razón cae en la lista UNRECOVERABLE el admin tiene que entrar
+// al panel y reescanear — auto-restart solo gasta CPU para nada.
+const UNRECOVERABLE_SUBSTRINGS = [
+    'logout',                       // LOGOUT — desvinculado desde el celular
+    'unpaired',                     // UNPAIRED / UNPAIRED_IDLE
+    'auth_failure',                 // creds locales corruptas → LocalAuth fresh
+    'qr_exhausted',                 // 50 QRs sin escanear
+    'max qrcode retries',           // mismo concepto desde wweb.js
+];
+const MAX_RECONNECT_ATTEMPTS = 8;
+
 class SessionManager {
     constructor(prisma) {
         this.prisma = prisma;
         this.sessions = new Map();      // workspaceId → WhatsAppSession
         this._initPromises = new Map(); // workspaceId → Promise (lock por sesión)
         this._lastErrors = new Map();   // workspaceId → last error message
+        this._reconnectAttempts = new Map(); // workspaceId → intentos consecutivos
+        this._reconnectTimers = new Map();   // workspaceId → setTimeout handle
+    }
+
+    // ── Auto-reconnect helpers ────────────────────────────────────
+    // Devuelve true si la razón implica que se necesita QR nuevo
+    // (LOGOUT, UNPAIRED, auth_failure, etc.). En esos casos no
+    // intentamos reconectar — el admin tiene que entrar a escanear.
+    _isUnrecoverable(reason) {
+        const lc = String(reason || '').toLowerCase();
+        return UNRECOVERABLE_SUBSTRINGS.some((s) => lc.includes(s));
+    }
+
+    // Programa un reintento con backoff exponencial + jitter. Si ya
+    // hay un timer pendiente para ese workspace, no encolamos otro
+    // (evita estampida de reintentos).
+    _scheduleReconnect(workspaceId, reason) {
+        if (this._reconnectTimers.has(workspaceId)) return;
+        const attempt = (this._reconnectAttempts.get(workspaceId) || 0) + 1;
+        this._reconnectAttempts.set(workspaceId, attempt);
+        if (attempt > MAX_RECONNECT_ATTEMPTS) {
+            console.error(
+                `❌ Reconnect attempts exhausted for ${workspaceId} (${attempt - 1} tries). ` +
+                `Admin debe entrar al panel y revisar.`,
+            );
+            return;
+        }
+        // 5s, 10s, 20s, 40s, 80s, 160s, 300s, 300s — cap a 5 min.
+        const baseDelay = Math.min(5_000 * 2 ** (attempt - 1), 300_000);
+        const jitter = Math.floor(Math.random() * 2_000);
+        const delay = baseDelay + jitter;
+        console.log(
+            `🔄 Scheduling reconnect ${attempt}/${MAX_RECONNECT_ATTEMPTS} for ${workspaceId} ` +
+            `in ${Math.round(delay / 1000)}s (reason: ${reason}).`,
+        );
+        const timer = setTimeout(async () => {
+            this._reconnectTimers.delete(workspaceId);
+            try {
+                console.log(`🔄 Attempting reconnect ${attempt}/${MAX_RECONNECT_ATTEMPTS} for ${workspaceId}…`);
+                await this.startSession(workspaceId);
+                // No reseteamos attempts aquí — solo el evento 'ready'
+                // confirma reconexión exitosa. Si la sesión queda en
+                // initializing pero nunca ready, el siguiente disconnect
+                // re-programará otro intento contando desde donde íbamos.
+            } catch (err) {
+                console.error(
+                    `❌ Reconnect ${attempt}/${MAX_RECONNECT_ATTEMPTS} failed for ${workspaceId}:`,
+                    err.message,
+                );
+                // El propio startSession dispara 'disconnected' si falla,
+                // que reentrará en _scheduleReconnect. Como fallback por
+                // si no se disparó, programamos uno más explícito.
+                if (!this._reconnectTimers.has(workspaceId)) {
+                    this._scheduleReconnect(workspaceId, `retry_failed:${err.message}`);
+                }
+            }
+        }, delay);
+        this._reconnectTimers.set(workspaceId, timer);
+    }
+
+    // Cancela timer + resetea contador. Se llama en éxito ('ready')
+    // y en logout/stop explícitos para no resucitar sesiones que el
+    // admin apagó a propósito.
+    _cancelReconnect(workspaceId) {
+        const timer = this._reconnectTimers.get(workspaceId);
+        if (timer) {
+            clearTimeout(timer);
+            this._reconnectTimers.delete(workspaceId);
+        }
+        this._reconnectAttempts.delete(workspaceId);
     }
 
     /**
@@ -83,6 +167,9 @@ class SessionManager {
 
         session.on('ready', async () => {
             console.log(`✅ Session ready for workspace ${workspaceId}`);
+            // Reconexión exitosa: cancelamos cualquier reintento
+            // programado y reseteamos el contador.
+            this._cancelReconnect(workspaceId);
             await this.updateDbSession(workspaceId, {
                 is_connected: true,
                 initializing: false,
@@ -95,12 +182,28 @@ class SessionManager {
         });
 
         session.on('disconnected', async (reason) => {
-            console.log(`🔴 Session disconnected for workspace ${workspaceId}: ${reason}`);
+            const reasonStr = String(reason || 'unknown');
+            console.log(`🔴 Session disconnected for workspace ${workspaceId}: ${reasonStr}`);
             await this.updateDbSession(workspaceId, {
                 is_connected: false,
                 initializing: false,
                 disconnected_at: new Date(),
             });
+
+            // Auto-reconexión: si la razón es recuperable (NAVIGATION,
+            // CONFLICT, TIMEOUT, red caída…) la sesión local sigue
+            // válida y reconectamos solos sin QR. Si es LOGOUT/UNPAIRED/
+            // auth_failure el admin tiene que entrar al panel — no
+            // gastamos CPU spinneando Chrome para nada.
+            if (this._isUnrecoverable(reasonStr)) {
+                console.log(
+                    `⚠️ Reason "${reasonStr}" requires QR rescan for ${workspaceId} — ` +
+                    `not auto-reconnecting. Admin: entra a /admin/whatsapp.`,
+                );
+                this._cancelReconnect(workspaceId);
+                return;
+            }
+            this._scheduleReconnect(workspaceId, reasonStr);
         });
 
         // Auto-restart when QR scan times out (user took too long)
@@ -142,6 +245,9 @@ class SessionManager {
         const session = this.sessions.get(workspaceId);
         if (!session) return false;
 
+        // Stop explícito → cancelar reintentos programados para que
+        // el auto-reconnect no resucite algo que el admin apagó.
+        this._cancelReconnect(workspaceId);
         await session.destroy();
         this.sessions.delete(workspaceId);
 
@@ -164,6 +270,10 @@ class SessionManager {
         if (!session) return false;
 
         console.log(`🔓 logoutSession called for ${workspaceId}`);
+        // Logout explícito → cancelar reintentos. Si quedaba un timer
+        // de auto-reconnect pendiente, no queremos que dispare después
+        // de que el admin desvinculó a propósito.
+        this._cancelReconnect(workspaceId);
         await session.logout();
         this.sessions.delete(workspaceId);
 
@@ -186,6 +296,11 @@ class SessionManager {
      */
     async destroyAll(keepDbState = false) {
         console.log(`🛑 Destroying all ${this.sessions.size} session(s)... (keepDbState=${keepDbState})`);
+        // Cancela todos los reintentos pendientes para que no disparen
+        // un startSession en medio del shutdown (Chrome zombie garantizado).
+        for (const workspaceId of Array.from(this._reconnectTimers.keys())) {
+            this._cancelReconnect(workspaceId);
+        }
         const promises = [];
         for (const [id, session] of this.sessions) {
             console.log(`  🗑️ Destroying session ${id}...`);
